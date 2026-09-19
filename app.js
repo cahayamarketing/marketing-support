@@ -24,7 +24,19 @@ if (!savedSession || !sessionToken) {
 let currentUser;
 
 let sheetPkmData = [];
-let sheetBranchOptions = [];
+
+let sheetBranchOptions = [
+    { code: "SLO", name: "SOLO YOS" },
+    { code: "RJM", name: "RAJIMAN" },
+    { code: "KRA", name: "KARANGANYAR" },
+    { code: "KRP", name: "KARANGPANDAN" },
+    { code: "SRG", name: "SRAGEN" },
+    { code: "WNG", name: "WONOGIRI" },
+    { code: "NGA", name: "NGAWI" },
+    { code: "CRB", name: "CARUBAN" },
+    { code: "STY", name: "SUTOYO" },
+    { code: "KSM", name: "KUSUMANEGARA" }
+];
 let activePkmFilters = {
     startDate: "",
     endDate: "",
