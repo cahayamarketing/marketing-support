@@ -2,78 +2,78 @@
 
 /*
 |--------------------------------------------------------------------------
-| DATA USER DEMO
-|--------------------------------------------------------------------------
-| Ini masih simulasi frontend.
-| Setelah backend dibuat, data user akan diambil dari API.
-*/
-
-const demoUsers = [
-    {
-        username: "crm.caruban",
-        password: "12345",
-        name: "CRM Caruban",
-        branch: "CRB",
-        branchName: "CARUBAN",
-        role: "CRM",
-        status: "AKTIF"
-    },
-    {
-        username: "kacab.caruban",
-        password: "12345",
-        name: "Kepala Cabang Caruban",
-        branch: "CRB",
-        branchName: "CARUBAN",
-        role: "KACAB",
-        status: "AKTIF"
-    },
-    {
-        username: "mscm",
-        password: "12345",
-        name: "Marketing Support",
-        branch: "ALL",
-        branchName: "SEMUA CABANG",
-        role: "MSCM",
-        status: "AKTIF"
-    },
-    {
-        username: "manager",
-        password: "12345",
-        name: "Manager",
-        branch: "ALL",
-        branchName: "SEMUA CABANG",
-        role: "MGR",
-        status: "AKTIF"
-    }
-];
-
-/*
-|--------------------------------------------------------------------------
 | ELEMENT
 |--------------------------------------------------------------------------
 */
 
-const loginForm = document.getElementById("loginForm");
-const loginMessage = document.getElementById("loginMessage");
+const loginForm =
+    document.getElementById("loginForm");
 
-const usernameInput = document.getElementById("username");
-const passwordInput = document.getElementById("password");
+const loginMessage =
+    document.getElementById("loginMessage");
 
-const forgotModal = document.getElementById("forgotPasswordModal");
-const forgotMessage = document.getElementById("forgotMessage");
+const usernameInput =
+    document.getElementById("username");
+
+const passwordInput =
+    document.getElementById("password");
+
+const togglePasswordButton =
+    document.getElementById(
+        "togglePassword"
+    );
+
+const forgotModal =
+    document.getElementById(
+        "forgotPasswordModal"
+    );
+
+const forgotMessage =
+    document.getElementById(
+        "forgotMessage"
+    );
+
+const forgotPasswordButton =
+    document.getElementById(
+        "forgotPasswordButton"
+    );
+
+const closeForgotModalButton =
+    document.getElementById(
+        "closeForgotModal"
+    );
+
+const forgotPasswordForm =
+    document.getElementById(
+        "forgotPasswordForm"
+    );
+
 
 /*
 |--------------------------------------------------------------------------
 | CEK SESSION
 |--------------------------------------------------------------------------
-| Jika sudah login, user tidak perlu melihat halaman login lagi.
 */
 
-const existingSession = sessionStorage.getItem("currentUser");
+const existingToken =
+    sessionStorage.getItem(
+        "sessionToken"
+    );
 
-if (existingSession) {
-    window.location.replace("index.html");
+const existingUser =
+    sessionStorage.getItem(
+        "currentUser"
+    );
+
+if (
+    existingToken &&
+    existingUser
+) {
+    window.location.replace(
+        "index.html"
+    );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -81,58 +81,64 @@ if (existingSession) {
 |--------------------------------------------------------------------------
 */
 
-loginForm.addEventListener("submit", function (event) {
-    event.preventDefault();
+loginForm.addEventListener(
+    "submit",
+    async function (event) {
+        event.preventDefault();
 
-    const username = usernameInput.value.trim().toLowerCase();
-    const password = passwordInput.value;
+        const nik =
+            usernameInput.value.trim();
 
-    hideLoginMessage();
+        const password =
+            passwordInput.value;
 
-    const user = demoUsers.find(function (item) {
-        return (
-            item.username.toLowerCase() === username &&
-            item.password === password
-        );
-    });
+        hideLoginMessage();
 
-    if (!user) {
-        showLoginMessage("Username atau password tidak sesuai.");
-        return;
+        if (!nik || !password) {
+            showLoginMessage(
+                "NIK dan password wajib diisi."
+            );
+
+            return;
+        }
+
+        setLoginLoading(true);
+
+        try {
+            const result =
+                await callApi(
+                    "login",
+                    {
+                        nik: nik,
+                        password: password
+                    }
+                );
+
+            sessionStorage.setItem(
+                "sessionToken",
+                result.token
+            );
+
+            sessionStorage.setItem(
+                "currentUser",
+                JSON.stringify(
+                    result.user
+                )
+            );
+
+            window.location.replace(
+                "index.html"
+            );
+        } catch (error) {
+            showLoginMessage(
+                getApiErrorMessage(error)
+            );
+
+            setLoginLoading(false);
+        }
     }
+);
 
-    if (user.status !== "AKTIF") {
-        showLoginMessage(
-            "Akun ini berstatus nonaktif. Hubungi administrator."
-        );
-
-        return;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | SIMPAN SESSION
-    |--------------------------------------------------------------------------
-    | Password sengaja tidak ikut disimpan.
-    */
-
-    const sessionUser = {
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        branch: user.branch,
-        branchName: user.branchName,
-        role: user.role,
-        status: user.status
-    };
-
-    sessionStorage.setItem(
-        "currentUser",
-        JSON.stringify(sessionUser)
-    );
-
-    window.location.replace("index.html");
-});
 
 /*
 |--------------------------------------------------------------------------
@@ -140,15 +146,27 @@ loginForm.addEventListener("submit", function (event) {
 |--------------------------------------------------------------------------
 */
 
-document
-    .getElementById("togglePassword")
-    .addEventListener("click", function () {
-        const passwordHidden = passwordInput.type === "password";
+if (togglePasswordButton) {
+    togglePasswordButton.addEventListener(
+        "click",
+        function () {
+            const passwordHidden =
+                passwordInput.type ===
+                "password";
 
-        passwordInput.type = passwordHidden ? "text" : "password";
+            passwordInput.type =
+                passwordHidden
+                    ? "text"
+                    : "password";
 
-        this.textContent = passwordHidden ? "Tutup" : "Lihat";
-    });
+            this.textContent =
+                passwordHidden
+                    ? "Tutup"
+                    : "Lihat";
+        }
+    );
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -156,98 +174,175 @@ document
 |--------------------------------------------------------------------------
 */
 
-document
-    .getElementById("forgotPasswordButton")
-    .addEventListener("click", function () {
-        forgotModal.classList.remove("hidden");
+if (
+    forgotPasswordButton &&
+    forgotModal
+) {
+    forgotPasswordButton.addEventListener(
+        "click",
+        function () {
+            forgotModal.classList.remove(
+                "hidden"
+            );
 
-        document.getElementById("forgotUsername").focus();
-    });
+            const forgotUsername =
+                document.getElementById(
+                    "forgotUsername"
+                );
 
-document
-    .getElementById("closeForgotModal")
-    .addEventListener("click", closeForgotModal);
+            if (forgotUsername) {
+                forgotUsername.focus();
+            }
+        }
+    );
+}
 
-forgotModal.addEventListener("click", function (event) {
-    if (event.target === forgotModal) {
-        closeForgotModal();
+
+if (closeForgotModalButton) {
+    closeForgotModalButton.addEventListener(
+        "click",
+        closeForgotModal
+    );
+}
+
+
+if (forgotModal) {
+    forgotModal.addEventListener(
+        "click",
+        function (event) {
+            if (
+                event.target ===
+                forgotModal
+            ) {
+                closeForgotModal();
+            }
+        }
+    );
+}
+
+
+document.addEventListener(
+    "keydown",
+    function (event) {
+        if (
+            event.key === "Escape" &&
+            forgotModal &&
+            !forgotModal.classList.contains(
+                "hidden"
+            )
+        ) {
+            closeForgotModal();
+        }
     }
-});
+);
 
-document.addEventListener("keydown", function (event) {
-    if (
-        event.key === "Escape" &&
-        !forgotModal.classList.contains("hidden")
-    ) {
-        closeForgotModal();
-    }
-});
 
-document
-    .getElementById("forgotPasswordForm")
-    .addEventListener("submit", function (event) {
-        event.preventDefault();
+if (forgotPasswordForm) {
+    forgotPasswordForm.addEventListener(
+        "submit",
+        function (event) {
+            event.preventDefault();
 
-        const username = document
-            .getElementById("forgotUsername")
-            .value
-            .trim()
-            .toLowerCase();
+            const nik =
+                document
+                    .getElementById(
+                        "forgotUsername"
+                    )
+                    .value
+                    .trim();
 
-        const user = demoUsers.find(function (item) {
-            return item.username.toLowerCase() === username;
-        });
+            forgotMessage.classList.remove(
+                "hidden"
+            );
 
-        forgotMessage.classList.remove("hidden");
+            if (!nik) {
+                forgotMessage.className =
+                    "mt-3 text-sm font-bold text-red-600";
 
-        if (!user) {
+                forgotMessage.textContent =
+                    "Masukkan NIK terlebih dahulu.";
+
+                return;
+            }
+
+            /*
+            | Tidak memberitahukan apakah NIK ada atau
+            | tidak demi keamanan akun.
+            */
+
             forgotMessage.className =
-                "mt-3 text-sm font-bold text-red-600";
+                "mt-3 text-sm font-bold text-emerald-600";
 
             forgotMessage.textContent =
-                "Username tidak ditemukan.";
-
-            return;
+                "Silakan hubungi administrator untuk reset password.";
         }
+    );
+}
 
-        if (user.status !== "AKTIF") {
-            forgotMessage.className =
-                "mt-3 text-sm font-bold text-amber-600";
-
-            forgotMessage.textContent =
-                "Akun berstatus nonaktif. Hubungi administrator.";
-
-            return;
-        }
-
-        forgotMessage.className =
-            "mt-3 text-sm font-bold text-emerald-600";
-
-        forgotMessage.textContent =
-            "Permintaan reset berhasil dibuat. Hubungi administrator.";
-    });
 
 /*
 |--------------------------------------------------------------------------
-| FUNCTION
+| FUNCTION UI
 |--------------------------------------------------------------------------
 */
 
 function showLoginMessage(message) {
-    loginMessage.textContent = message;
-    loginMessage.classList.remove("hidden");
+    loginMessage.textContent =
+        message;
+
+    loginMessage.classList.remove(
+        "hidden"
+    );
 }
+
 
 function hideLoginMessage() {
     loginMessage.textContent = "";
-    loginMessage.classList.add("hidden");
+
+    loginMessage.classList.add(
+        "hidden"
+    );
 }
 
+
+function setLoginLoading(loading) {
+    const submitButton =
+        loginForm.querySelector(
+            'button[type="submit"]'
+        );
+
+    if (!submitButton) {
+        return;
+    }
+
+    submitButton.disabled =
+        loading;
+
+    submitButton.textContent =
+        loading
+            ? "Memeriksa..."
+            : "Masuk";
+}
+
+
 function closeForgotModal() {
-    forgotModal.classList.add("hidden");
+    if (!forgotModal) {
+        return;
+    }
 
-    document.getElementById("forgotPasswordForm").reset();
+    forgotModal.classList.add(
+        "hidden"
+    );
 
-    forgotMessage.textContent = "";
-    forgotMessage.classList.add("hidden");
+    if (forgotPasswordForm) {
+        forgotPasswordForm.reset();
+    }
+
+    if (forgotMessage) {
+        forgotMessage.textContent = "";
+
+        forgotMessage.classList.add(
+            "hidden"
+        );
+    }
 }
