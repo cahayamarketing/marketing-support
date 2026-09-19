@@ -1218,6 +1218,45 @@
                         </table>
                     </div>
 
+                    <div
+                        id="pkmPagination"
+                        class="mt-5 flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-5 sm:flex-row"
+                    >
+                        <p
+                            id="pkmPaginationInfo"
+                            class="text-sm font-bold text-slate-500"
+                        >
+                            Halaman 1 dari 1
+                        </p>
+
+                        <div class="flex items-center gap-2">
+                            <button
+                                id="previousPkmPage"
+                                type="button"
+                                class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                disabled
+                            >
+                                ← Sebelumnya
+                            </button>
+
+                            <span
+                                id="currentPkmPage"
+                                class="min-w-[42px] rounded-xl bg-red-600 px-3 py-2 text-center text-sm font-black text-white"
+                            >
+                                1
+                            </span>
+
+                            <button
+                                id="nextPkmPage"
+                                type="button"
+                                class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                disabled
+                            >
+                                Selanjutnya →
+                            </button>
+                        </div>
+                    </div>
+
                     <div id="emptyPkm" class="empty-state hidden">
                         Data PKM tidak ditemukan.
                     </div>

@@ -44,6 +44,9 @@ let activePkmFilters = {
     branches: []
 };
 let pkmDataLoading = false;
+const PKM_PAGE_SIZE = 15;
+
+let currentPkmPage = 1;
 
 try {
     currentUser =
@@ -3318,7 +3321,7 @@ function renderPkmTable() {
     const statusFilter =
         statusInput.value;
 
-    const data = getBranchPkm().filter(
+    let data = getBranchPkm().filter(
         function (item) {
             const combinedText = [
                 item.id,
@@ -3386,13 +3389,86 @@ function renderPkmTable() {
         }
     );
 
+    /*
+    |--------------------------------------------------------------------------
+    | TAMPILAN DEFAULT
+    |--------------------------------------------------------------------------
+    | Jika pencarian kosong dan status masih ALL,
+    | data yang sudah ACC tidak ditampilkan.
+    */
+
+    const isDefaultList =
+        search === "" &&
+        statusFilter === "ALL";
+
+    if (isDefaultList) {
+        data = data.filter(function (item) {
+            const normalizedStatus = String(
+                item.status || ""
+            )
+                .trim()
+                .toUpperCase();
+
+            return ![
+                "ACC",
+                "DISETUJUI"
+            ].includes(normalizedStatus);
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAGINATION
+    |--------------------------------------------------------------------------
+    */
+
+    const totalData = data.length;
+
+    const totalPages = Math.max(
+        1,
+        Math.ceil(totalData / PKM_PAGE_SIZE)
+    );
+
+    /*
+    | Mencegah halaman aktif melebihi jumlah halaman.
+    */
+
+    if (currentPkmPage > totalPages) {
+        currentPkmPage = totalPages;
+    }
+
+    if (currentPkmPage < 1) {
+        currentPkmPage = 1;
+    }
+
+    const startIndex =
+        (currentPkmPage - 1) *
+        PKM_PAGE_SIZE;
+
+    const endIndex =
+        startIndex +
+        PKM_PAGE_SIZE;
+
+    const pageData = data.slice(
+        startIndex,
+        endIndex
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | INFORMASI HASIL
+    |--------------------------------------------------------------------------
+    */
+
     const resultCount = document.getElementById(
         "listResultCount"
     );
 
     if (resultCount) {
-        resultCount.textContent = `${data.length} data`;
+        resultCount.textContent =
+            `${totalData} data ditemukan`;
     }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -3400,7 +3476,7 @@ function renderPkmTable() {
     |--------------------------------------------------------------------------
     */
 
-    pkmTableBody.innerHTML = data
+    pkmTableBody.innerHTML = pageData
         .map(function (item) {
             const typeText =
                 Array.isArray(item.type)
@@ -3510,8 +3586,65 @@ function renderPkmTable() {
 
     emptyPkm.classList.toggle(
         "hidden",
-        data.length > 0
+        totalData > 0
     );
+
+    const paginationContainer =
+        document.getElementById(
+            "pkmPagination"
+        );
+
+    const paginationInfo =
+        document.getElementById(
+            "pkmPaginationInfo"
+        );
+
+    const currentPageElement =
+        document.getElementById(
+            "currentPkmPage"
+        );
+
+    const previousButton =
+        document.getElementById(
+            "previousPkmPage"
+        );
+
+    const nextButton =
+        document.getElementById(
+            "nextPkmPage"
+        );
+
+    if (paginationContainer) {
+        paginationContainer.classList.toggle(
+            "hidden",
+            totalData === 0
+        );
+    }
+
+    if (paginationInfo) {
+        paginationInfo.textContent =
+            totalData === 0
+                ? "Tidak ada data"
+                : `Menampilkan ${startIndex + 1}–${Math.min(
+                    endIndex,
+                    totalData
+                )} dari ${totalData} data`;
+    }
+
+    if (currentPageElement) {
+        currentPageElement.textContent =
+            currentPkmPage;
+    }
+
+    if (previousButton) {
+        previousButton.disabled =
+            currentPkmPage <= 1;
+    }
+
+    if (nextButton) {
+        nextButton.disabled =
+            currentPkmPage >= totalPages;
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -4475,11 +4608,17 @@ pkmForm.addEventListener(
 
 document
     .getElementById("searchPkm")
-    .addEventListener("input", renderPkmTable);
+    .addEventListener("input", function () {
+        currentPkmPage = 1;
+        renderPkmTable();
+    });
 
 document
     .getElementById("statusFilter")
-    .addEventListener("change", renderPkmTable);
+    .addEventListener("change", function () {
+        currentPkmPage = 1;
+        renderPkmTable();
+    });
 
 document
     .getElementById("applyDashboardFilter")
@@ -4490,12 +4629,14 @@ document
 document
     .getElementById("applyPkmFilter")
     .addEventListener("click", function () {
+        currentPkmPage = 1;
         loadPkmData("list");
     });
 
 document
     .getElementById("resetPkmFilter")
     .addEventListener("click", function () {
+        currentPkmPage = 1;
         const range = getCurrentMonthRange();
 
         document.getElementById("searchPkm").value = "";
@@ -4545,6 +4686,48 @@ document
 | JALANKAN APLIKASI SETELAH SELURUH KONSTANTA DAN LISTENER SIAP
 |--------------------------------------------------------------------------
 */
+
+
+/*
+|--------------------------------------------------------------------------
+| PAGINATION LIST PKM
+|--------------------------------------------------------------------------
+*/
+
+document
+    .getElementById("previousPkmPage")
+    .addEventListener("click", function () {
+        if (currentPkmPage <= 1) {
+            return;
+        }
+
+        currentPkmPage -= 1;
+
+        renderPkmTable();
+
+        document
+            .getElementById("listPkmPage")
+            .scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+    });
+
+document
+    .getElementById("nextPkmPage")
+    .addEventListener("click", function () {
+        currentPkmPage += 1;
+
+        renderPkmTable();
+
+        document
+            .getElementById("listPkmPage")
+            .scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+    });
+
 
 initializeApplication();
 
