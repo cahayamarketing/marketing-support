@@ -1156,6 +1156,11 @@ async function initializeApplication() {
         "sidebarUserName"
     ).textContent = currentUser.name;
 
+    manageAccountsButton.classList.toggle(
+        "hidden",
+        !isMasterAccount()
+    );
+
     document.getElementById(
         "sidebarBranch"
     ).textContent =
@@ -1239,6 +1244,90 @@ async function initializeApplication() {
 
     validateFormState();
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| MENU AKUN
+|--------------------------------------------------------------------------
+*/
+
+const MASTER_ACCOUNT_NIKS = [
+    "911117",
+    "911120",
+    "911147"
+];
+
+function isMasterAccount() {
+    return (
+        currentUser.isMaster === true ||
+        MASTER_ACCOUNT_NIKS.includes(
+            String(
+                currentUser.nik ||
+                currentUser.username ||
+                ""
+            )
+        )
+    );
+}
+
+const accountMenuButton =
+    document.getElementById(
+        "accountMenuButton"
+    );
+
+const accountMenu =
+    document.getElementById(
+        "accountMenu"
+    );
+
+const accountMenuArrow =
+    document.getElementById(
+        "accountMenuArrow"
+    );
+
+const manageAccountsButton =
+    document.getElementById(
+        "manageAccountsButton"
+    );
+
+accountMenuButton.addEventListener(
+    "click",
+    function (event) {
+        event.stopPropagation();
+
+        accountMenu.classList.toggle(
+            "hidden"
+        );
+
+        accountMenuArrow.textContent =
+            accountMenu.classList.contains(
+                "hidden"
+            )
+                ? "⌃"
+                : "⌄";
+    }
+);
+
+document.addEventListener(
+    "click",
+    function (event) {
+        if (
+            !document
+                .getElementById(
+                    "accountMenuWrapper"
+                )
+                .contains(event.target)
+        ) {
+            accountMenu.classList.add(
+                "hidden"
+            );
+
+            accountMenuArrow.textContent =
+                "⌃";
+        }
+    }
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -4728,6 +4817,762 @@ document
             });
     });
 
+
+/*
+|--------------------------------------------------------------------------
+| MANAGE AKUN
+|--------------------------------------------------------------------------
+*/
+
+const accountManagementModal =
+    document.getElementById(
+        "accountManagementModal"
+    );
+
+let managedAccounts = [];
+
+
+function closeAccountManagementModal() {
+    accountManagementModal.classList.add(
+        "hidden"
+    );
+}
+
+
+async function openAccountManagementModal() {
+    if (!isMasterAccount()) {
+        showToast(
+            "Anda tidak memiliki akses Manage Akun."
+        );
+
+        return;
+    }
+
+    accountMenu.classList.add("hidden");
+
+    accountManagementModal.classList.remove(
+        "hidden"
+    );
+
+    await loadManagedAccounts();
+}
+
+
+async function loadManagedAccounts() {
+    const tableBody =
+        document.getElementById(
+            "managedAccountTableBody"
+        );
+
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="6" class="py-10 text-center text-slate-400">
+                Memuat data akun...
+            </td>
+        </tr>
+    `;
+
+    try {
+        const result = await requestBackend(
+            "getManagedAccounts"
+        );
+
+        managedAccounts =
+            Array.isArray(result.accounts)
+                ? result.accounts
+                : [];
+
+        renderManagedAccounts();
+    } catch (error) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="py-10 text-center font-bold text-red-600">
+                    ${escapeHtml(
+                        error.message ||
+                        "Data akun gagal dimuat."
+                    )}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+function renderManagedAccounts() {
+    const search =
+        document.getElementById(
+            "accountSearch"
+        )
+            .value
+            .trim()
+            .toLowerCase();
+
+    const filteredAccounts =
+        managedAccounts.filter(
+            function (account) {
+                const searchableText = [
+                    account.nik,
+                    account.name,
+                    account.branch,
+                    account.jabatan,
+                    account.role,
+                    account.status
+                ]
+                    .join(" ")
+                    .toLowerCase();
+
+                return searchableText.includes(
+                    search
+                );
+            }
+        );
+
+    const tableBody =
+        document.getElementById(
+            "managedAccountTableBody"
+        );
+
+    tableBody.innerHTML =
+        filteredAccounts
+            .map(function (account) {
+                const statusClass =
+                    account.status ===
+                    "AKTIF"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700";
+
+                return `
+                    <tr>
+                        <td class="font-black">
+                            ${escapeHtml(account.nik)}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(account.name)}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(account.branch)}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(
+                                account.role ||
+                                "-"
+                            )}
+                        </td>
+
+                        <td>
+                            <span class="rounded-full px-3 py-1 text-xs font-black ${statusClass}">
+                                ${escapeHtml(account.status)}
+                            </span>
+                        </td>
+
+                        <td>
+                            <button
+                                type="button"
+                                data-edit-account="${escapeHtml(account.nik)}"
+                                class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white"
+                            >
+                                Edit
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+
+    document.getElementById(
+        "managedAccountCount"
+    ).textContent =
+        `${filteredAccounts.length} akun`;
+
+    tableBody
+        .querySelectorAll(
+            "[data-edit-account]"
+        )
+        .forEach(function (button) {
+            button.addEventListener(
+                "click",
+                function () {
+                    selectManagedAccount(
+                        button.dataset
+                            .editAccount
+                    );
+                }
+            );
+        });
+}
+
+
+function selectManagedAccount(nik) {
+    const account =
+        managedAccounts.find(
+            function (item) {
+                return item.nik === nik;
+            }
+        );
+
+    if (!account) {
+        return;
+    }
+
+    document.getElementById(
+        "managedOriginalNik"
+    ).value = account.nik;
+
+    document.getElementById(
+        "managedNik"
+    ).value = account.nik;
+
+    document.getElementById(
+        "managedName"
+    ).value = account.name;
+
+    document.getElementById(
+        "managedBranch"
+    ).value = account.branch;
+
+    document.getElementById(
+        "managedRole"
+    ).value =
+        account.role || "";
+
+    document.getElementById(
+        "managedStatus"
+    ).value =
+        account.status || "AKTIF";
+
+    [
+        "managedNik",
+        "managedName",
+        "managedBranch",
+        "managedRole",
+        "managedStatus",
+        "saveManagedAccount"
+    ].forEach(function (id) {
+        document.getElementById(
+            id
+        ).disabled = false;
+    });
+
+    /*
+    | NIK master tidak boleh diubah.
+    */
+
+    if (
+        MASTER_ACCOUNT_NIKS.includes(
+            account.nik
+        )
+    ) {
+        document.getElementById(
+            "managedNik"
+        ).disabled = true;
+    }
+}
+
+
+document
+    .getElementById(
+        "accountSearch"
+    )
+    .addEventListener(
+        "input",
+        renderManagedAccounts
+    );
+
+
+manageAccountsButton.addEventListener(
+    "click",
+    openAccountManagementModal
+);
+
+
+document
+    .getElementById(
+        "closeAccountManagement"
+    )
+    .addEventListener(
+        "click",
+        closeAccountManagementModal
+    );
+
+
+document
+    .getElementById(
+        "accountManagementBackdrop"
+    )
+    .addEventListener(
+        "click",
+        closeAccountManagementModal
+    );
+
+
+document
+    .getElementById(
+        "saveManagedAccount"
+    )
+    .addEventListener(
+        "click",
+        async function () {
+            const payload = {
+                originalNik:
+                    document.getElementById(
+                        "managedOriginalNik"
+                    ).value,
+
+                nik:
+                    document.getElementById(
+                        "managedNik"
+                    ).value.trim(),
+
+                name:
+                    document.getElementById(
+                        "managedName"
+                    ).value.trim(),
+
+                branch:
+                    document.getElementById(
+                        "managedBranch"
+                    ).value,
+
+                role:
+                    document.getElementById(
+                        "managedRole"
+                    ).value,
+
+                status:
+                    document.getElementById(
+                        "managedStatus"
+                    ).value
+            };
+
+            if (
+                !payload.nik ||
+                !payload.name ||
+                !payload.branch
+            ) {
+                showToast(
+                    "NIK, nama, dan cabang wajib diisi."
+                );
+
+                return;
+            }
+
+            try {
+                this.disabled = true;
+                this.textContent =
+                    "Menyimpan...";
+
+                await requestBackend(
+                    "updateManagedAccount",
+                    payload
+                );
+
+                showToast(
+                    "Data akun berhasil diperbarui."
+                );
+
+                await loadManagedAccounts();
+            } catch (error) {
+                showToast(
+                    error.message ||
+                    "Data akun gagal disimpan."
+                );
+            } finally {
+                this.disabled = false;
+                this.textContent =
+                    "Simpan Perubahan";
+            }
+        }
+    );    
+
+/*
+|--------------------------------------------------------------------------
+| KELOLA PROFIL
+|--------------------------------------------------------------------------
+*/
+
+const profileModal =
+    document.getElementById(
+        "profileModal"
+    );
+
+const profileSignatureCanvas =
+    document.getElementById(
+        "profileSignatureCanvas"
+    );
+
+const profileSignatureContext =
+    profileSignatureCanvas.getContext(
+        "2d"
+    );
+
+let profileSignatureDrawing = false;
+let profileSignatureHasDrawing = false;
+let uploadedSignatureData = "";
+
+
+function openProfileModal() {
+    document.getElementById(
+        "profileNik"
+    ).value =
+        currentUser.nik ||
+        currentUser.username ||
+        "";
+
+    document.getElementById(
+        "profileName"
+    ).value =
+        currentUser.name || "";
+
+    document.getElementById(
+        "profileNewPassword"
+    ).value = "";
+
+    document.getElementById(
+        "profileConfirmPassword"
+    ).value = "";
+
+    clearProfileSignature();
+
+    profileModal.classList.remove(
+        "hidden"
+    );
+
+    profileModal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    accountMenu.classList.add("hidden");
+}
+
+
+function closeProfileModal() {
+    profileModal.classList.add(
+        "hidden"
+    );
+
+    profileModal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+}
+
+
+function getProfileCanvasPosition(event) {
+    const rectangle =
+        profileSignatureCanvas
+            .getBoundingClientRect();
+
+    return {
+        x:
+            (
+                event.clientX -
+                rectangle.left
+            ) *
+            (
+                profileSignatureCanvas.width /
+                rectangle.width
+            ),
+
+        y:
+            (
+                event.clientY -
+                rectangle.top
+            ) *
+            (
+                profileSignatureCanvas.height /
+                rectangle.height
+            )
+    };
+}
+
+
+profileSignatureCanvas.addEventListener(
+    "pointerdown",
+    function (event) {
+        profileSignatureDrawing = true;
+
+        const position =
+            getProfileCanvasPosition(
+                event
+            );
+
+        profileSignatureContext.beginPath();
+
+        profileSignatureContext.moveTo(
+            position.x,
+            position.y
+        );
+    }
+);
+
+
+profileSignatureCanvas.addEventListener(
+    "pointermove",
+    function (event) {
+        if (!profileSignatureDrawing) {
+            return;
+        }
+
+        const position =
+            getProfileCanvasPosition(
+                event
+            );
+
+        profileSignatureContext.lineWidth = 4;
+        profileSignatureContext.lineCap =
+            "round";
+
+        profileSignatureContext.strokeStyle =
+            "#0f172a";
+
+        profileSignatureContext.lineTo(
+            position.x,
+            position.y
+        );
+
+        profileSignatureContext.stroke();
+
+        profileSignatureHasDrawing = true;
+    }
+);
+
+
+document.addEventListener(
+    "pointerup",
+    function () {
+        profileSignatureDrawing = false;
+    }
+);
+
+
+function clearProfileSignature() {
+    profileSignatureContext.clearRect(
+        0,
+        0,
+        profileSignatureCanvas.width,
+        profileSignatureCanvas.height
+    );
+
+    profileSignatureHasDrawing = false;
+    uploadedSignatureData = "";
+
+    document.getElementById(
+        "profileSignatureUpload"
+    ).value = "";
+
+    document.getElementById(
+        "uploadedSignaturePreview"
+    ).removeAttribute("src");
+
+    document.getElementById(
+        "uploadedSignaturePreviewContainer"
+    ).classList.add("hidden");
+}
+
+
+document
+    .getElementById(
+        "profileSignatureUpload"
+    )
+    .addEventListener(
+        "change",
+        function (event) {
+            const file =
+                event.target.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            if (
+                !file.type.startsWith(
+                    "image/"
+                )
+            ) {
+                showToast(
+                    "File tanda tangan harus berupa gambar."
+                );
+
+                event.target.value = "";
+                return;
+            }
+
+            if (
+                file.size >
+                2 * 1024 * 1024
+            ) {
+                showToast(
+                    "Ukuran gambar maksimal 2 MB."
+                );
+
+                event.target.value = "";
+                return;
+            }
+
+            const reader =
+                new FileReader();
+
+            reader.onload = function () {
+                uploadedSignatureData =
+                    reader.result;
+
+                document.getElementById(
+                    "uploadedSignaturePreview"
+                ).src =
+                    uploadedSignatureData;
+
+                document.getElementById(
+                    "uploadedSignaturePreviewContainer"
+                ).classList.remove(
+                    "hidden"
+                );
+            };
+
+            reader.readAsDataURL(file);
+        }
+    );
+
+
+document
+    .getElementById(
+        "manageProfileButton"
+    )
+    .addEventListener(
+        "click",
+        openProfileModal
+    );
+
+
+document
+    .getElementById(
+        "closeProfileModal"
+    )
+    .addEventListener(
+        "click",
+        closeProfileModal
+    );
+
+
+document
+    .getElementById(
+        "cancelProfileButton"
+    )
+    .addEventListener(
+        "click",
+        closeProfileModal
+    );
+
+
+document
+    .getElementById(
+        "profileModalBackdrop"
+    )
+    .addEventListener(
+        "click",
+        closeProfileModal
+    );
+
+
+document
+    .getElementById(
+        "clearProfileSignature"
+    )
+    .addEventListener(
+        "click",
+        clearProfileSignature
+    );
+
+
+document
+    .getElementById(
+        "saveProfileButton"
+    )
+    .addEventListener(
+        "click",
+        async function () {
+            const newPassword =
+                document.getElementById(
+                    "profileNewPassword"
+                ).value;
+
+            const confirmPassword =
+                document.getElementById(
+                    "profileConfirmPassword"
+                ).value;
+
+            if (
+                newPassword &&
+                newPassword.length < 5
+            ) {
+                showToast(
+                    "Password minimal 5 karakter."
+                );
+
+                return;
+            }
+
+            if (
+                newPassword !==
+                confirmPassword
+            ) {
+                showToast(
+                    "Konfirmasi password tidak sesuai."
+                );
+
+                return;
+            }
+
+            let signatureData =
+                uploadedSignatureData;
+
+            if (
+                !signatureData &&
+                profileSignatureHasDrawing
+            ) {
+                signatureData =
+                    profileSignatureCanvas
+                        .toDataURL(
+                            "image/png"
+                        );
+            }
+
+            try {
+                this.disabled = true;
+                this.textContent =
+                    "Menyimpan...";
+
+                await requestBackend(
+                    "updateMyProfile",
+                    {
+                        newPassword:
+                            newPassword,
+
+                        signatureData:
+                            signatureData
+                    }
+                );
+
+                showToast(
+                    "Profil berhasil diperbarui."
+                );
+
+                closeProfileModal();
+            } catch (error) {
+                showToast(
+                    error.message ||
+                    "Profil gagal diperbarui."
+                );
+            } finally {
+                this.disabled = false;
+                this.textContent =
+                    "Simpan Profil";
+            }
+        }
+    );
 
 initializeApplication();
 
