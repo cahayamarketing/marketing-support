@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Dashboard | CSM Marketing System</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
+</head>
+
+<body class="bg-slate-100 text-slate-800">
+
+<section id="appPage" class="min-h-screen">
+
+    <!-- Overlay sidebar mobile -->
+    <div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+
+        <div class="flex h-20 items-center justify-between border-b border-white/10 px-6">
+            <div>
+                <div class="text-2xl font-black tracking-tight text-white">
+                    CSM
+                </div>
+
+                <div class="text-xs font-medium text-red-200">
+                    Marketing System
+                </div>
+            </div>
+
+            <button
+                id="closeSidebar"
+                class="rounded-lg p-2 text-white hover:bg-white/10 lg:hidden"
+                type="button"
+            >
+                ✕
+            </button>
+        </div>
+
+        <div class="px-4 py-6">
+
+            <div class="mb-6 rounded-2xl bg-white/10 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wider text-red-200">
+                    Login sebagai
+                </p>
+
+                <p id="sidebarUserName" class="mt-1 font-bold text-white"></p>
+                <p id="sidebarBranch" class="text-sm text-red-100"></p>
+            </div>
+
+            <nav class="space-y-2">
+
+                <button
+                    class="nav-item active"
+                    data-page="dashboardPage"
+                    type="button"
+                >
+                    <span>▦</span>
+                    <span>Dashboard</span>
+                </button>
+
+                <div>
+                    <button id="pkmMenuButton" class="nav-item" type="button">
+                        <span>▣</span>
+                        <span class="flex-1 text-left">PKM</span>
+                        <span id="pkmArrow">⌄</span>
+                    </button>
+
+                    <div
+                        id="pkmSubmenu"
+                        class="ml-5 mt-2 hidden space-y-1 border-l border-white/20 pl-4"
+                    >
+                        <button
+                            class="nav-subitem"
+                            data-page="pengajuanPage"
+                            type="button"
+                        >
+                            Pengajuan PKM
+                        </button>
+
+                        <button
+                            class="nav-subitem"
+                            data-page="listPkmPage"
+                            type="button"
+                        >
+                            List PKM
+                        </button>
+                    </div>
+                </div>
+
+                <button class="nav-item disabled-menu" type="button">
+                    <span>◎</span>
+                    <span>KPI</span>
+                    <span class="menu-badge">Segera</span>
+                </button>
+
+                <button class="nav-item disabled-menu" type="button">
+                    <span>◉</span>
+                    <span>CRM</span>
+                    <span class="menu-badge">Segera</span>
+                </button>
+
+                <button class="nav-item disabled-menu" type="button">
+                    <span>▤</span>
+                    <span>SIPEDE</span>
+                    <span class="menu-badge">Segera</span>
+                </button>
+
+            </nav>
+        </div>
+
+        <div class="absolute bottom-0 w-full border-t border-white/10 p-4">
+            <button id="logoutButton" class="nav-item" type="button">
+                <span>↪</span>
+                <span>Keluar</span>
+            </button>
+        </div>
+
+    </aside>
+
+    <!-- KONTEN UTAMA -->
+    <main class="lg:ml-72">
+
+        <!-- HEADER -->
+        <header class="sticky top-0 z-20 flex h-20 items-center justify-between border-b bg-white/95 px-4 backdrop-blur md:px-8">
+
+            <div class="flex items-center gap-4">
+                <button
+                    id="openSidebar"
+                    class="rounded-xl border p-2.5 lg:hidden"
+                    type="button"
+                >
+                    ☰
+                </button>
+
+                <div>
+                    <h1 id="pageTitle" class="text-xl font-black text-slate-900">
+                        Dashboard
+                    </h1>
+
+                    <p id="pageSubtitle" class="text-sm text-slate-500">
+                        Ringkasan aktivitas marketing
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="hidden text-right sm:block">
+                    <p id="headerUserName" class="text-sm font-bold text-slate-900"></p>
+                    <p id="headerBranch" class="text-xs text-slate-500"></p>
+                </div>
+
+                <div id="userInitial" class="user-avatar"></div>
+            </div>
+
+        </header>
+
+        <div class="p-4 md:p-8">
+
+            <!-- DASHBOARD -->
+            <section id="dashboardPage" class="app-content">
+
+                <div class="dashboard-hero">
+                    <div class="relative z-10">
+
+                        <p class="text-sm font-bold uppercase tracking-[0.2em] text-red-100">
+                            Marketing Activity
+                        </p>
+
+                        <h2 class="mt-2 text-3xl font-black text-white">
+                            Selamat datang,
+                            <span id="dashboardUserName"></span>
+                        </h2>
+
+                        <p class="mt-3 max-w-xl text-red-100">
+                            Pantau pengajuan dan status aktivitas pemasaran
+                            cabang melalui satu dashboard.
+                        </p>
+
+                    </div>
+                </div>
+
+                <div class="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+
+                    <article class="stat-card">
+                        <p class="stat-label">Total pengajuan</p>
+                        <p id="totalSubmission" class="stat-value">0</p>
+                        <p class="stat-caption">Data cabang login</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <p class="stat-label">Menunggu persetujuan</p>
+                        <p id="pendingSubmission" class="stat-value text-amber-500">0</p>
+                        <p class="stat-caption">Perlu ditindaklanjuti</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <p class="stat-label">Disetujui</p>
+                        <p id="approvedSubmission" class="stat-value text-emerald-600">0</p>
+                        <p class="stat-caption">Pengajuan berstatus ACC</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <p class="stat-label">Total dana</p>
+                        <p id="totalFund" class="stat-value text-red-600">Rp0</p>
+                        <p class="stat-caption">Akumulasi pengajuan</p>
+                    </article>
+
+                </div>
+
+                <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-black text-slate-900">
+                                Pengajuan terbaru
+                            </h3>
+
+                            <p class="text-sm text-slate-500">
+                                Pengajuan PKM terbaru dari cabang Anda.
+                            </p>
+                        </div>
+
+                        <button
+                            class="btn-secondary"
+                            data-page="listPkmPage"
+                            type="button"
+                        >
+                            Lihat semua
+                        </button>
+                    </div>
+
+                    <div id="recentPkmContainer" class="mt-5"></div>
+
+                </div>
+
+            </section>
+
+            <!-- PENGAJUAN PKM -->
+            <section id="pengajuanPage" class="app-content hidden">
+
+                <form id="pkmForm" class="space-y-6">
+
+                    <!-- INFORMASI PKM -->
+                    <div class="form-section">
+
+                        <div class="section-heading">
+                            <span class="section-number">1</span>
+
+                            <div>
+                                <h2>Informasi PKM</h2>
+                                <p>Informasi utama kegiatan yang akan diajukan.</p>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+
+                            <div class="md:col-span-2">
+                                <label for="namaPkm" class="form-label">
+                                    Nama PKM
+                                </label>
+
+                                <input
+                                    id="namaPkm"
+                                    class="form-input"
+                                    type="text"
+                                    placeholder="Contoh: Roadshow Honda BeAT"
+                                    required
+                                >
+                            </div>
+
+                            <div>
+                                <label for="cabang" class="form-label">
+                                    Cabang
+                                </label>
+
+                                <input
+                                    id="cabang"
+                                    class="form-input bg-slate-100"
+                                    type="text"
+                                    readonly
+                                >
+                            </div>
+
+                            <div>
+                                <label class="form-label">Type PKM</label>
+
+                                <div class="option-group">
+
+                                    <label class="check-card">
+                                        <input
+                                            class="type-pkm"
+                                            type="checkbox"
+                                            value="H1"
+                                        >
+                                        <span>H1</span>
+                                    </label>
+
+                                    <label class="check-card">
+                                        <input
+                                            class="type-pkm"
+                                            type="checkbox"
+                                            value="H23"
+                                        >
+                                        <span>H23</span>
+                                    </label>
+
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="jenisPkm" class="form-label">
+                                    Jenis PKM
+                                </label>
+
+                                <select id="jenisPkm" class="form-input" required>
+                                    <option value="">Pilih jenis PKM</option>
+                                    <option value="ATL BIASA">ATL BIASA</option>
+                                    <option value="ATL DEALER">ATL DEALER</option>
+                                    <option value="BTL BIASA">BTL BIASA</option>
+                                    <option value="BTL DEALER">BTL DEALER</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="jenisKegiatan" class="form-label">
+                                    Jenis kegiatan
+                                </label>
+
+                                <select id="jenisKegiatan" class="form-input" required>
+                                    <option value="">Pilih jenis kegiatan</option>
+                                    <option>Ajuan ATL</option>
+                                    <option>Ajuan NOS</option>
+                                    <option>Canvassing</option>
+                                    <option>Entertainment</option>
+                                    <option>Kebutuhan Marketing</option>
+                                    <option>Lain-lain</option>
+                                    <option>Pameran</option>
+                                    <option>Roadshow</option>
+                                    <option>Service Visit</option>
+                                    <option>Showroom Event</option>
+                                    <option>Sponsorship</option>
+                                </select>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- WAKTU -->
+                    <div class="form-section">
+
+                        <div class="section-heading">
+                            <span class="section-number">2</span>
+
+                            <div>
+                                <h2>Waktu pelaksanaan</h2>
+                                <p>Tentukan tanggal dan jam mulai sampai selesai.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+
+                            <div>
+                                <label for="tanggalMulai" class="form-label">
+                                    Tanggal mulai
+                                </label>
+
+                                <input
+                                    id="tanggalMulai"
+                                    class="form-input"
+                                    type="date"
+                                    required
+                                >
+                            </div>
+
+                            <div>
+                                <label for="jamMulai" class="form-label">
+                                    Jam mulai
+                                </label>
+
+                                <input
+                                    id="jamMulai"
+                                    class="form-input"
+                                    type="time"
+                                    required
+                                >
+                            </div>
+
+                            <div>
+                                <label for="tanggalSelesai" class="form-label">
+                                    Tanggal selesai
+                                </label>
+
+                                <input
+                                    id="tanggalSelesai"
+                                    class="form-input"
+                                    type="date"
+                                    required
+                                >
+                            </div>
+
+                            <div>
+                                <label for="jamSelesai" class="form-label">
+                                    Jam selesai
+                                </label>
+
+                                <input
+                                    id="jamSelesai"
+                                    class="form-input"
+                                    type="time"
+                                    required
+                                >
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- LOKASI -->
+                    <section
+                        id="locationSection"
+                        class="form-section hidden"
+                        aria-hidden="true"
+                    >
+
+                            <div class="section-heading">
+                                <span class="section-number">3</span>
+
+                                <div>
+                                    <h2>Lokasi kegiatan</h2>
+                                    <p>Cari lokasi atau isi wilayah secara manual.</p>
+                                </div>
+                            </div>              
+
+                            <div class="conditional-content">
+                                <label for="locationSearch" class="form-label">
+                                    Pencarian lokasi
+                                </label>
+
+                                <div class="flex flex-col gap-3 sm:flex-row">
+
+                                    <input
+                                        id="locationSearch"
+                                        class="form-input"
+                                        type="text"
+                                        placeholder="Contoh: Alun-Alun Caruban"
+                                    >
+
+                                    <button
+                                        id="searchLocationButton"
+                                        class="btn-secondary whitespace-nowrap"
+                                        type="button"
+                                    >
+                                        Cari lokasi
+                                    </button>
+
+                                </div>
+
+                                <div
+                                    id="locationResults"
+                                    class="location-results mt-3 hidden"
+                                ></div>
+                            </div>
+
+                            <div class="mt-5 form-grid">
+
+                                <div class="md:col-span-2">
+                                    <label for="lokasi" class="form-label">
+                                        Nama/alamat lokasi
+                                    </label>
+
+                                    <input
+                                        id="lokasi"
+                                        class="form-input"
+                                        type="text"
+                                        placeholder="Nama gedung atau alamat kegiatan"
+                                        required
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="kabupaten" class="form-label">
+                                        Kabupaten/kota
+                                    </label>
+
+                                    <input
+                                        id="kabupaten"
+                                        class="form-input"
+                                        type="text"
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="kecamatan" class="form-label">
+                                        Kecamatan
+                                    </label>
+
+                                    <input
+                                        id="kecamatan"
+                                        class="form-input"
+                                        type="text"
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="kelurahan" class="form-label">
+                                        Kelurahan/desa
+                                    </label>
+
+                                    <input
+                                        id="kelurahan"
+                                        class="form-input"
+                                        type="text"
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="latitude" class="form-label">
+                                        Latitude
+                                    </label>
+
+                                    <input
+                                        id="latitude"
+                                        class="form-input bg-slate-100"
+                                        type="text"
+                                        readonly
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="longitude" class="form-label">
+                                        Longitude
+                                    </label>
+
+                                    <input
+                                        id="longitude"
+                                        class="form-input bg-slate-100"
+                                        type="text"
+                                        readonly
+                                    >
+                                </div>
+
+                            </div>
+
+                            <div class="mt-5">
+
+                                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-800">
+                                            Pilih titik lokasi
+                                        </p>
+
+                                        <p class="text-xs text-slate-500">
+                                            Klik peta atau geser marker untuk menentukan lokasi.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        id="useMyLocationButton"
+                                        type="button"
+                                        class="btn-secondary"
+                                    >
+                                        Gunakan lokasi saya
+                                    </button>
+                                </div>
+
+                                <div id="locationMap"></div>
+
+                                <div class="mt-3 flex flex-col justify-between gap-2 sm:flex-row">
+                                    <p id="mapStatus" class="text-sm text-slate-500">
+                                        Belum ada titik lokasi yang dipilih.
+                                    </p>
+
+                                    <p class="text-xs text-slate-400">
+                                        Sumber peta: OpenStreetMap
+                                    </p>
+                                </div>
+
+                            </div>                        
+                    </section>
+
+                    <!-- ALASAN DAN KONSEP -->
+                    <div class="form-section">
+
+                        <div class="section-heading">
+                            <span class="section-number">4</span>
+
+                            <div>
+                                <h2>Alasan dan konsep</h2>
+                                <p>Jelaskan tujuan dan rencana kegiatan.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-5 md:grid-cols-2">
+
+                            <div>
+                                <label for="alasan" class="form-label">
+                                    Alasan PKM
+                                </label>
+
+                                <textarea
+                                    id="alasan"
+                                    class="form-input min-h-36"
+                                    placeholder="Tuliskan alasan pengajuan..."
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div>
+                                <label for="konsep" class="form-label">
+                                    Konsep PKM
+                                </label>
+
+                                <textarea
+                                    id="konsep"
+                                    class="form-input min-h-36"
+                                    placeholder="Tuliskan konsep pelaksanaan..."
+                                    required
+                                ></textarea>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- PEOPLE: HANYA TAMPIL UNTUK BTL -->
+                    <section
+                        id="peopleSection"
+                        class="form-section hidden"
+                        aria-hidden="true"
+                    >
+                                <div class="section-heading">
+                                    <span class="section-number">5</span>
+
+                                    <div>
+                                        <h2>Daftar people</h2>
+                                        <p>Cari dan pilih salesman yang terlibat.</p>
+                                    </div>
+                                </div>
+
+                                    <div class="people-picker">
+
+                                        <label for="peopleSearch" class="form-label">
+                                            Cari nama atau NIK salesman
+                                        </label>
+
+                                        <div class="people-search-wrapper">
+
+                                            <span class="people-search-icon">⌕</span>
+
+                                            <input
+                                                id="peopleSearch"
+                                                class="form-input people-search-input"
+                                                type="search"
+                                                placeholder="Ketik nama atau NIK..."
+                                                autocomplete="off"
+                                                disabled
+                                            >
+
+                                            <div
+                                                id="peopleSearchResults"
+                                                class="people-search-results hidden"
+                                            ></div>
+
+                                        </div>
+
+                                        <div class="selected-people-header">
+                                            <span>People terpilih</span>
+                                            <span id="selectedPeopleCount">0 orang</span>
+                                        </div>
+
+                                        <div id="selectedPeopleContainer" class="selected-people-container">
+                                            <div id="peopleEmptyState" class="people-empty-state">
+                                                Belum ada salesman yang dipilih.
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                    </section>
+
+
+                    <!-- PROGRAM DAN PUBLIKASI: HANYA TAMPIL UNTUK BTL -->
+                    <section
+                        id="publicationSection"
+                        class="form-section hidden"
+                        aria-hidden="true"
+                    >
+
+                                <div class="section-heading">
+                                    <span class="section-number">6</span>
+
+                                    <div>
+                                        <h2>Fokus program dan publikasi</h2>
+                                        <p>Tentukan fokus aktivitas dan media publikasinya.</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Fokus type</label>
+
+                                    <div class="option-group">
+
+                                        <label class="check-card">
+                                            <input
+                                                class="focus-type"
+                                                type="checkbox"
+                                                value="H1"
+                                            >
+                                            <span>Program H1</span>
+                                        </label>
+
+                                        <label class="check-card">
+                                            <input
+                                                class="focus-type"
+                                                type="checkbox"
+                                                value="H23"
+                                            >
+                                            <span>Program H23</span>
+                                        </label>
+
+                                    </div>
+                                </div>
+
+                                <div class="mt-5 grid gap-5 md:grid-cols-2">
+
+                                    <div id="programH1Container" class="hidden">
+                                        <label for="programH1" class="form-label">
+                                            Nama program H1
+                                        </label>
+
+                                        <input
+                                            id="programH1"
+                                            class="form-input"
+                                            type="text"
+                                        >
+                                    </div>
+
+                                    <div id="programH23Container" class="hidden">
+                                        <label for="programH23" class="form-label">
+                                            Nama program H23
+                                        </label>
+
+                                        <input
+                                            id="programH23"
+                                            class="form-input"
+                                            type="text"
+                                        >
+                                    </div>
+
+                                </div>
+
+                                <div class="publication-section mt-5">
+
+                                        <label class="form-label">
+                                            Publikasi
+                                        </label>
+
+                                        <div class="option-group">
+
+                                            <label class="check-card">
+                                                <input
+                                                    class="publication"
+                                                    type="checkbox"
+                                                    value="TO PEOPLE"
+                                                    disabled
+                                                >
+                                                <span>To People</span>
+                                            </label>
+
+                                            <label class="check-card">
+                                                <input
+                                                    class="publication"
+                                                    type="checkbox"
+                                                    value="SOSMED"
+                                                    disabled
+                                                >
+                                                <span>Sosmed</span>
+                                            </label>
+
+                                            <label class="check-card">
+                                                <input
+                                                    class="publication"
+                                                    type="checkbox"
+                                                    value="WA BLAST"
+                                                    disabled
+                                                >
+                                                <span>WA Blast</span>
+                                            </label>
+
+                                            <label class="check-card">
+                                                <input
+                                                    class="publication"
+                                                    type="checkbox"
+                                                    value="CANVASSING"
+                                                    disabled
+                                                >
+                                                <span>Canvassing</span>
+                                            </label>
+
+                                        </div>
+
+                                </div>
+                    </section>
+
+                    <!-- LEASING DAN DANA -->
+                    <div class="form-section fund-section">
+
+                        <!-- HEADER -->
+                        <div class="flex flex-wrap items-start justify-between gap-4">
+
+                            <div class="section-heading mb-0">
+                                <span class="section-number">7</span>
+
+                                <div>
+                                    <h2>Leasing support dan dana</h2>
+                                    <p>Masukkan sumber dana kegiatan.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SUMBER DANA -->
+                        <div class="mt-6 grid gap-4 md:grid-cols-3">
+
+                            <div class="compact-fund-field">
+                                <div class="fund-icon fund-icon-csm">
+                                    C
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <label for="danaCsm" class="form-label">
+                                        Dana CSM
+                                    </label>
+
+                                    <div class="currency-input">
+                                        <span>Rp</span>
+
+                                        <input
+                                            id="danaCsm"
+                                            type="number"
+                                            min="0"
+                                            step="1000"
+                                            value=""
+                                            placeholder="0"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="compact-fund-field">
+                                <div class="fund-icon fund-icon-md">
+                                    M
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <label for="danaMd" class="form-label">
+                                        Dana MD
+                                    </label>
+
+                                    <div class="currency-input">
+                                        <span>Rp</span>
+
+                                        <input
+                                            id="danaMd"
+                                            type="number"
+                                            min="0"
+                                            step="1000"
+                                            value=""
+                                            placeholder="0"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="compact-fund-field">
+                                <div class="fund-icon fund-icon-other">
+                                    +
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <label for="danaLain" class="form-label">
+                                        Dana lain-lain
+                                    </label>
+
+                                    <div class="currency-input">
+                                        <span>Rp</span>
+
+                                        <input
+                                            id="danaLain"
+                                            type="number"
+                                            min="0"
+                                            step="1000"
+                                            value=""
+                                            placeholder="0"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- LEASING -->
+                        <div class="leasing-compact-panel">
+
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+
+                                <div>
+                                    <h3 class="text-sm font-black text-slate-900">
+                                        Dana leasing
+                                    </h3>
+
+                                    <p class="text-xs text-slate-500">
+                                        Pilih leasing sebelum mengisi nominal.
+                                    </p>
+                                </div>
+
+                                <button
+                                    id="addLeasingButton"
+                                    class="compact-add-button"
+                                    type="button"
+                                >
+                                    <span>＋</span>
+                                    Tambah leasing
+                                </button>
+
+                            </div>
+
+                            <div id="leasingContainer" class="mt-3 space-y-2"></div>
+
+                        </div>
+
+                        <!-- RINCIAN TOTAL -->
+                        <div class="fund-summary">
+
+                            <div class="fund-summary-item">
+                                <span>CSM</span>
+                                <strong id="summaryDanaCsm">Rp0</strong>
+                            </div>
+
+                            <div class="fund-summary-item">
+                                <span>MD</span>
+                                <strong id="summaryDanaMd">Rp0</strong>
+                            </div>
+
+                            <div class="fund-summary-item">
+                                <span>Leasing</span>
+                                <strong id="summaryDanaLeasing">Rp0</strong>
+                            </div>
+
+                            <div class="fund-summary-item">
+                                <span>Lain-lain</span>
+                                <strong id="summaryDanaLain">Rp0</strong>
+                            </div>
+
+                            <div class="fund-summary-total">
+                                <span>Total</span>
+                                <strong id="summaryTotalDana">Rp0</strong>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- TARGET -->
+                    <div class="form-section">
+
+                        <div class="section-heading">
+                            <span class="section-number">8</span>
+
+                            <div>
+                                <h2>Target kegiatan</h2>
+                                <p>Masukkan target DB, deal, dan unit entry.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-5 md:grid-cols-3">
+
+                            <div>
+                                <label for="targetDb" class="form-label">
+                                    Target DB
+                                </label>
+
+                                <input
+                                    id="targetDb"
+                                    class="form-input"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                >
+                            </div>
+
+                            <div>
+                                <label for="targetDeal" class="form-label">
+                                    Target deal
+                                </label>
+
+                                <input
+                                    id="targetDeal"
+                                    class="form-input"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                >
+                            </div>
+
+                            <div id="targetUeContainer" class="hidden">
+                                <label for="targetUe" class="form-label">
+                                    Target UE
+                                </label>
+
+                                <input
+                                    id="targetUe"
+                                    class="form-input"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                >
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- TOMBOL SUBMIT -->
+                    <div id="submitPanel" class="sticky-submit submit-panel-locked">
+
+                        <div class="submit-information">
+
+                            <div id="submitStatusIcon" class="submit-status-icon">
+                                🔒
+                            </div>
+
+                            <div>
+                                <p id="submitStatusTitle" class="font-black text-slate-900">
+                                    Lengkapi pengajuan
+                                </p>
+
+                                <p id="submitStatusMessage" class="text-sm text-slate-500">
+                                    Tombol aktif setelah seluruh data wajib diisi.
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <button
+                            id="submitPkmButton"
+                            type="submit"
+                            class="submit-pkm-button"
+                            disabled
+                        >
+                            <span id="submitButtonIcon">🔒</span>
+                            <span id="submitButtonText">Lengkapi data</span>
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+            <!-- LIST PKM -->
+            <section id="listPkmPage" class="app-content hidden">
+
+                <div class="rounded-3xl bg-white p-6 shadow-sm">
+
+                    <div class="flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
+
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-900">
+                                List PKM
+                            </h2>
+
+                            <p class="mt-1 text-sm text-slate-500">
+                                Telusuri pengajuan baru maupun data PKM sebelumnya.
+                            </p>
+                        </div>
+
+                        <button
+                            class="btn-primary"
+                            data-page="pengajuanPage"
+                            type="button"
+                        >
+                            + Pengajuan baru
+                        </button>
+
+                    </div>
+
+                    <div class="mt-6 grid gap-4 md:grid-cols-4">
+
+                        <div class="md:col-span-2">
+                            <label for="searchPkm" class="form-label">
+                                Cari PKM
+                            </label>
+
+                            <input
+                                id="searchPkm"
+                                class="form-input"
+                                type="search"
+                                placeholder="Cari ID, nama, jenis, atau lokasi..."
+                            >
+                        </div>
+
+                        <div>
+                            <label for="statusFilter" class="form-label">
+                                Status
+                            </label>
+
+                            <select id="statusFilter" class="form-input">
+                                <option value="ALL">Semua status</option>
+                                <option value="MENUNGGU">Menunggu</option>
+                                <option value="ACC">ACC</option>
+                                <option value="DITOLAK">Ditolak</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="dataSourceFilter" class="form-label">
+                                Sumber data
+                            </label>
+
+                            <select id="dataSourceFilter" class="form-input">
+                                <option value="ALL">Semua data</option>
+                                <option value="WEB">Terbaru sejak web</option>
+                                <option value="LEGACY">Data PKM lama</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-6 overflow-x-auto">
+                        <table class="data-table min-w-[1100px]">
+                            <thead>
+                                <tr>
+                                    <th>ID PKM</th>
+                                    <th>Nama PKM</th>
+                                    <th>Cabang</th>
+                                    <th>Type</th>
+                                    <th>Pelaksanaan</th>
+                                    <th>Total dana</th>
+                                    <th>Status</th>
+                                    <th>Sumber</th>
+                                    <th class="text-right">Aksi</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="pkmTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="emptyPkm" class="empty-state hidden">
+                        Data PKM tidak ditemukan.
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+</section>
+
+<div id="toast" class="toast hidden"></div>
+
+<!-- MODAL PROSES APPROVAL -->
+<div
+    id="approvalModal"
+    class="fixed inset-0 z-[100] hidden"
+    aria-hidden="true"
+>
+    <!-- BACKDROP -->
+    <div
+        id="approvalModalBackdrop"
+        class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+    ></div>
+
+    <!-- MODAL CONTENT -->
+    <div
+        class="relative flex min-h-full items-center justify-center p-4"
+    >
+        <div
+            class="relative max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
+        >
+            <!-- HEADER -->
+            <div
+                class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5"
+            >
+                <div>
+                    <p
+                        id="approvalModalLabel"
+                        class="text-xs font-bold uppercase tracking-wider text-red-600"
+                    >
+                        Proses Approval
+                    </p>
+
+                    <h2
+                        id="approvalModalTitle"
+                        class="mt-1 text-xl font-black text-slate-900"
+                    >
+                        Persetujuan PKM
+                    </h2>
+
+                    <p
+                        id="approvalModalSubtitle"
+                        class="mt-1 text-sm text-slate-500"
+                    >
+                        Periksa seluruh informasi sebelum menyetujui.
+                    </p>
+                </div>
+
+                <button
+                    id="closeApprovalModalButton"
+                    type="button"
+                    class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-600 transition hover:bg-red-100 hover:text-red-600"
+                    aria-label="Tutup"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="space-y-6 p-6">
+                <!-- STATUS -->
+                <div
+                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                >
+                    <div
+                        id="approvalModalFlow"
+                        class="overflow-x-auto"
+                    ></div>
+                </div>
+
+                <!-- INFORMASI UTAMA -->
+                <div>
+                    <h3
+                        class="mb-4 text-base font-black text-slate-900"
+                    >
+                        Informasi pengajuan
+                    </h3>
+
+                    <div
+                        class="grid grid-cols-1 gap-4 md:grid-cols-2"
+                    >
+                        <div>
+                            <label class="form-label">
+                                ID Pengajuan
+                            </label>
+
+                            <input
+                                id="approvalId"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Nama PKM
+                            </label>
+
+                            <input
+                                id="approvalName"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Cabang
+                            </label>
+
+                            <input
+                                id="approvalBranch"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Jenis PKM
+                            </label>
+
+                            <input
+                                id="approvalType"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Type
+                            </label>
+
+                            <input
+                                id="approvalProductType"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Jenis kegiatan
+                            </label>
+
+                            <input
+                                id="approvalActivity"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Waktu mulai
+                            </label>
+
+                            <input
+                                id="approvalStartDate"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Waktu selesai
+                            </label>
+
+                            <input
+                                id="approvalEndDate"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="form-label">
+                                Lokasi
+                            </label>
+
+                            <input
+                                id="approvalLocation"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Total dana
+                            </label>
+
+                            <input
+                                id="approvalFund"
+                                class="form-input bg-slate-100 font-black text-red-700"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div>
+                            <label class="form-label">
+                                Target
+                            </label>
+
+                            <input
+                                id="approvalTarget"
+                                class="form-input bg-slate-100"
+                                type="text"
+                                readonly
+                            >
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="form-label">
+                                Alasan PKM
+                            </label>
+
+                            <textarea
+                                id="approvalReason"
+                                class="form-input min-h-24 resize-none bg-slate-100"
+                                readonly
+                            ></textarea>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="form-label">
+                                Konsep PKM
+                            </label>
+
+                            <textarea
+                                id="approvalConcept"
+                                class="form-input min-h-24 resize-none bg-slate-100"
+                                readonly
+                            ></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIWAYAT APPROVAL -->
+                <div>
+                    <h3
+                        class="mb-4 text-base font-black text-slate-900"
+                    >
+                        Riwayat approval
+                    </h3>
+
+                    <div
+                        id="approvalHistoryContainer"
+                        class="space-y-3"
+                    ></div>
+                </div>
+
+                <!-- TANDA TANGAN -->
+                <div
+                    id="signatureSection"
+                    class="rounded-2xl border-2 border-red-100 bg-red-50/40 p-5"
+                >
+                    <div
+                        class="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center"
+                    >
+                        <div>
+                            <h3
+                                class="font-black text-slate-900"
+                            >
+                                Tanda tangan persetujuan
+                            </h3>
+
+                            <p
+                                id="signatureInformation"
+                                class="mt-1 text-sm text-slate-500"
+                            >
+                                Buat tanda tangan pada kotak berikut.
+                            </p>
+                        </div>
+
+                        <button
+                            id="clearSignatureButton"
+                            type="button"
+                            class="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50"
+                        >
+                            Hapus TTD
+                        </button>
+                    </div>
+
+                    <div
+                        class="overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-white"
+                    >
+                        <canvas
+                            id="signatureCanvas"
+                            width="1000"
+                            height="260"
+                            class="block h-[220px] w-full cursor-crosshair bg-white"
+                        ></canvas>
+                    </div>
+
+                    <p
+                        id="signatureError"
+                        class="mt-2 hidden text-sm font-bold text-red-600"
+                    >
+                        Tanda tangan wajib dibuat sebelum menyetujui.
+                    </p>
+
+                    <div
+                        class="mt-4 rounded-xl bg-white p-4 text-sm text-slate-600"
+                    >
+                        Dengan menekan tombol Setujui, saya menyatakan
+                        bahwa data pengajuan telah diperiksa dan disetujui.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div
+                class="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:justify-end"
+            >
+                <button
+                    id="cancelApprovalButton"
+                    type="button"
+                    class="rounded-xl border border-slate-300 px-6 py-3 font-bold text-slate-700 hover:bg-slate-100"
+                >
+                    Tutup
+                </button>
+
+                <button
+                    id="approveWithSignatureButton"
+                    type="button"
+                    class="rounded-xl bg-red-600 px-7 py-3 font-black text-white shadow-lg shadow-red-200 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                    disabled
+                >
+                    ✓ Setujui Pengajuan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+
+<script src="app.js"></script>
+</body>
+</html>
