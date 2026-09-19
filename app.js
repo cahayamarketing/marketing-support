@@ -5290,6 +5290,8 @@ function getProfileCanvasPosition(event) {
 }
 
 
+
+
 profileSignatureCanvas.addEventListener(
     "pointerdown",
     function (event) {
@@ -5360,6 +5362,34 @@ function clearProfileSignature() {
     profileSignatureHasDrawing = false;
     uploadedSignatureData = "";
 
+    document
+        .getElementById(
+            "chooseDrawSignature"
+        )
+        .addEventListener(
+            "click",
+            function () {
+                uploadedSignatureData = "";
+
+                document.getElementById(
+                    "profileSignatureUpload"
+                ).value = "";
+
+                document.getElementById(
+                    "uploadedSignaturePreview"
+                ).removeAttribute("src");
+
+                document.getElementById(
+                    "uploadedSignaturePreviewContainer"
+                ).classList.add("hidden");
+
+                profileSignatureCanvas.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+            }
+        );
+
     document.getElementById(
         "profileSignatureUpload"
     ).value = "";
@@ -5387,6 +5417,15 @@ document
             if (!file) {
                 return;
             }
+
+            profileSignatureContext.clearRect(
+                0,
+                0,
+                profileSignatureCanvas.width,
+                profileSignatureCanvas.height
+            );
+
+            profileSignatureHasDrawing = false;
 
             if (
                 !file.type.startsWith(
