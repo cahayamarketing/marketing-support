@@ -10,7 +10,10 @@
 const savedSession =
     sessionStorage.getItem("currentUser");
 
-if (!savedSession) {
+const sessionToken =
+    sessionStorage.getItem("sessionToken");
+
+if (!savedSession || !sessionToken) {
     window.location.replace("login.html");
 
     throw new Error(
@@ -19,6 +22,16 @@ if (!savedSession) {
 }
 
 let currentUser;
+
+let sheetPkmData = [];
+let sheetBranchOptions = [];
+let activePkmFilters = {
+    startDate: "",
+    endDate: "",
+    jenisPkm: "ALL",
+    branches: []
+};
+let pkmDataLoading = false;
 
 try {
     currentUser =
@@ -538,6 +551,449 @@ function saveStoredPkm(data) {
     );
 }
 
+/*
+|--------------------------------------------------------------------------
+| API DAN FILTER DATA PKM
+|--------------------------------------------------------------------------
+*/
+
+async function requestBackend(action, payload = {}) {
+    const response = await fetch("/api/gas", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            action: action,
+            token: sessionToken,
+            payload: payload
+        })
+    });
+
+    let data;
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        throw new Error(
+            "Respons server tidak dapat dibaca."
+        );
+    }
+
+    if (!response.ok || !data.success) {
+        throw new Error(
+            data.message ||
+            "Permintaan ke server gagal."
+        );
+    }
+
+    return data.result;
+}
+
+function toDateInputValue(date) {
+    const year = date.getFullYear();
+    const month = String(
+        date.getMonth() + 1
+    ).padStart(2, "0");
+    const day = String(
+        date.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+function getCurrentMonthRange() {
+    const now = new Date();
+
+    return {
+        startDate: toDateInputValue(
+            new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                1
+            )
+        ),
+        endDate: toDateInputValue(
+            new Date(
+                now.getFullYear(),
+                now.getMonth() + 1,
+                0
+            )
+        )
+    };
+}
+
+function isHeadOfficeUser() {
+    return (
+        currentUser.branch === "ALL" ||
+        currentUser.originalBranch === "HO"
+    );
+}
+
+function initializePkmFilters() {
+    const range = getCurrentMonthRange();
+
+    ["dashboard", "list"].forEach(
+        function (prefix) {
+            const startInput = document.getElementById(
+                `${prefix}StartDate`
+            );
+            const endInput = document.getElementById(
+                `${prefix}EndDate`
+            );
+
+            if (startInput) {
+                startInput.value = range.startDate;
+            }
+
+            if (endInput) {
+                endInput.value = range.endDate;
+            }
+        }
+    );
+
+    activePkmFilters = {
+        startDate: range.startDate,
+        endDate: range.endDate,
+        jenisPkm: "ALL",
+        branches: isHeadOfficeUser()
+            ? []
+            : [
+                currentUser.originalBranch ||
+                currentUser.branch
+            ]
+    };
+}
+
+function renderBranchFilter(prefix) {
+    const container = document.getElementById(
+        `${prefix}BranchFilter`
+    );
+
+    if (!container) {
+        return;
+    }
+
+    if (!isHeadOfficeUser()) {
+        container.innerHTML = `
+            <input
+                class="form-input bg-slate-100 font-bold text-slate-600"
+                type="text"
+                value="${escapeHtml(
+                    `${currentUser.originalBranch || currentUser.branch} — ${currentUser.branchName}`
+                )}"
+                readonly
+            >
+        `;
+
+        return;
+    }
+
+    container.innerHTML = `
+        <details class="relative">
+            <summary class="form-input flex cursor-pointer list-none items-center justify-between font-bold">
+                <span id="${prefix}BranchSummary">Semua cabang</span>
+                <span>⌄</span>
+            </summary>
+
+            <div class="absolute left-0 right-0 z-40 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                <label class="mb-2 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-slate-50">
+                    <input type="checkbox" data-branch-all="${prefix}" checked>
+                    <span class="font-black text-slate-800">Semua cabang</span>
+                </label>
+
+                <div class="border-t border-slate-100 pt-2">
+                    ${sheetBranchOptions.map(function (branch) {
+                        return `
+                            <label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-slate-50">
+                                <input
+                                    type="checkbox"
+                                    data-branch-option="${prefix}"
+                                    value="${escapeHtml(branch.code)}"
+                                >
+                                <span class="text-sm font-bold text-slate-700">
+                                    ${escapeHtml(branch.code)} — ${escapeHtml(branch.name)}
+                                </span>
+                            </label>
+                        `;
+                    }).join("")}
+                </div>
+            </div>
+        </details>
+    `;
+
+    const allCheckbox = container.querySelector(
+        `[data-branch-all="${prefix}"]`
+    );
+
+    const branchCheckboxes = [
+        ...container.querySelectorAll(
+            `[data-branch-option="${prefix}"]`
+        )
+    ];
+
+    function updateSummary() {
+        const selected = branchCheckboxes
+            .filter(function (checkbox) {
+                return checkbox.checked;
+            })
+            .map(function (checkbox) {
+                return checkbox.value;
+            });
+
+        const summary = document.getElementById(
+            `${prefix}BranchSummary`
+        );
+
+        if (allCheckbox.checked || !selected.length) {
+            summary.textContent = "Semua cabang";
+        } else if (selected.length <= 3) {
+            summary.textContent = selected.join(", ");
+        } else {
+            summary.textContent = `${selected.length} cabang dipilih`;
+        }
+    }
+
+    allCheckbox.addEventListener("change", function () {
+        if (allCheckbox.checked) {
+            branchCheckboxes.forEach(function (checkbox) {
+                checkbox.checked = false;
+            });
+        }
+
+        updateSummary();
+    });
+
+    branchCheckboxes.forEach(function (checkbox) {
+        checkbox.addEventListener("change", function () {
+            if (checkbox.checked) {
+                allCheckbox.checked = false;
+            }
+
+            if (
+                !branchCheckboxes.some(function (item) {
+                    return item.checked;
+                })
+            ) {
+                allCheckbox.checked = true;
+            }
+
+            updateSummary();
+        });
+    });
+}
+
+function getSelectedBranches(prefix) {
+    if (!isHeadOfficeUser()) {
+        return [
+            currentUser.originalBranch ||
+            currentUser.branch
+        ];
+    }
+
+    const allCheckbox = document.querySelector(
+        `[data-branch-all="${prefix}"]`
+    );
+
+    if (!allCheckbox || allCheckbox.checked) {
+        return [];
+    }
+
+    return [
+        ...document.querySelectorAll(
+            `[data-branch-option="${prefix}"]:checked`
+        )
+    ].map(function (checkbox) {
+        return checkbox.value;
+    });
+}
+
+function readPkmFilters(prefix) {
+    return {
+        startDate:
+            document.getElementById(
+                `${prefix}StartDate`
+            )?.value || "",
+
+        endDate:
+            document.getElementById(
+                `${prefix}EndDate`
+            )?.value || "",
+
+        jenisPkm:
+            document.getElementById(
+                `${prefix}JenisPkm`
+            )?.value || "ALL",
+
+        branches: getSelectedBranches(prefix)
+    };
+}
+
+function validatePkmFilter(filters) {
+    if (
+        filters.startDate &&
+        filters.endDate &&
+        filters.startDate > filters.endDate
+    ) {
+        throw new Error(
+            "Tanggal pelaksanaan awal tidak boleh melebihi tanggal akhir."
+        );
+    }
+}
+
+function setPkmLoading(isLoading) {
+    pkmDataLoading = isLoading;
+
+    [
+        "applyDashboardFilter",
+        "applyPkmFilter"
+    ].forEach(function (id) {
+        const button = document.getElementById(id);
+
+        if (button) {
+            button.disabled = isLoading;
+            button.classList.toggle(
+                "opacity-60",
+                isLoading
+            );
+        }
+    });
+}
+
+async function loadPkmData(prefix = "dashboard") {
+    if (pkmDataLoading) {
+        return;
+    }
+
+    try {
+        const filters = readPkmFilters(prefix);
+        validatePkmFilter(filters);
+        setPkmLoading(true);
+
+        const result = await requestBackend(
+            "getPkmData",
+            filters
+        );
+
+        sheetPkmData = Array.isArray(result.data)
+            ? result.data
+            : [];
+
+        sheetBranchOptions = Array.isArray(result.branches)
+            ? result.branches
+            : [];
+
+        activePkmFilters = result.appliedFilters || filters;
+
+        if (
+            isHeadOfficeUser() &&
+            !document.querySelector(
+                '[data-branch-option="dashboard"]'
+            )
+        ) {
+            renderBranchFilter("dashboard");
+            renderBranchFilter("list");
+        }
+
+        renderAllData();
+        updateFilterInformation(prefix);
+    } catch (error) {
+        if (
+            String(error.message).includes(
+                "Sesi login"
+            )
+        ) {
+            sessionStorage.clear();
+            window.location.replace("login.html");
+            return;
+        }
+
+        showToast(
+            error.message ||
+            "Data PKM gagal dimuat."
+        );
+    } finally {
+        setPkmLoading(false);
+    }
+}
+
+function updateFilterInformation(prefix) {
+    const branches = activePkmFilters.branches || [];
+    const branchText = isHeadOfficeUser()
+        ? (
+            branches.length === sheetBranchOptions.length ||
+            !branches.length
+                ? "Semua cabang"
+                : branches.join(", ")
+        )
+        : `${currentUser.originalBranch || currentUser.branch}`;
+
+    const dateText =
+        activePkmFilters.startDate &&
+        activePkmFilters.endDate
+            ? `${activePkmFilters.startDate} s.d. ${activePkmFilters.endDate}`
+            : "Semua tanggal pelaksanaan";
+
+    const message =
+        `${dateText} • ${activePkmFilters.jenisPkm || "ALL"} • ${branchText}`;
+
+    [
+        "dashboardFilterInfo",
+        "listFilterInfo"
+    ].forEach(function (id) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = message;
+        }
+    });
+}
+
+function matchesActivePkmFilters(item) {
+    const filter = activePkmFilters;
+    const selectedBranches = filter.branches || [];
+
+    if (
+        selectedBranches.length &&
+        !selectedBranches.includes(item.branch)
+    ) {
+        return false;
+    }
+
+    if (
+        filter.jenisPkm !== "ALL" &&
+        item.jenisPkm !== filter.jenisPkm
+    ) {
+        return false;
+    }
+
+    const start = item.startDate
+        ? new Date(item.startDate)
+        : null;
+    const end = item.endDate
+        ? new Date(item.endDate)
+        : start;
+    const filterStart = filter.startDate
+        ? new Date(`${filter.startDate}T00:00:00`)
+        : null;
+    const filterEnd = filter.endDate
+        ? new Date(`${filter.endDate}T23:59:59`)
+        : null;
+
+    if (!start && (filterStart || filterEnd)) {
+        return false;
+    }
+
+    if (filterEnd && start > filterEnd) {
+        return false;
+    }
+
+    if (filterStart && end < filterStart) {
+        return false;
+    }
+
+    return true;
+}
+
 function escapeHtml(value) {
     const temporaryElement = document.createElement("div");
 
@@ -636,7 +1092,7 @@ function populateJenisPkmOptions() {
 |--------------------------------------------------------------------------
 */
 
-function initializeApplication() {
+async function initializeApplication() {
     document.getElementById(
         "sidebarUserName"
     ).textContent = currentUser.name;
@@ -677,6 +1133,12 @@ function initializeApplication() {
     */
 
     populateJenisPkmOptions();
+    initializePkmFilters();
+
+    if (!isHeadOfficeUser()) {
+        renderBranchFilter("dashboard");
+        renderBranchFilter("list");
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -708,7 +1170,7 @@ function initializeApplication() {
 
     showPage("dashboardPage");
 
-    renderAllData();
+    await loadPkmData("dashboard");
 
     /*
     |--------------------------------------------------------------------------
@@ -731,7 +1193,7 @@ document
     .getElementById("logoutButton")
     .addEventListener(
         "click",
-        function () {
+        async function () {
             const confirmed =
                 window.confirm(
                     "Apakah Anda yakin ingin keluar?"
@@ -741,9 +1203,14 @@ document
                 return;
             }
 
-            sessionStorage.removeItem(
-                "currentUser"
-            );
+            try {
+                await requestBackend("logout");
+            } catch (error) {
+                // Session lokal tetap dibersihkan jika API logout gagal.
+            }
+
+            sessionStorage.removeItem("currentUser");
+            sessionStorage.removeItem("sessionToken");
 
             window.location.replace(
                 "login.html"
@@ -2311,10 +2778,18 @@ function resetPkmForm() {
 */
 
 function getBranchPkm() {
+    const localData = getStoredPkm().filter(
+        matchesActivePkmFilters
+    );
+
     const allData = [
-        ...getStoredPkm(),
-        ...legacyPkm
-    ];
+        ...localData,
+        ...sheetPkmData
+    ].filter(function (item, index, data) {
+        return data.findIndex(function (candidate) {
+            return candidate.id === item.id;
+        }) === index;
+    });
 
     let filteredData = allData;
 
@@ -2330,8 +2805,12 @@ function getBranchPkm() {
 
     return filteredData.sort(function (a, b) {
         return (
-            new Date(b.createdAt).getTime() -
-            new Date(a.createdAt).getTime()
+            new Date(
+                b.startDate || b.createdAt || 0
+            ).getTime() -
+            new Date(
+                a.startDate || a.createdAt || 0
+            ).getTime()
         );
     });
 }
@@ -2458,6 +2937,11 @@ function renderRecentPkm(data) {
 */
 
 function statusBadge(status) {
+    const normalizedStatus = String(status || "")
+        .trim()
+        .toUpperCase()
+        .replaceAll(" ", "_");
+
     const statusInformation = {
         MENUNGGU_KACAB: {
             label: "Menunggu KACAB",
@@ -2503,7 +2987,7 @@ function statusBadge(status) {
     };
 
     const information =
-        statusInformation[status] || {
+        statusInformation[normalizedStatus] || {
             label: status || "-",
             className:
                 "bg-slate-100 text-slate-600"
@@ -2529,7 +3013,9 @@ function sourceBadge(source) {
         }">
             ${isWeb
                 ? "WEB BARU"
-                : "DATA LAMA"
+                : source === "SHEET"
+                    ? "SPREADSHEET"
+                    : "DATA LAMA"
             }
         </span>
     `;
@@ -2586,7 +3072,15 @@ function canCurrentUserProcess(item) {
     const approvalStep =
         getApprovalStep(item);
 
+    const sameBranch =
+        isHeadOfficeUser() ||
+        item.branch === (
+            currentUser.originalBranch ||
+            currentUser.branch
+        );
+
     return (
+        sameBranch &&
         item.source === "WEB" &&
         approvalStep === userRole &&
         ["KACAB", "MSCM", "MGR"].includes(
@@ -2755,15 +3249,9 @@ function renderPkmTable() {
             "statusFilter"
         );
 
-    const sourceInput =
-        document.getElementById(
-            "dataSourceFilter"
-        );
-
     if (
         !searchInput ||
-        !statusInput ||
-        !sourceInput
+        !statusInput
     ) {
         return;
     }
@@ -2776,9 +3264,6 @@ function renderPkmTable() {
     const statusFilter =
         statusInput.value;
 
-    const sourceFilter =
-        sourceInput.value;
-
     const data = getBranchPkm().filter(
         function (item) {
             const combinedText = [
@@ -2788,7 +3273,20 @@ function renderPkmTable() {
                 item.branchName,
                 item.jenisPkm,
                 item.kegiatan,
-                item.location
+                item.location,
+                item.kabupaten,
+                item.kecamatan,
+                item.kelurahan,
+                item.konsep,
+                item.alasan,
+                Array.isArray(item.people)
+                    ? item.people.join(" ")
+                    : item.people,
+                Array.isArray(item.leasing)
+                    ? item.leasing.join(" ")
+                    : item.leasing,
+                item.status,
+                item.approvalStep
             ]
                 .join(" ")
                 .toLowerCase();
@@ -2827,18 +3325,20 @@ function renderPkmTable() {
                     statusFilter;
             }
 
-            const matchesSource =
-                sourceFilter === "ALL" ||
-                item.source ===
-                    sourceFilter;
-
             return (
                 matchesSearch &&
-                matchesStatus &&
-                matchesSource
+                matchesStatus
             );
         }
     );
+
+    const resultCount = document.getElementById(
+        "listResultCount"
+    );
+
+    if (resultCount) {
+        resultCount.textContent = `${data.length} data`;
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -3928,8 +4428,63 @@ document
     .addEventListener("change", renderPkmTable);
 
 document
-    .getElementById("dataSourceFilter")
-    .addEventListener("change", renderPkmTable);
+    .getElementById("applyDashboardFilter")
+    .addEventListener("click", function () {
+        loadPkmData("dashboard");
+    });
+
+document
+    .getElementById("applyPkmFilter")
+    .addEventListener("click", function () {
+        loadPkmData("list");
+    });
+
+document
+    .getElementById("resetPkmFilter")
+    .addEventListener("click", function () {
+        const range = getCurrentMonthRange();
+
+        document.getElementById("searchPkm").value = "";
+        document.getElementById("statusFilter").value = "ALL";
+        document.getElementById("listJenisPkm").value = "ALL";
+        document.getElementById("listStartDate").value = range.startDate;
+        document.getElementById("listEndDate").value = range.endDate;
+
+        if (isHeadOfficeUser()) {
+            const allCheckbox = document.querySelector(
+                '[data-branch-all="list"]'
+            );
+
+            if (allCheckbox) {
+                allCheckbox.checked = true;
+            }
+
+            document
+                .querySelectorAll('[data-branch-option="list"]')
+                .forEach(function (checkbox) {
+                    checkbox.checked = false;
+                });
+
+            const summary = document.getElementById(
+                "listBranchSummary"
+            );
+
+            if (summary) {
+                summary.textContent = "Semua cabang";
+            }
+        }
+
+        loadPkmData("list");
+    });
+
+document
+    .getElementById("searchPkm")
+    .addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            loadPkmData("list");
+        }
+    });
 
 /*
 |--------------------------------------------------------------------------
