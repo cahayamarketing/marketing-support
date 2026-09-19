@@ -572,9 +572,11 @@ function saveStoredPkm(data) {
 async function requestBackend(action, payload = {}) {
     const response = await fetch("/api/gas", {
         method: "POST",
+
         headers: {
             "Content-Type": "application/json"
         },
+
         body: JSON.stringify({
             action: action,
             token: sessionToken,
@@ -592,14 +594,53 @@ async function requestBackend(action, payload = {}) {
         );
     }
 
-    if (!response.ok || !data.success) {
-        throw new Error(
+    /*
+    |--------------------------------------------------------------------------
+    | TANGANI ERROR DARI VERCEL ATAU APPS SCRIPT
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        !response.ok ||
+        data.success === false
+    ) {
+        const serverMessage =
             data.message ||
-            "Permintaan ke server gagal."
+            data.error?.message ||
+            (
+                typeof data.error === "string"
+                    ? data.error
+                    : ""
+            );
+
+        throw new Error(
+            serverMessage ||
+            `Permintaan ke server gagal (HTTP ${response.status}).`
         );
     }
 
-    return data.result;
+    /*
+    |--------------------------------------------------------------------------
+    | FORMAT RESPONSE
+    |--------------------------------------------------------------------------
+    | Apps Script biasanya:
+    | { success: true, result: {...} }
+    |
+    | Proxy Vercel juga dapat langsung mengembalikan:
+    | {...}
+    */
+
+    if (
+        data.success === true &&
+        Object.prototype.hasOwnProperty.call(
+            data,
+            "result"
+        )
+    ) {
+        return data.result;
+    }
+
+    return data;
 }
 
 function toDateInputValue(date) {
@@ -891,9 +932,12 @@ async function loadPkmData(prefix = "dashboard") {
             ? result.data
             : [];
 
-        sheetBranchOptions = Array.isArray(result.branches)
-            ? result.branches
-            : [];
+        if (
+            Array.isArray(result.branches) &&
+            result.branches.length
+        ) {
+            sheetBranchOptions = result.branches;
+        }
 
         activePkmFilters = result.appliedFilters || filters;
 
@@ -1147,10 +1191,8 @@ async function initializeApplication() {
     populateJenisPkmOptions();
     initializePkmFilters();
 
-    if (!isHeadOfficeUser()) {
-        renderBranchFilter("dashboard");
-        renderBranchFilter("list");
-    }
+    renderBranchFilter("dashboard");
+    renderBranchFilter("list");
 
     /*
     |--------------------------------------------------------------------------
