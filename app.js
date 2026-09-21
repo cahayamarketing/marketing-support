@@ -3281,18 +3281,38 @@ function canCurrentUserProcess(item) {
         getCurrentUserRole();
 
     const approvalStep =
-        getApprovalStep(item);
+        String(
+            getApprovalStep(item) || ""
+        )
+            .trim()
+            .toUpperCase();
 
-    const sameBranch =
-        isHeadOfficeUser() ||
-        item.branch === (
+    const userBranch =
+        String(
             currentUser.originalBranch ||
-            currentUser.branch
-        );
+            currentUser.branch ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const itemBranch =
+        String(item.branch || "")
+            .trim()
+            .toUpperCase();
+
+    /*
+    | KACAB hanya dapat memproses cabangnya.
+    | MSCM dan MGR dari HO dapat memproses semua cabang.
+    */
+
+    const branchAllowed =
+        userRole === "KACAB"
+            ? itemBranch === userBranch
+            : isHeadOfficeUser();
 
     return (
-        sameBranch &&
-        item.source === "WEB" &&
+        branchAllowed &&
         approvalStep === userRole &&
         ["KACAB", "MSCM", "MGR"].includes(
             userRole
@@ -3856,6 +3876,8 @@ const signatureError =
     );
 
 let signatureIsDrawing = false;
+let approvalSignatureMode = "";
+let savedApprovalSignatureAvailable = false;
 
 
 /*
@@ -3876,6 +3898,148 @@ function setApprovalField(
     }
 }
 
+function selectApprovalSignatureMode(mode) {
+    const savedButton =
+        document.getElementById(
+            "useSavedApprovalSignature"
+        );
+
+    const drawnButton =
+        document.getElementById(
+            "useDrawnApprovalSignature"
+        );
+
+    const savedPanel =
+        document.getElementById(
+            "savedApprovalSignaturePanel"
+        );
+
+    const drawnPanel =
+        document.getElementById(
+            "drawnApprovalSignaturePanel"
+        );
+
+    if (
+        mode === "SAVED" &&
+        !savedApprovalSignatureAvailable
+    ) {
+        showToast(
+            "Anda belum memiliki TTD tersimpan."
+        );
+
+        return;
+    }
+
+    approvalSignatureMode = mode;
+
+    savedPanel.classList.toggle(
+        "hidden",
+        mode !== "SAVED"
+    );
+
+    drawnPanel.classList.toggle(
+        "hidden",
+        mode !== "DRAWN"
+    );
+
+    savedButton.classList.toggle(
+        "border-red-500",
+        mode === "SAVED"
+    );
+
+    savedButton.classList.toggle(
+        "bg-red-50",
+        mode === "SAVED"
+    );
+
+    drawnButton.classList.toggle(
+        "border-red-500",
+        mode === "DRAWN"
+    );
+
+    drawnButton.classList.toggle(
+        "bg-red-50",
+        mode === "DRAWN"
+    );
+
+    approveWithSignatureButton.disabled =
+        mode === "SAVED"
+            ? !savedApprovalSignatureAvailable
+            : !signatureHasDrawing;
+
+    signatureError.classList.add(
+        "hidden"
+    );
+}
+
+
+async function prepareApprovalSignature() {
+    const status =
+        document.getElementById(
+            "savedApprovalSignatureStatus"
+        );
+
+    const image =
+        document.getElementById(
+            "savedApprovalSignatureImage"
+        );
+
+    approvalSignatureMode = "";
+    savedApprovalSignatureAvailable =
+        false;
+
+    status.textContent =
+        "Memeriksa TTD profil...";
+
+    image.removeAttribute("src");
+
+    clearSignature();
+
+    try {
+        const profile =
+            await requestBackend(
+                "getMyProfile"
+            );
+
+        savedApprovalSignatureAvailable =
+            Boolean(
+                profile.hasSignature &&
+                profile.signatureData
+            );
+
+        if (
+            savedApprovalSignatureAvailable
+        ) {
+            image.src =
+                profile.signatureData;
+
+            status.textContent =
+                `Terakhir diperbarui: ${
+                    profile.signatureUpdatedAt ||
+                    "-"
+                }`;
+
+            selectApprovalSignatureMode(
+                "SAVED"
+            );
+        } else {
+            status.textContent =
+                "Belum ada TTD tersimpan.";
+
+            selectApprovalSignatureMode(
+                "DRAWN"
+            );
+        }
+    } catch (error) {
+        status.textContent =
+            "TTD profil gagal dimuat.";
+
+        selectApprovalSignatureMode(
+            "DRAWN"
+        );
+    }
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -3883,7 +4047,7 @@ function setApprovalField(
 |--------------------------------------------------------------------------
 */
 
-function openApprovalModal(itemId) {
+async function openApprovalModal(itemId) {  
     const item = getBranchPkm().find(
         function (pkm) {
             return pkm.id === itemId;
@@ -4023,9 +4187,11 @@ function openApprovalModal(itemId) {
         "modal-open"
     );
 
-    window.setTimeout(function () {
+    if (canProcess) {
+        await prepareApprovalSignature();
+    } else {
         clearSignature();
-    }, 50);
+    }
 }
 
 
@@ -4231,7 +4397,9 @@ function drawSignature(event) {
     signatureHasDrawing = true;
 
     approveWithSignatureButton.disabled =
-        false;
+        approvalSignatureMode === "SAVED"
+            ? !savedApprovalSignatureAvailable
+            : true;
 
     signatureError.classList.add(
         "hidden"
@@ -4507,6 +4675,33 @@ approveWithSignatureButton.addEventListener(
     "click",
     approvePkmWithSignature
 );
+
+document
+    .getElementById(
+        "useSavedApprovalSignature"
+    )
+    .addEventListener(
+        "click",
+        function () {
+            selectApprovalSignatureMode(
+                "SAVED"
+            );
+        }
+    );
+
+
+document
+    .getElementById(
+        "useDrawnApprovalSignature"
+    )
+    .addEventListener(
+        "click",
+        function () {
+            selectApprovalSignatureMode(
+                "DRAWN"
+            );
+        }
+    );
 
 /*
 |--------------------------------------------------------------------------
