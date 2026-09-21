@@ -3979,6 +3979,49 @@ function selectApprovalSignatureMode(mode) {
 }
 
 
+function resetApprovalSignatureSelection() {
+    approvalSignatureMode = "";
+
+    document
+        .getElementById(
+            "savedApprovalSignaturePanel"
+        )
+        .classList.add("hidden");
+
+    document
+        .getElementById(
+            "drawnApprovalSignaturePanel"
+        )
+        .classList.add("hidden");
+
+    const savedButton =
+        document.getElementById(
+            "useSavedApprovalSignature"
+        );
+
+    const drawnButton =
+        document.getElementById(
+            "useDrawnApprovalSignature"
+        );
+
+    savedButton.classList.remove(
+        "border-red-500",
+        "bg-red-50"
+    );
+
+    drawnButton.classList.remove(
+        "border-red-500",
+        "bg-red-50"
+    );
+
+    approveWithSignatureButton.disabled =
+        true;
+
+    signatureError.classList.add(
+        "hidden"
+    );
+}
+
 async function prepareApprovalSignature() {
     const status =
         document.getElementById(
@@ -4030,19 +4073,15 @@ async function prepareApprovalSignature() {
             );
         } else {
             status.textContent =
-                "Belum ada TTD tersimpan.";
+                "Belum ada TTD tersimpan. Klik Gambar TTD untuk membuatnya.";
 
-            selectApprovalSignatureMode(
-                "DRAWN"
-            );
+            resetApprovalSignatureSelection();
         }
     } catch (error) {
         status.textContent =
-            "TTD profil gagal dimuat.";
+            "TTD profil gagal dimuat. Anda tetap dapat menggambar TTD.";
 
-        selectApprovalSignatureMode(
-            "DRAWN"
-        );
+        resetApprovalSignatureSelection();
     }
 }
 
@@ -4560,50 +4599,60 @@ signatureCanvas.addEventListener(
 |--------------------------------------------------------------------------
 */
 
-function approvePkmWithSignature() {
-    if (!signatureHasDrawing) {
+async function approvePkmWithSignature() {
+    if (!approvalSignatureMode) {
         signatureError.classList.remove(
             "hidden"
         );
 
         showToast(
-            "Tanda tangan wajib dibuat."
+            "Pilih metode tanda tangan."
         );
 
         return;
     }
 
-    const storedPkm =
-        getStoredPkm();
+    if (
+        approvalSignatureMode === "DRAWN" &&
+        !signatureHasDrawing
+    ) {
+        signatureError.classList.remove(
+            "hidden"
+        );
 
-    const itemIndex =
-        storedPkm.findIndex(
-            function (item) {
+        showToast(
+            "Silakan gambar tanda tangan terlebih dahulu."
+        );
+
+        return;
+    }
+
+    /*
+    | Ambil data dari hasil Spreadsheet,
+    | bukan dari localStorage.
+    */
+
+    const item =
+        sheetPkmData.find(
+            function (pkm) {
                 return (
-                    item.id ===
-                    activeApprovalPkmId
+                    String(pkm.id) ===
+                    String(
+                        activeApprovalPkmId
+                    )
                 );
             }
         );
 
-    if (itemIndex < 0) {
+    if (!item) {
         showToast(
-            "Data pengajuan tidak ditemukan."
+            "Data pengajuan tidak ditemukan. Silakan muat ulang List PKM."
         );
 
         return;
     }
 
-    const item =
-        storedPkm[itemIndex];
-
-    const currentRole =
-        getCurrentUserRole();
-
-    if (
-        getApprovalStep(item) !==
-        currentRole
-    ) {
+    if (!canCurrentUserProcess(item)) {
         showToast(
             "Pengajuan ini bukan giliran Anda."
         );
@@ -4620,76 +4669,59 @@ function approvePkmWithSignature() {
         return;
     }
 
+    let signatureData = "";
+
     if (
-        !Array.isArray(
-            item.approvalHistory
-        )
+        approvalSignatureMode === "DRAWN"
     ) {
-        item.approvalHistory = [];
-    }
-
-    item.approvalHistory.push({
-        role: currentRole,
-        action: "MENYETUJUI",
-        name: currentUser.name,
-        username: currentUser.username,
-        date: new Date().toISOString(),
-
-        signature:
+        signatureData =
             signatureCanvas.toDataURL(
-                "image/png"
-            )
-    });
-
-    const approvalSequence = [
-        "KACAB",
-        "MSCM",
-        "MGR"
-    ];
-
-    const currentIndex =
-        approvalSequence.indexOf(
-            currentRole
-        );
-
-    const nextRole =
-        approvalSequence[
-            currentIndex + 1
-        ];
-
-    if (nextRole) {
-        item.approvalStep =
-            nextRole;
-
-        item.status =
-            `MENUNGGU_${nextRole}`;
-    } else {
-        item.approvalStep =
-            "SELESAI";
-
-        item.status =
-            "DISETUJUI";
-
-        item.approvedAt =
-            new Date().toISOString();
+                "image/jpeg",
+                0.6
+            );
     }
 
-    item.updatedAt =
-        new Date().toISOString();
+    try {
+        approveWithSignatureButton.disabled =
+            true;
 
-    storedPkm[itemIndex] = item;
+        approveWithSignatureButton.textContent =
+            "Memproses...";
 
-    saveStoredPkm(storedPkm);
+        const result =
+            await requestBackend(
+                "approvePkm",
+                {
+                    pkmId: item.id,
 
-    closeApprovalModal();
+                    signatureMode:
+                        approvalSignatureMode,
 
-    renderAllData();
+                    signatureData:
+                        signatureData
+                }
+            );
 
-    showToast(
-        nextRole
-            ? `Disetujui. Dilanjutkan ke ${nextRole}.`
-            : "Pengajuan telah disetujui sepenuhnya."
-    );
+        closeApprovalModal();
+
+        await loadPkmData("list");
+
+        showToast(
+            result.message ||
+            "Pengajuan berhasil disetujui."
+        );
+    } catch (error) {
+        showToast(
+            error.message ||
+            "Approval gagal diproses."
+        );
+    } finally {
+        approveWithSignatureButton.textContent =
+            "✓ Setujui Pengajuan";
+
+        approveWithSignatureButton.disabled =
+            false;
+    }
 }
 
 
@@ -4761,8 +4793,42 @@ document
     .addEventListener(
         "click",
         function () {
+            /*
+            | Jika sebelumnya belum memilih
+            | mode gambar, bersihkan canvas.
+            */
+
+            const previouslyDrawing =
+                approvalSignatureMode ===
+                "DRAWN";
+
             selectApprovalSignatureMode(
                 "DRAWN"
+            );
+
+            if (!previouslyDrawing) {
+                clearSignature();
+            }
+
+            /*
+            | Tunggu canvas tampil, kemudian
+            | geser modal seperlunya.
+            */
+
+            window.requestAnimationFrame(
+                function () {
+                    document
+                        .getElementById(
+                            "drawnApprovalSignaturePanel"
+                        )
+                        .scrollIntoView({
+                            behavior:
+                                "smooth",
+
+                            block:
+                                "nearest"
+                        });
+                }
             );
         }
     );

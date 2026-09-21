@@ -1270,3 +1270,20 @@ body.modal-open {
 .app-content.hidden {
     display: none !important;
 }
+
+#signatureCanvas {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: contain;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#drawnApprovalSignaturePanel {
+    scroll-margin-top: 90px;
+    scroll-margin-bottom: 100px;
+}
+
+#approvalModal {
+    overscroll-behavior: contain;
+}
