@@ -1368,6 +1368,66 @@ document
             );
         }
     );
+
+document
+    .getElementById(
+        "updateProfileSignature"
+    )
+    .addEventListener(
+        "click",
+        function () {
+            showProfileSignatureEditor();
+        }
+    );
+
+
+document
+    .getElementById(
+        "deleteProfileSignature"
+    )
+    .addEventListener(
+        "click",
+        async function () {
+            const confirmed =
+                window.confirm(
+                    "Hapus tanda tangan yang tersimpan?"
+                );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                this.disabled = true;
+                this.textContent =
+                    "Menghapus...";
+
+                await requestBackend(
+                    "deleteMySignature"
+                );
+
+                hasCurrentProfileSignature =
+                    false;
+
+                showToast(
+                    "Tanda tangan berhasil dihapus."
+                );
+
+                showProfileSignatureEditor();
+            } catch (error) {
+                showToast(
+                    error.message ||
+                    "Tanda tangan gagal dihapus."
+                );
+            } finally {
+                this.disabled = false;
+                this.textContent =
+                    "Hapus TTD";
+            }
+        }
+    );
+
+
 /*
 |--------------------------------------------------------------------------
 | SIDEBAR
@@ -5216,9 +5276,126 @@ const profileSignatureContext =
 let profileSignatureDrawing = false;
 let profileSignatureHasDrawing = false;
 let uploadedSignatureData = "";
+let hasCurrentProfileSignature = false;
 
 
-function openProfileModal() {
+/*
+|--------------------------------------------------------------------------
+| TAMPILKAN EDITOR TTD
+|--------------------------------------------------------------------------
+*/
+
+function showProfileSignatureEditor() {
+    document
+        .getElementById(
+            "currentProfileSignature"
+        )
+        .classList.add("hidden");
+
+    document
+        .getElementById(
+            "profileSignatureEditor"
+        )
+        .classList.remove("hidden");
+
+    clearProfileSignature();
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AMBIL TTD SAAT INI
+|--------------------------------------------------------------------------
+*/
+
+async function loadCurrentProfileSignature() {
+    const currentSection =
+        document.getElementById(
+            "currentProfileSignature"
+        );
+
+    const editor =
+        document.getElementById(
+            "profileSignatureEditor"
+        );
+
+    const image =
+        document.getElementById(
+            "currentSignatureImage"
+        );
+
+    const updatedAt =
+        document.getElementById(
+            "currentSignatureUpdatedAt"
+        );
+
+    try {
+        const result =
+            await requestBackend(
+                "getMyProfile"
+            );
+
+        hasCurrentProfileSignature =
+            Boolean(
+                result.hasSignature &&
+                result.signatureData
+            );
+
+        if (
+            hasCurrentProfileSignature
+        ) {
+            image.src =
+                result.signatureData;
+
+            updatedAt.textContent =
+                "Terakhir diperbarui: " +
+                (
+                    result.signatureUpdatedAt ||
+                    "-"
+                );
+
+            currentSection
+                .classList
+                .remove("hidden");
+
+            editor
+                .classList
+                .add("hidden");
+
+            return;
+        }
+
+        image.removeAttribute("src");
+
+        currentSection
+            .classList
+            .add("hidden");
+
+        editor
+            .classList
+            .remove("hidden");
+    } catch (error) {
+        hasCurrentProfileSignature =
+            false;
+
+        currentSection
+            .classList
+            .add("hidden");
+
+        editor
+            .classList
+            .remove("hidden");
+
+        showToast(
+            error.message ||
+            "TTD saat ini gagal dimuat."
+        );
+    }
+}
+
+
+
+async function openProfileModal() {
     document.getElementById(
         "profileNik"
     ).value =
@@ -5249,6 +5426,8 @@ function openProfileModal() {
         "aria-hidden",
         "false"
     );
+
+    await loadCurrentProfileSignature();
 
     accountMenu.classList.add("hidden");
 }
@@ -5827,6 +6006,18 @@ document
                 showToast(
                     "Profil berhasil diperbarui."
                 );
+
+                document.getElementById(
+                    "profileNewPassword"
+                ).value = "";
+
+                document.getElementById(
+                    "profileConfirmPassword"
+                ).value = "";
+
+                clearProfileSignature();
+
+                await loadCurrentProfileSignature();
 
                 closeProfileModal();
             } catch (error) {

@@ -1424,67 +1424,153 @@
                         </h3>
 
                         <p class="mt-1 text-sm text-slate-500">
-                            Gambar langsung atau unggah gambar tanda tangan.
+                            Tanda tangan ini digunakan untuk proses approval.
                         </p>
                     </div>
 
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <button
-                            id="chooseDrawSignature"
-                            type="button"
-                            class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white"
+                    <!-- TTD YANG SUDAH TERSIMPAN -->
+                    <div
+                        id="currentProfileSignature"
+                        class="mt-4 hidden rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4"
+                    >
+                        <div
+                            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                         >
-                            ✎ Gambar TTD
-                        </button>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600"
+                                    >
+                                        ✓
+                                    </span>
 
-                        <label
-                            for="profileSignatureUpload"
-                            class="cursor-pointer rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
-                        >
-                            ↑ Upload TTD
-                        </label>
+                                    <div>
+                                        <p class="text-sm font-black text-slate-900">
+                                            TTD saat ini
+                                        </p>
 
-                        <input
-                            id="profileSignatureUpload"
-                            type="file"
-                            accept="image/png,image/jpeg,image/webp"
-                            class="hidden"
-                        >
+                                        <p
+                                            id="currentSignatureUpdatedAt"
+                                            class="mt-0.5 text-xs text-slate-500"
+                                        >
+                                            Terakhir diperbarui: -
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <button
-                            id="clearProfileSignature"
-                            type="button"
-                            class="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-black text-red-600"
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    id="updateProfileSignature"
+                                    type="button"
+                                    class="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-600 hover:bg-red-50"
+                                >
+                                    ✎ Perbarui
+                                </button>
+
+                                <button
+                                    id="deleteProfileSignature"
+                                    type="button"
+                                    class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white hover:bg-red-700"
+                                >
+                                    ✕ Hapus
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            class="mt-4 flex min-h-36 items-center justify-center rounded-xl border border-slate-200 bg-white p-4"
                         >
-                            Hapus
-                        </button>
+                            <img
+                                id="currentSignatureImage"
+                                src=""
+                                alt="Tanda tangan saat ini"
+                                class="max-h-32 max-w-full object-contain"
+                            >
+                        </div>
                     </div>
 
+                    <!-- EDITOR UNTUK MEMBUAT ATAU MEMPERBARUI TTD -->
                     <div
-                        id="profileSignatureCanvasContainer"
-                        class="mt-4 overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-white"
+                        id="profileSignatureEditor"
+                        class="mt-4"
                     >
-                        <canvas
-                            id="profileSignatureCanvas"
-                            width="1000"
-                            height="260"
-                            class="block h-[220px] w-full cursor-crosshair bg-white"
-                        ></canvas>
-                    </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                id="chooseDrawSignature"
+                                type="button"
+                                class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white hover:bg-red-700"
+                            >
+                                ✎ Gambar TTD
+                            </button>
 
-                    <div
-                        id="uploadedSignaturePreviewContainer"
-                        class="mt-4 hidden rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                        <p class="mb-3 text-xs font-black uppercase text-slate-500">
-                            Preview upload
-                        </p>
+                            <label
+                                for="profileSignatureUpload"
+                                class="cursor-pointer rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                            >
+                                ↑ Upload TTD
+                            </label>
 
-                        <img
-                            id="uploadedSignaturePreview"
-                            class="max-h-40 max-w-full object-contain"
-                            alt="Preview tanda tangan"
+                            <input
+                                id="profileSignatureUpload"
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                class="hidden"
+                            >
+
+                            <button
+                                id="clearProfileSignature"
+                                type="button"
+                                class="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-black text-red-600 hover:bg-red-100"
+                            >
+                                Bersihkan
+                            </button>
+                        </div>
+
+                        <div
+                            id="profileSignatureCanvasContainer"
+                            class="mt-4 overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-white"
                         >
+                            <canvas
+                                id="profileSignatureCanvas"
+                                width="1000"
+                                height="260"
+                                class="block h-[220px] w-full cursor-crosshair bg-white"
+                            ></canvas>
+                        </div>
+
+                        <div
+                            id="uploadedSignaturePreviewContainer"
+                            class="mt-4 hidden rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                            <div class="mb-3 flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-black uppercase text-slate-500">
+                                        Preview upload
+                                    </p>
+
+                                    <p class="mt-1 text-xs text-slate-400">
+                                        Gambar ini akan digunakan sebagai TTD approval.
+                                    </p>
+                                </div>
+
+                                <span
+                                    class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700"
+                                >
+                                    Siap disimpan
+                                </span>
+                            </div>
+
+                            <div
+                                class="flex min-h-32 items-center justify-center rounded-xl border border-slate-200 bg-white p-3"
+                            >
+                                <img
+                                    id="uploadedSignaturePreview"
+                                    class="max-h-40 max-w-full object-contain"
+                                    alt="Preview tanda tangan"
+                                >
+                            </div>
+                        </div>
                     </div>
 
                     <p
