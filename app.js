@@ -5381,7 +5381,19 @@ function clearProfileSignature() {
 
                 document.getElementById(
                     "uploadedSignaturePreviewContainer"
-                ).classList.add("hidden");
+                ).classList.add(
+                    "hidden"
+                );
+
+                document.getElementById(
+                    "profileSignatureCanvasContainer"
+                ).classList.remove("hidden");
+
+                document.getElementById(
+                    "profileSignatureCanvasContainer"
+                ).classList.remove(
+                    "hidden"
+                );
 
                 profileSignatureCanvas.scrollIntoView({
                     behavior: "smooth",
@@ -5459,6 +5471,10 @@ document
                 uploadedSignatureData =
                     reader.result;
 
+                /*
+                | Tampilkan preview upload.
+                */
+
                 document.getElementById(
                     "uploadedSignaturePreview"
                 ).src =
@@ -5467,6 +5483,16 @@ document
                 document.getElementById(
                     "uploadedSignaturePreviewContainer"
                 ).classList.remove(
+                    "hidden"
+                );
+
+                /*
+                | Sembunyikan kotak gambar manual.
+                */
+
+                document.getElementById(
+                    "profileSignatureCanvasContainer"
+                ).classList.add(
                     "hidden"
                 );
             };
