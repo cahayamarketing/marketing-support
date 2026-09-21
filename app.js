@@ -587,13 +587,18 @@ async function requestBackend(action, payload = {}) {
         })
     });
 
+const responseText =
+    await response.text();
+
     let data;
 
     try {
-        data = await response.json();
+        data = JSON.parse(responseText);
     } catch (error) {
         throw new Error(
-            "Respons server tidak dapat dibaca."
+            responseText
+                ? `Server HTTP ${response.status}: ${responseText.slice(0, 300)}`
+                : `Server tidak memberikan respons. HTTP ${response.status}.`
         );
     }
 
@@ -5362,58 +5367,45 @@ function clearProfileSignature() {
     profileSignatureHasDrawing = false;
     uploadedSignatureData = "";
 
-    document
-        .getElementById(
-            "chooseDrawSignature"
-        )
-        .addEventListener(
-            "click",
-            function () {
-                uploadedSignatureData = "";
-
-                document.getElementById(
-                    "profileSignatureUpload"
-                ).value = "";
-
-                document.getElementById(
-                    "uploadedSignaturePreview"
-                ).removeAttribute("src");
-
-                document.getElementById(
-                    "uploadedSignaturePreviewContainer"
-                ).classList.add(
-                    "hidden"
-                );
-
-                document.getElementById(
-                    "profileSignatureCanvasContainer"
-                ).classList.remove("hidden");
-
-                document.getElementById(
-                    "profileSignatureCanvasContainer"
-                ).classList.remove(
-                    "hidden"
-                );
-
-                profileSignatureCanvas.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                });
-            }
+    const uploadInput =
+        document.getElementById(
+            "profileSignatureUpload"
         );
 
-    document.getElementById(
-        "profileSignatureUpload"
-    ).value = "";
+    const preview =
+        document.getElementById(
+            "uploadedSignaturePreview"
+        );
 
-    document.getElementById(
-        "uploadedSignaturePreview"
-    ).removeAttribute("src");
+    const previewContainer =
+        document.getElementById(
+            "uploadedSignaturePreviewContainer"
+        );
 
-    document.getElementById(
-        "uploadedSignaturePreviewContainer"
-    ).classList.add("hidden");
+    const canvasContainer =
+        document.getElementById(
+            "profileSignatureCanvasContainer"
+        );
+
+    uploadInput.value = "";
+    preview.removeAttribute("src");
+    previewContainer.classList.add("hidden");
+    canvasContainer.classList.remove("hidden");
 }
+
+document
+    .getElementById("chooseDrawSignature")
+    .addEventListener(
+        "click",
+        function () {
+            clearProfileSignature();
+
+            profileSignatureCanvas.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+    );
 
 
 /*
@@ -5452,8 +5444,8 @@ function compressSignatureImage(file) {
             };
 
             image.onload = function () {
-                const maximumWidth = 1000;
-                const maximumHeight = 400;
+                const maximumWidth = 600;
+                const maximumHeight = 240;
 
                 const scale = Math.min(
                     1,
@@ -5516,7 +5508,7 @@ function compressSignatureImage(file) {
                 const compressedData =
                     canvas.toDataURL(
                         "image/jpeg",
-                        0.75
+                        0.6
                     );
 
                 resolve(
@@ -5529,6 +5521,66 @@ function compressSignatureImage(file) {
 
         reader.readAsDataURL(file);
     });
+}
+
+function compressDrawnSignature() {
+    const maximumWidth = 600;
+    const maximumHeight = 240;
+
+    const scale = Math.min(
+        1,
+        maximumWidth /
+            profileSignatureCanvas.width,
+        maximumHeight /
+            profileSignatureCanvas.height
+    );
+
+    const width = Math.max(
+        1,
+        Math.round(
+            profileSignatureCanvas.width *
+            scale
+        )
+    );
+
+    const height = Math.max(
+        1,
+        Math.round(
+            profileSignatureCanvas.height *
+            scale
+        )
+    );
+
+    const canvas =
+        document.createElement("canvas");
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const context =
+        canvas.getContext("2d");
+
+    context.fillStyle = "#ffffff";
+
+    context.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    context.drawImage(
+        profileSignatureCanvas,
+        0,
+        0,
+        width,
+        height
+    );
+
+    return canvas.toDataURL(
+        "image/jpeg",
+        0.6
+    );
 }
 
 document
@@ -5735,10 +5787,7 @@ document
                 profileSignatureHasDrawing
             ) {
                 signatureData =
-                    profileSignatureCanvas
-                        .toDataURL(
-                            "image/png"
-                        );
+                    compressDrawnSignature();
             }
 
             /*
@@ -5750,10 +5799,10 @@ document
             if (
                 signatureData &&
                 signatureData.length >
-                900000
+                350000
             ) {
                 showToast(
-                    "Gambar TTD masih terlalu besar. Gunakan gambar yang lebih sederhana."
+                    "Gambar TTD terlalu besar. Coba unggah ulang dengan gambar yang lebih sederhana."
                 );
 
                 return;
