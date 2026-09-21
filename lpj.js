@@ -318,21 +318,188 @@ function renderLpjPagination() {
         lpjTotalPages;
 }
 
+let lpjLoadingProgress = 0;
+let lpjLoadingInterval = null;
+let lpjLoadingTimeout = null;
+
+
+function updateLpjLoading(
+    progress,
+    message = ""
+) {
+    lpjLoadingProgress =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                progress
+            )
+        );
+
+    const bar =
+        document.getElementById(
+            "lpjLoadingBar"
+        );
+
+    const percentage =
+        document.getElementById(
+            "lpjLoadingPercentage"
+        );
+
+    const messageElement =
+        document.getElementById(
+            "lpjLoadingMessage"
+        );
+
+    if (bar) {
+        bar.style.width =
+            `${lpjLoadingProgress}%`;
+    }
+
+    if (percentage) {
+        percentage.textContent =
+            `${Math.round(
+                lpjLoadingProgress
+            )}%`;
+    }
+
+    if (
+        message &&
+        messageElement
+    ) {
+        messageElement.textContent =
+            message;
+    }
+}
+
+
 function setLpjLoading(loading) {
     const panel =
         document.getElementById(
             "lpjTableLoading"
         );
 
-    panel.classList.toggle(
-        "hidden",
-        !loading
+    const searchButton =
+        document.getElementById(
+            "applyLpjFilter"
+        );
+
+    window.clearInterval(
+        lpjLoadingInterval
     );
 
-    panel.classList.toggle(
-        "flex",
-        loading
+    window.clearTimeout(
+        lpjLoadingTimeout
     );
+
+    if (searchButton) {
+        searchButton.disabled =
+            loading;
+
+        searchButton.classList.toggle(
+            "cursor-wait",
+            loading
+        );
+
+        searchButton.classList.toggle(
+            "opacity-80",
+            loading
+        );
+    }
+
+    if (!panel) {
+        return;
+    }
+
+    if (loading) {
+        panel.classList.remove(
+            "hidden"
+        );
+
+        panel.classList.add(
+            "flex"
+        );
+
+        updateLpjLoading(
+            8,
+            "Menghubungkan ke Google Spreadsheet..."
+        );
+
+        lpjLoadingInterval =
+            window.setInterval(
+                function () {
+                    if (
+                        lpjLoadingProgress >=
+                        92
+                    ) {
+                        return;
+                    }
+
+                    const addition =
+                        Math.floor(
+                            Math.random() *
+                            6
+                        ) + 2;
+
+                    const nextProgress =
+                        Math.min(
+                            92,
+                            lpjLoadingProgress +
+                            addition
+                        );
+
+                    let message =
+                        "Membaca data PKM...";
+
+                    if (
+                        nextProgress >= 45 &&
+                        nextProgress < 75
+                    ) {
+                        message =
+                            "Memeriksa PKM yang belum memiliki LPJ...";
+                    }
+
+                    if (
+                        nextProgress >= 75
+                    ) {
+                        message =
+                            "Menyiapkan tabel LPJ...";
+                    }
+
+                    updateLpjLoading(
+                        nextProgress,
+                        message
+                    );
+                },
+                220
+            );
+
+        return;
+    }
+
+    updateLpjLoading(
+        100,
+        "Data LPJ berhasil dimuat."
+    );
+
+    lpjLoadingTimeout =
+        window.setTimeout(
+            function () {
+                panel.classList.add(
+                    "hidden"
+                );
+
+                panel.classList.remove(
+                    "flex"
+                );
+
+                updateLpjLoading(
+                    0,
+                    ""
+                );
+            },
+            350
+        );
 }
 
 function resetLpjFilter() {

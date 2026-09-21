@@ -22,6 +22,7 @@ if (!savedSession || !sessionToken) {
 }
 
 let currentUser;
+let activePageId = "";
 
 let sheetPkmData = [];
 
@@ -1319,45 +1320,130 @@ function populateJenisPkmOptions() {
     `;
 }
 
-async function loadSalesmanData() {
-    try {
-        const result =
-            await requestBackend(
-                "getSalesmen",
-                {
-                    branch:
-                        currentUser.branch
-                }
+let salesmanLoadPromise = null;
+
+
+function waitForSalesmanRetry(
+    milliseconds
+) {
+    return new Promise(
+        function (resolve) {
+            window.setTimeout(
+                resolve,
+                milliseconds
+            );
+        }
+    );
+}
+
+
+function loadSalesmanData() {
+    /*
+    |--------------------------------------------------------------------------
+    | CEGAH REQUEST GANDA
+    |--------------------------------------------------------------------------
+    */
+
+    if (salesmanLoadPromise) {
+        return salesmanLoadPromise;
+    }
+
+    salesmanLoadPromise =
+        loadSalesmanWithRetry();
+
+    return salesmanLoadPromise;
+}
+
+
+async function loadSalesmanWithRetry() {
+    const maximumAttempts = 3;
+
+    if (peopleSearch) {
+        peopleSearch.placeholder =
+            "Memuat data salesman...";
+    }
+
+    for (
+        let attempt = 1;
+        attempt <= maximumAttempts;
+        attempt += 1
+    ) {
+        try {
+            const result =
+                await requestBackend(
+                    "getSalesmen",
+                    {
+                        branch:
+                            currentUser.branch
+                    }
+                );
+
+            salesmanData =
+                Array.isArray(
+                    result.salesmen
+                )
+                    ? result.salesmen
+                    : [];
+
+            console.log(
+                `Data salesman dimuat: ${salesmanData.length}`
             );
 
-        salesmanData =
-            Array.isArray(
-                result.salesmen
-            )
-                ? result.salesmen
-                : [];
+            if (peopleSearch) {
+                peopleSearch.placeholder =
+                    "Ketik nama atau NIK...";
+            }
 
-        console.log(
-            "Data salesman dimuat:",
-            salesmanData.length
-        );
+            return salesmanData;
+        } catch (error) {
+            console.warn(
+                `Percobaan memuat salesman ${attempt}/${maximumAttempts} gagal:`,
+                error
+            );
 
-        return salesmanData;
-    } catch (error) {
-        salesmanData = [];
+            const emptyResponse =
+                String(
+                    error.message || ""
+                ).includes(
+                    "Server tidak memberikan respons"
+                );
 
-        console.error(
-            "Gagal memuat salesman:",
-            error
-        );
+            /*
+            | Error validasi seperti session habis atau action tidak tersedia
+            | tidak perlu diulang.
+            */
 
-        showToast(
-            error.message ||
-            "Data salesman gagal dimuat."
-        );
+            if (
+                !emptyResponse ||
+                attempt === maximumAttempts
+            ) {
+                salesmanData = [];
 
-        return [];
+                if (peopleSearch) {
+                    peopleSearch.placeholder =
+                        "Data salesman gagal dimuat";
+                }
+
+                showToast(
+                    error.message ||
+                    "Data salesman gagal dimuat."
+                );
+
+                throw error;
+            }
+
+            /*
+            | Percobaan kedua: 700 ms
+            | Percobaan ketiga: 1.400 ms
+            */
+
+            await waitForSalesmanRetry(
+                700 * attempt
+            );
+        }
     }
+
+    return [];
 }
 
 /*
@@ -1423,7 +1509,14 @@ async function initializeApplication() {
     |--------------------------------------------------------------------------
     */
 
-    await loadSalesmanData();
+    try {
+        await loadSalesmanData();
+    } catch (error) {
+        /*
+        | Aplikasi tetap dibuka.
+        | Hanya fitur People yang sementara tidak tersedia.
+        */
+    }
     selectedPeople = [];
 
     renderSelectedPeople();
@@ -1458,7 +1551,11 @@ async function initializeApplication() {
     |--------------------------------------------------------------------------
     */
 
-    showPage("dashboardPage");
+    if (!activePageId) {
+        showPage(
+            "dashboardPage"
+        );
+    }
 
     await loadPkmData("dashboard");
 
@@ -1756,6 +1853,8 @@ function showPage(pageId) {
     if (!selectedPage) {
         return;
     }
+
+    activePageId = pageId;
 
     selectedPage.classList.remove("hidden");
     selectedPage.style.display = "block";

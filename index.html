@@ -1719,18 +1719,40 @@
 
                         <div
                             id="lpjTableLoading"
-                            class="absolute inset-0 z-20 hidden items-center justify-center rounded-2xl bg-white/90 backdrop-blur-sm"
+                            class="absolute inset-0 z-20 hidden items-center justify-center rounded-2xl bg-white/90 p-6 backdrop-blur-sm"
                         >
-                            <div class="text-center">
-                                <span class="ui-spinner mx-auto h-8 w-8"></span>
+                            <div class="w-full max-w-md text-center">
+
+                                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                                    <span class="ui-spinner h-7 w-7"></span>
+                                </div>
 
                                 <p class="mt-4 font-black text-slate-900">
                                     Mengambil data LPJ
                                 </p>
 
-                                <p class="mt-1 text-sm text-slate-500">
-                                    Membaca PKM yang belum memiliki LPJ...
+                                <p
+                                    id="lpjLoadingMessage"
+                                    class="mt-1 text-sm text-slate-500"
+                                >
+                                    Menghubungkan ke database...
                                 </p>
+
+                                <div class="mt-4 overflow-hidden rounded-full bg-slate-200">
+                                    <div
+                                        id="lpjLoadingBar"
+                                        class="database-progress-bar h-2 rounded-full bg-red-600"
+                                        style="width: 0%"
+                                    ></div>
+                                </div>
+
+                                <p
+                                    id="lpjLoadingPercentage"
+                                    class="mt-2 text-sm font-black text-red-600"
+                                >
+                                    0%
+                                </p>
+
                             </div>
                         </div>
 
