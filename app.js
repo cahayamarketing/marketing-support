@@ -3962,10 +3962,16 @@ function selectApprovalSignatureMode(mode) {
         mode === "DRAWN"
     );
 
-    approveWithSignatureButton.disabled =
-        mode === "SAVED"
-            ? !savedApprovalSignatureAvailable
-            : !signatureHasDrawing;
+    if (mode === "SAVED") {
+        approveWithSignatureButton.disabled =
+            !savedApprovalSignatureAvailable;
+    } else if (mode === "DRAWN") {
+        approveWithSignatureButton.disabled =
+            !signatureHasDrawing;
+    } else {
+        approveWithSignatureButton.disabled =
+            true;
+    }
 
     signatureError.classList.add(
         "hidden"
@@ -4359,20 +4365,61 @@ function getSignaturePosition(event) {
 function startSignature(event) {
     event.preventDefault();
 
-    signatureIsDrawing = true;
+    /*
+    | Pastikan mode gambar aktif.
+    */
 
-    signatureCanvas.setPointerCapture(
-        event.pointerId
-    );
+    if (
+        approvalSignatureMode !== "DRAWN"
+    ) {
+        selectApprovalSignatureMode(
+            "DRAWN"
+        );
+    }
+
+    signatureIsDrawing = true;
+    signatureHasDrawing = true;
+
+    try {
+        signatureCanvas.setPointerCapture(
+            event.pointerId
+        );
+    } catch (error) {
+        /*
+        | Beberapa browser tidak mendukung
+        | pointer capture secara penuh.
+        */
+    }
 
     const position =
-        getSignaturePosition(event);
+        getSignaturePosition(
+            event
+        );
 
     signatureContext.beginPath();
 
     signatureContext.moveTo(
         position.x,
         position.y
+    );
+
+    /*
+    | Buat titik kecil agar satu sentuhan
+    | tetap dianggap sebagai gambar.
+    */
+
+    signatureContext.lineTo(
+        position.x + 0.1,
+        position.y + 0.1
+    );
+
+    signatureContext.stroke();
+
+    approveWithSignatureButton.disabled =
+        false;
+
+    signatureError.classList.add(
+        "hidden"
     );
 }
 
@@ -4385,7 +4432,9 @@ function drawSignature(event) {
     event.preventDefault();
 
     const position =
-        getSignaturePosition(event);
+        getSignaturePosition(
+            event
+        );
 
     signatureContext.lineTo(
         position.x,
@@ -4396,10 +4445,13 @@ function drawSignature(event) {
 
     signatureHasDrawing = true;
 
-    approveWithSignatureButton.disabled =
-        approvalSignatureMode === "SAVED"
-            ? !savedApprovalSignatureAvailable
-            : true;
+    if (
+        approvalSignatureMode ===
+        "DRAWN"
+    ) {
+        approveWithSignatureButton.disabled =
+            false;
+    }
 
     signatureError.classList.add(
         "hidden"
@@ -4416,15 +4468,27 @@ function stopSignature(event) {
 
     signatureContext.closePath();
 
-    if (
-        signatureCanvas.hasPointerCapture(
-            event.pointerId
-        )
-    ) {
-        signatureCanvas.releasePointerCapture(
-            event.pointerId
-        );
+    try {
+        if (
+            signatureCanvas.hasPointerCapture(
+                event.pointerId
+            )
+        ) {
+            signatureCanvas.releasePointerCapture(
+                event.pointerId
+            );
+        }
+    } catch (error) {
+        /*
+        | Abaikan jika pointer capture
+        | tidak didukung browser.
+        */
     }
+
+    approveWithSignatureButton.disabled =
+        approvalSignatureMode === "DRAWN"
+            ? !signatureHasDrawing
+            : !savedApprovalSignatureAvailable;
 }
 
 
