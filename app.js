@@ -2610,7 +2610,10 @@
 
         leasingFund.addEventListener(
             "input",
-            calculateTotalFund
+            function () {
+                calculateTotalFund();
+                updateBudgetDetailSummary();
+            }
         );
 
         row

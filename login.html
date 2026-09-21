@@ -7,969 +7,188 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>CSM Marketing System</title>
+    <title>Login | CSM Marketing System</title>
 
-    <!-- Tailwind CSS -->
+    <link rel="icon" type="image/png" href="data/logo.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- CSS tambahan -->
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body class="bg-slate-100 text-slate-800">
 
-<!-- ===================================================== -->
-<!-- LOGIN -->
-<!-- ===================================================== -->
+    <main id="loginPage" class="grid min-h-screen lg:grid-cols-2">
 
-<section id="loginPage" class="min-h-screen grid lg:grid-cols-2">
+        <section class="login-banner hidden lg:flex" aria-label="Informasi sistem">
+            <div class="relative z-10 max-w-lg">
+                <div class="brand-mark">CSM</div>
 
-    <div class="hidden lg:flex login-banner">
-        <div class="relative z-10 max-w-lg">
-            <div class="brand-mark">CSM</div>
+                <h1 class="mt-8 text-5xl font-black leading-tight text-white">
+                    Marketing Activity Management
+                </h1>
 
-            <h1 class="mt-8 text-5xl font-black leading-tight text-white">
-                Marketing Activity Management
-            </h1>
-
-            <p class="mt-5 text-lg leading-8 text-red-100">
-                Sistem pengajuan, monitoring, dan evaluasi aktivitas
-                pemasaran Cahaya Sakti Motor.
-            </p>
-        </div>
-    </div>
-
-    <div class="flex items-center justify-center px-6 py-12">
-        <div class="w-full max-w-md">
-
-            <div class="mb-8 lg:hidden">
-                <div class="brand-mark brand-mark-red">CSM</div>
-            </div>
-
-            <div class="rounded-3xl bg-white p-8 shadow-xl shadow-slate-200/70">
-                <div>
-                    <p class="text-sm font-bold uppercase tracking-[0.25em] text-red-600">
-                        Selamat datang
-                    </p>
-
-                    <h2 class="mt-2 text-3xl font-black text-slate-900">
-                        Masuk ke sistem
-                    </h2>
-
-                    <p class="mt-2 text-slate-500">
-                        Gunakan akun sesuai cabang masing-masing.
-                    </p>
-                </div>
-
-                <form id="loginForm" class="mt-8 space-y-5">
-
-                    <div>
-                        <label for="username" class="form-label">
-                            NIK
-                        </label>
-
-                        <input
-                            id="username"
-                            type="text"
-                            class="form-input"
-                            placeholder="Masukkan username"
-                            autocomplete="username"
-                            required
-                        >
-                    </div>
-
-                    <div>
-                        <label for="password" class="form-label">
-                            Password
-                        </label>
-
-                        <div class="relative">
-                            <input
-                                id="password"
-                                type="password"
-                                class="form-input pr-20"
-                                placeholder="Masukkan password"
-                                autocomplete="current-password"
-                                required
-                            >
-
-                            <button
-                                id="togglePassword"
-                                type="button"
-                                class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-red-600"
-                            >
-                                Lihat
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="loginMessage" class="hidden alert-error"></div>
-
-                    <button
-                    id="loginSubmitButton"
-                    type="submit"
-                    class="btn-primary flex w-full items-center justify-center gap-2"
-                >
-                    <span id="loginSubmitContent">
-                        Masuk
-                    </span>
-                </button>
-
-                    <button
-                        id="forgotPasswordButton"
-                        type="button"
-                        class="w-full text-sm font-bold text-red-600 hover:text-red-700"
-                    >
-                        Lupa password?
-                    </button>
-                </form>
-
-                <div class="mt-7 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                    <p class="font-bold text-slate-800">Akun demo</p>
-                    <p class="mt-1">Username: <b>crb</b></p>
-                    <p>Password: <b>crb123</b></p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ===================================================== -->
-<!-- APLIKASI -->
-<!-- ===================================================== -->
-
-<section id="appPage" class="hidden min-h-screen">
-
-    <!-- Overlay mobile -->
-    <div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
-
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-
-        <div class="flex h-20 items-center justify-between border-b border-white/10 px-6">
-            <div>
-                <div class="text-2xl font-black tracking-tight text-white">
-                    CSM
-                </div>
-                <div class="text-xs font-medium text-red-200">
-                    Marketing System
-                </div>
-            </div>
-
-            <button
-                id="closeSidebar"
-                class="rounded-lg p-2 text-white hover:bg-white/10 lg:hidden"
-                type="button"
-            >
-                ✕
-            </button>
-        </div>
-
-        <div class="px-4 py-6">
-            <div class="mb-6 rounded-2xl bg-white/10 p-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-red-200">
-                    Login sebagai
+                <p class="mt-5 text-lg leading-8 text-red-100">
+                    Sistem pengajuan, monitoring, dan evaluasi aktivitas
+                    pemasaran Cahaya Sakti Motor.
                 </p>
-
-                <p id="sidebarUserName" class="mt-1 font-bold text-white"></p>
-                <p id="sidebarBranch" class="text-sm text-red-100"></p>
             </div>
+        </section>
 
-            <nav class="space-y-2">
+        <section class="flex items-center justify-center px-6 py-12">
+            <div class="w-full max-w-md">
 
-                <button
-                    class="nav-item active"
-                    data-page="dashboardPage"
-                    type="button"
-                >
-                    <span>▦</span>
-                    <span>Dashboard</span>
-                </button>
-
-                <div>
-                    <button id="pkmMenuButton" class="nav-item" type="button">
-                        <span>▣</span>
-                        <span class="flex-1 text-left">PKM</span>
-                        <span id="pkmArrow">⌄</span>
-                    </button>
-
-                    <div id="pkmSubmenu" class="ml-5 mt-2 hidden space-y-1 border-l border-white/20 pl-4">
-                        <button
-                            class="nav-subitem"
-                            data-page="pengajuanPage"
-                            type="button"
-                        >
-                            Pengajuan PKM
-                        </button>
-
-                        <button
-                            class="nav-subitem"
-                            data-page="listPkmPage"
-                            type="button"
-                        >
-                            List PKM
-                        </button>
-                    </div>
+                <div class="mb-8 lg:hidden">
+                    <div class="brand-mark brand-mark-red">CSM</div>
                 </div>
 
-                <button class="nav-item disabled-menu" type="button">
-                    <span>◎</span>
-                    <span>KPI</span>
-                    <span class="menu-badge">Segera</span>
-                </button>
-
-                <button class="nav-item disabled-menu" type="button">
-                    <span>◉</span>
-                    <span>CRM</span>
-                    <span class="menu-badge">Segera</span>
-                </button>
-
-                <button class="nav-item disabled-menu" type="button">
-                    <span>▤</span>
-                    <span>SIPEDE</span>
-                    <span class="menu-badge">Segera</span>
-                </button>
-            </nav>
-        </div>
-
-        <div class="absolute bottom-0 w-full border-t border-white/10 p-4">
-            <button id="logoutButton" class="nav-item" type="button">
-                <span>↪</span>
-                <span>Keluar</span>
-            </button>
-        </div>
-    </aside>
-
-    <!-- Konten utama -->
-    <main class="lg:ml-72">
-
-        <header class="sticky top-0 z-20 flex h-20 items-center justify-between border-b bg-white/95 px-4 backdrop-blur md:px-8">
-            <div class="flex items-center gap-4">
-                <button
-                    id="openSidebar"
-                    class="rounded-xl border p-2.5 lg:hidden"
-                    type="button"
-                >
-                    ☰
-                </button>
-
-                <div>
-                    <h1 id="pageTitle" class="text-xl font-black text-slate-900">
-                        Dashboard
-                    </h1>
-
-                    <p id="pageSubtitle" class="text-sm text-slate-500">
-                        Ringkasan aktivitas marketing
-                    </p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <div class="hidden text-right sm:block">
-                    <p id="headerUserName" class="text-sm font-bold text-slate-900"></p>
-                    <p id="headerBranch" class="text-xs text-slate-500"></p>
-                </div>
-
-                <div id="userInitial" class="user-avatar"></div>
-            </div>
-        </header>
-
-        <div class="p-4 md:p-8">
-
-            <!-- ================================================= -->
-            <!-- DASHBOARD -->
-            <!-- ================================================= -->
-
-            <section id="dashboardPage" class="app-content">
-
-                <div class="dashboard-hero">
-                    <div class="relative z-10">
-                        <p class="text-sm font-bold uppercase tracking-[0.2em] text-red-100">
-                            Marketing Activity
+                <div class="rounded-3xl bg-white p-8 shadow-xl shadow-slate-200/70">
+                    <div>
+                        <p class="text-sm font-bold uppercase tracking-[0.25em] text-red-600">
+                            Selamat datang
                         </p>
 
-                        <h2 class="mt-2 text-3xl font-black text-white">
-                            Selamat datang,
-                            <span id="dashboardUserName"></span>
+                        <h2 class="mt-2 text-3xl font-black text-slate-900">
+                            Masuk ke sistem
                         </h2>
 
-                        <p class="mt-3 max-w-xl text-red-100">
-                            Pantau pengajuan dan status aktivitas pemasaran
-                            cabang melalui satu dashboard.
+                        <p class="mt-2 text-slate-500">
+                            Gunakan NIK dan password akun Anda.
                         </p>
                     </div>
-                </div>
 
-                <div class="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-
-                    <article class="stat-card">
-                        <p class="stat-label">Total pengajuan</p>
-                        <p id="totalSubmission" class="stat-value">0</p>
-                        <p class="stat-caption">Data cabang login</p>
-                    </article>
-
-                    <article class="stat-card">
-                        <p class="stat-label">Menunggu persetujuan</p>
-                        <p id="pendingSubmission" class="stat-value text-amber-500">0</p>
-                        <p class="stat-caption">Perlu ditindaklanjuti</p>
-                    </article>
-
-                    <article class="stat-card">
-                        <p class="stat-label">Disetujui</p>
-                        <p id="approvedSubmission" class="stat-value text-emerald-600">0</p>
-                        <p class="stat-caption">Pengajuan berstatus ACC</p>
-                    </article>
-
-                    <article class="stat-card">
-                        <p class="stat-label">Total dana</p>
-                        <p id="totalFund" class="stat-value text-red-600">Rp0</p>
-                        <p class="stat-caption">Akumulasi pengajuan</p>
-                    </article>
-                </div>
-
-                <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-                    <div class="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <h3 class="text-xl font-black text-slate-900">
-                                Pengajuan terbaru
-                            </h3>
-                            <p class="text-sm text-slate-500">
-                                Pengajuan PKM terbaru dari cabang Anda.
-                            </p>
-                        </div>
-
-                        <button
-                            class="btn-secondary"
-                            data-page="listPkmPage"
-                            type="button"
-                        >
-                            Lihat semua
-                        </button>
-                    </div>
-
-                    <div id="recentPkmContainer" class="mt-5"></div>
-                </div>
-            </section>
-
-            <!-- ================================================= -->
-            <!-- PENGAJUAN PKM -->
-            <!-- ================================================= -->
-
-            <section id="pengajuanPage" class="app-content hidden">
-
-                <form id="pkmForm" class="space-y-6">
-
-                    <!-- Informasi utama -->
-                    <div class="form-section">
-                        <div class="section-heading">
-                            <span class="section-number">1</span>
-                            <div>
-                                <h2>Informasi PKM</h2>
-                                <p>Informasi utama kegiatan yang akan diajukan.</p>
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-
-                            <div class="md:col-span-2">
-                                <label class="form-label" for="namaPkm">
-                                    Nama PKM
-                                </label>
-
-                                <input
-                                    id="namaPkm"
-                                    class="form-input"
-                                    type="text"
-                                    placeholder="Contoh: Roadshow Honda BeAT"
-                                    required
-                                >
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="cabang">
-                                    Cabang
-                                </label>
-
-                                <input
-                                    id="cabang"
-                                    class="form-input bg-slate-100"
-                                    type="text"
-                                    readonly
-                                >
-                            </div>
-
-                            <div>
-                                <label class="form-label">Type PKM</label>
-
-                                <div class="option-group">
-                                    <label class="check-card">
-                                        <input
-                                            class="type-pkm"
-                                            type="checkbox"
-                                            value="H1"
-                                        >
-                                        <span>H1</span>
-                                    </label>
-
-                                    <label class="check-card">
-                                        <input
-                                            class="type-pkm"
-                                            type="checkbox"
-                                            value="H23"
-                                        >
-                                        <span>H23</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="jenisPkm">
-                                    Jenis PKM
-                                </label>
-
-                                <select id="jenisPkm" class="form-input" required>
-                                    <option value="">Pilih jenis PKM</option>
-                                    <option>ATL BIASA</option>
-                                    <option>ATL DEALER</option>
-                                    <option>BTL BIASA</option>
-                                    <option>BTL DEALER</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="jenisKegiatan">
-                                    Jenis kegiatan
-                                </label>
-
-                                <select id="jenisKegiatan" class="form-input" required>
-                                    <option value="">Pilih jenis kegiatan</option>
-                                    <option>Ajuan ATL</option>
-                                    <option>Ajuan NOS</option>
-                                    <option>Canvassing</option>
-                                    <option>Entertainment</option>
-                                    <option>Kebutuhan Marketing</option>
-                                    <option>Lain-lain</option>
-                                    <option>Pameran</option>
-                                    <option>Roadshow</option>
-                                    <option>Service Visit</option>
-                                    <option>Showroom Event</option>
-                                    <option>Sponsorship</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Waktu -->
-                    <div class="form-section">
-                        <div class="section-heading">
-                            <span class="section-number">2</span>
-                            <div>
-                                <h2>Waktu pelaksanaan</h2>
-                                <p>Tentukan tanggal dan jam mulai sampai selesai.</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-
-                            <div>
-                                <label class="form-label" for="tanggalMulai">
-                                    Tanggal mulai
-                                </label>
-                                <input id="tanggalMulai" class="form-input" type="date" required>
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="jamMulai">
-                                    Jam mulai
-                                </label>
-                                <input id="jamMulai" class="form-input" type="time" required>
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="tanggalSelesai">
-                                    Tanggal selesai
-                                </label>
-                                <input id="tanggalSelesai" class="form-input" type="date" required>
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="jamSelesai">
-                                    Jam selesai
-                                </label>
-                                <input id="jamSelesai" class="form-input" type="time" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Lokasi -->
-                    <div class="form-section">
-                        <div class="section-heading">
-                            <span class="section-number">3</span>
-                            <div>
-                                <h2>Lokasi kegiatan</h2>
-                                <p>Cari lokasi atau isi wilayah secara manual.</p>
-                            </div>
-                        </div>
+                    <form id="loginForm" class="mt-8 space-y-5" novalidate>
 
                         <div>
-                            <label class="form-label" for="locationSearch">
-                                Pencarian lokasi
+                            <label for="username" class="form-label">
+                                NIK
                             </label>
 
-                            <div class="flex flex-col gap-3 sm:flex-row">
+                            <input
+                                id="username"
+                                name="username"
+                                type="text"
+                                inputmode="numeric"
+                                class="form-input"
+                                placeholder="Masukkan NIK"
+                                autocomplete="username"
+                                required
+                            >
+                        </div>
+
+                        <div>
+                            <label for="password" class="form-label">
+                                Password
+                            </label>
+
+                            <div class="relative">
                                 <input
-                                    id="locationSearch"
-                                    class="form-input"
-                                    type="text"
-                                    placeholder="Contoh: Alun-Alun Caruban"
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    class="form-input pr-24"
+                                    placeholder="Masukkan password"
+                                    autocomplete="current-password"
+                                    required
                                 >
 
                                 <button
-                                    id="searchLocationButton"
-                                    class="btn-secondary whitespace-nowrap"
+                                    id="togglePassword"
                                     type="button"
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-red-600"
+                                    aria-label="Tampilkan password"
                                 >
-                                    Cari lokasi
+                                    Lihat
                                 </button>
                             </div>
-
-                            <div id="locationResults" class="mt-3 hidden location-results"></div>
                         </div>
 
-                        <div class="mt-5 form-grid">
-                            <div class="md:col-span-2">
-                                <label class="form-label" for="lokasi">
-                                    Nama/alamat lokasi
-                                </label>
-
-                                <input
-                                    id="lokasi"
-                                    class="form-input"
-                                    type="text"
-                                    placeholder="Nama gedung atau alamat kegiatan"
-                                    required
-                                >
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="kabupaten">
-                                    Kabupaten/kota
-                                </label>
-                                <input id="kabupaten" class="form-input" type="text">
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="kecamatan">
-                                    Kecamatan
-                                </label>
-                                <input id="kecamatan" class="form-input" type="text">
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="kelurahan">
-                                    Kelurahan/desa
-                                </label>
-                                <input id="kelurahan" class="form-input" type="text">
-                            </div>
-
-                            <input id="latitude" type="hidden">
-                            <input id="longitude" type="hidden">
-                        </div>
-
-                        <div id="mapPreview" class="map-placeholder mt-5">
-                            <span>Pilih hasil pencarian untuk menampilkan lokasi.</span>
-                        </div>
-                    </div>
-
-                    <!-- Konsep -->
-                    <div class="form-section">
-                        <div class="section-heading">
-                            <span class="section-number">4</span>
-                            <div>
-                                <h2>Alasan dan konsep</h2>
-                                <p>Jelaskan tujuan dan rencana kegiatan.</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-5 md:grid-cols-2">
-                            <div>
-                                <label class="form-label" for="alasan">
-                                    Alasan PKM
-                                </label>
-
-                                <textarea
-                                    id="alasan"
-                                    class="form-input min-h-36"
-                                    placeholder="Tuliskan alasan pengajuan..."
-                                    required
-                                ></textarea>
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="konsep">
-                                    Konsep PKM
-                                </label>
-
-                                <textarea
-                                    id="konsep"
-                                    class="form-input min-h-36"
-                                    placeholder="Tuliskan konsep pelaksanaan..."
-                                    required
-                                ></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- People -->
-                    <div class="form-section">
-                        <div class="flex flex-wrap items-center justify-between gap-4">
-                            <div class="section-heading mb-0">
-                                <span class="section-number">5</span>
-                                <div>
-                                    <h2>Daftar people</h2>
-                                    <p>Pilih salesman yang terlibat dalam kegiatan.</p>
-                                </div>
-                            </div>
-
-                            <button
-                                id="addPeopleButton"
-                                class="btn-secondary"
-                                type="button"
-                            >
-                                + Tambah people
-                            </button>
-                        </div>
-
-                        <div id="peopleContainer" class="mt-6 space-y-3"></div>
-                    </div>
-
-                    <!-- Program -->
-                    <div class="form-section">
-                        <div class="section-heading">
-                            <span class="section-number">6</span>
-                            <div>
-                                <h2>Fokus program dan publikasi</h2>
-                                <p>Tentukan fokus aktivitas dan media publikasinya.</p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="form-label">Fokus type</label>
-
-                            <div class="option-group">
-                                <label class="check-card">
-                                    <input
-                                        class="focus-type"
-                                        type="checkbox"
-                                        value="H1"
-                                    >
-                                    <span>Program H1</span>
-                                </label>
-
-                                <label class="check-card">
-                                    <input
-                                        class="focus-type"
-                                        type="checkbox"
-                                        value="H23"
-                                    >
-                                    <span>Program H23</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="mt-5 grid gap-5 md:grid-cols-2">
-                            <div id="programH1Container" class="hidden">
-                                <label class="form-label" for="programH1">
-                                    Nama program H1
-                                </label>
-                                <input id="programH1" class="form-input" type="text">
-                            </div>
-
-                            <div id="programH23Container" class="hidden">
-                                <label class="form-label" for="programH23">
-                                    Nama program H23
-                                </label>
-                                <input id="programH23" class="form-input" type="text">
-                            </div>
-                        </div>
-
-                        <div class="mt-6">
-                            <label class="form-label">
-                                Publikasi
-                            </label>
-
-                            <div class="option-group">
-                                <label class="check-card">
-                                    <input class="publication" type="checkbox" value="TO PEOPLE">
-                                    <span>To People</span>
-                                </label>
-
-                                <label class="check-card">
-                                    <input class="publication" type="checkbox" value="SOSMED">
-                                    <span>Sosmed</span>
-                                </label>
-
-                                <label class="check-card">
-                                    <input class="publication" type="checkbox" value="WA BLAST">
-                                    <span>WA Blast</span>
-                                </label>
-
-                                <label class="check-card">
-                                    <input class="publication" type="checkbox" value="CANVASSING">
-                                    <span>Canvassing</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Leasing dan dana -->
-                    <div class="form-section">
-                        <div class="flex flex-wrap items-center justify-between gap-4">
-                            <div class="section-heading mb-0">
-                                <span class="section-number">7</span>
-                                <div>
-                                    <h2>Leasing support dan dana</h2>
-                                    <p>Masukkan sumber dana yang mendukung kegiatan.</p>
-                                </div>
-                            </div>
-
-                            <button
-                                id="addLeasingButton"
-                                class="btn-secondary"
-                                type="button"
-                            >
-                                + Tambah leasing
-                            </button>
-                        </div>
-
-                        <div id="leasingContainer" class="mt-6 space-y-3"></div>
-
-                        <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-
-                            <div>
-                                <label class="form-label" for="danaCsm">
-                                    Dana CSM
-                                </label>
-                                <input id="danaCsm" class="form-input fund-input" type="number" min="0" value="0">
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="danaMd">
-                                    Dana MD
-                                </label>
-                                <input id="danaMd" class="form-input fund-input" type="number" min="0" value="0">
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="danaLain">
-                                    Dana lain-lain
-                                </label>
-                                <input id="danaLain" class="form-input fund-input" type="number" min="0" value="0">
-                            </div>
-
-                            <div class="total-fund-box">
-                                <p class="text-sm font-bold text-red-100">
-                                    Total dana
-                                </p>
-                                <p id="totalDanaDisplay" class="mt-2 text-2xl font-black text-white">
-                                    Rp0
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Target -->
-                    <div class="form-section">
-                        <div class="section-heading">
-                            <span class="section-number">8</span>
-                            <div>
-                                <h2>Target kegiatan</h2>
-                                <p>Masukkan target database, deal, dan unit entry.</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-5 md:grid-cols-3">
-                            <div>
-                                <label class="form-label" for="targetDb">
-                                    Target DB
-                                </label>
-                                <input id="targetDb" class="form-input" type="number" min="0" value="0">
-                            </div>
-
-                            <div>
-                                <label class="form-label" for="targetDeal">
-                                    Target deal
-                                </label>
-                                <input id="targetDeal" class="form-input" type="number" min="0" value="0">
-                            </div>
-
-                            <div id="targetUeContainer" class="hidden">
-                                <label class="form-label" for="targetUe">
-                                    Target UE
-                                </label>
-                                <input id="targetUe" class="form-input" type="number" min="0" value="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="sticky-submit">
-                        <div>
-                            <p class="font-bold text-slate-900">
-                                Pastikan seluruh data telah diperiksa.
-                            </p>
-                            <p class="text-sm text-slate-500">
-                                Data akan disimpan sebagai pengajuan baru.
-                            </p>
-                        </div>
-
-                        <button type="submit" class="btn-primary">
-                            Ajukan PKM
-                        </button>
-                    </div>
-                </form>
-            </section>
-
-            <!-- ================================================= -->
-            <!-- LIST PKM -->
-            <!-- ================================================= -->
-
-            <section id="listPkmPage" class="app-content hidden">
-                <div class="rounded-3xl bg-white p-6 shadow-sm">
-
-                    <div class="flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
-                        <div>
-                            <h2 class="text-2xl font-black text-slate-900">
-                                List PKM
-                            </h2>
-                            <p class="mt-1 text-sm text-slate-500">
-                                Telusuri pengajuan baru maupun data PKM sebelumnya.
-                            </p>
-                        </div>
+                        <div
+                            id="loginMessage"
+                            class="alert-error hidden"
+                            role="alert"
+                            aria-live="polite"
+                        ></div>
 
                         <button
-                            class="btn-primary"
-                            data-page="pengajuanPage"
-                            type="button"
+                            id="loginSubmitButton"
+                            type="submit"
+                            class="btn-primary flex w-full items-center justify-center gap-2"
                         >
-                            + Pengajuan baru
+                            <span>Masuk</span>
                         </button>
-                    </div>
 
-                    <div class="mt-6 grid gap-4 md:grid-cols-3">
-
-                        <div class="md:col-span-2">
-                            <label class="form-label" for="searchPkm">
-                                Cari PKM
-                            </label>
-
-                            <input
-                                id="searchPkm"
-                                class="form-input"
-                                type="search"
-                                placeholder="Cari ID, nama, jenis, atau lokasi..."
-                            >
-                        </div>
-
-                        <div>
-                            <label class="form-label" for="dataSourceFilter">
-                                Sumber data
-                            </label>
-
-                            <select id="dataSourceFilter" class="form-input">
-                                <option value="ALL">Semua data</option>
-                                <option value="WEB">Terbaru sejak web</option>
-                                <option value="LEGACY">Data PKM lama</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mt-6 overflow-x-auto">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>ID PKM</th>
-                                    <th>Nama PKM</th>
-                                    <th>Cabang</th>
-                                    <th>Type</th>
-                                    <th>Pelaksanaan</th>
-                                    <th>Total dana</th>
-                                    <th>Status</th>
-                                    <th>Sumber</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="pkmTableBody"></tbody>
-                        </table>
-                    </div>
-
-                    <div id="emptyPkm" class="hidden empty-state">
-                        Data PKM tidak ditemukan.
-                    </div>
+                        <button
+                            id="forgotPasswordButton"
+                            type="button"
+                            class="w-full text-sm font-bold text-red-600 hover:text-red-700"
+                        >
+                            Lupa password?
+                        </button>
+                    </form>
                 </div>
-            </section>
-
-            <!-- Halaman sementara -->
-            <section id="temporaryPage" class="app-content hidden">
-                <div class="empty-state rounded-3xl bg-white">
-                    Menu masih dalam tahap pengembangan.
-                </div>
-            </section>
-
-        </div>
+            </div>
+        </section>
     </main>
-</section>
 
-<!-- ===================================================== -->
-<!-- MODAL LUPA PASSWORD -->
-<!-- ===================================================== -->
+    <div
+        id="forgotPasswordModal"
+        class="modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forgotPasswordTitle"
+    >
+        <div class="modal-card">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 id="forgotPasswordTitle" class="text-xl font-black text-slate-900">
+                        Lupa password
+                    </h2>
 
-<div id="forgotPasswordModal" class="modal hidden">
-    <div class="modal-card">
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <h2 class="text-xl font-black text-slate-900">
-                    Lupa password
-                </h2>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Masukkan NIK untuk mengajukan reset password.
+                    </p>
+                </div>
 
-                <p class="mt-1 text-sm text-slate-500">
-                    Masukkan username untuk mengajukan reset password.
-                </p>
+                <button
+                    id="closeForgotModal"
+                    type="button"
+                    class="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                    aria-label="Tutup modal"
+                >
+                    ✕
+                </button>
             </div>
 
-            <button
-                id="closeForgotModal"
-                type="button"
-                class="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-            >
-                ✕
-            </button>
+            <form id="forgotPasswordForm" class="mt-6">
+                <label class="form-label" for="forgotUsername">
+                    NIK
+                </label>
+
+                <input
+                    id="forgotUsername"
+                    class="form-input"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="username"
+                    required
+                >
+
+                <p
+                    id="forgotMessage"
+                    class="mt-3 hidden text-sm"
+                    aria-live="polite"
+                ></p>
+
+                <button type="submit" class="btn-primary mt-5 w-full">
+                    Ajukan reset password
+                </button>
+            </form>
         </div>
-
-        <form id="forgotPasswordForm" class="mt-6">
-            <label class="form-label" for="forgotUsername">
-                Username
-            </label>
-
-            <input
-                id="forgotUsername"
-                class="form-input"
-                type="text"
-                required
-            >
-
-            <p id="forgotMessage" class="mt-3 hidden text-sm"></p>
-
-            <button type="submit" class="btn-primary mt-5 w-full">
-                Ajukan reset password
-            </button>
-        </form>
     </div>
-</div>
 
-<!-- Toast -->
-<div id="toast" class="toast hidden"></div>
+    <div id="toast" class="toast hidden"></div>
 
-<script src="api.js"></script>
-<script src="login.js"></script>
+    <script src="api.js"></script>
+    <script src="login.js"></script>
 </body>
 </html>
