@@ -902,23 +902,170 @@ function validatePkmFilter(filters) {
     }
 }
 
+let pkmLoadingProgress = 0;
+let pkmLoadingInterval = null;
+let pkmLoadingHideTimeout = null;
+
+
+function updatePkmLoadingProgress(
+    progress,
+    message = ""
+) {
+    pkmLoadingProgress =
+        Math.max(
+            0,
+            Math.min(100, progress)
+        );
+
+    const bar =
+        document.getElementById(
+            "pkmLoadingBar"
+        );
+
+    const percentage =
+        document.getElementById(
+            "pkmLoadingPercentage"
+        );
+
+    const messageElement =
+        document.getElementById(
+            "pkmLoadingMessage"
+        );
+
+    if (bar) {
+        bar.style.width =
+            `${pkmLoadingProgress}%`;
+    }
+
+    if (percentage) {
+        percentage.textContent =
+            `${Math.round(
+                pkmLoadingProgress
+            )}%`;
+    }
+
+    if (
+        message &&
+        messageElement
+    ) {
+        messageElement.textContent =
+            message;
+    }
+}
+
 function setPkmLoading(isLoading) {
     pkmDataLoading = isLoading;
+
+    const loadingPanel =
+        document.getElementById(
+            "pkmTableLoading"
+        );
+
+    window.clearInterval(
+        pkmLoadingInterval
+    );
+
+    window.clearTimeout(
+        pkmLoadingHideTimeout
+    );
 
     [
         "applyDashboardFilter",
         "applyPkmFilter"
     ].forEach(function (id) {
-        const button = document.getElementById(id);
+        const button =
+            document.getElementById(id);
 
-        if (button) {
-            button.disabled = isLoading;
-            button.classList.toggle(
-                "opacity-60",
-                isLoading
-            );
+        if (!button) {
+            return;
         }
+
+        button.disabled = isLoading;
+
+        button.classList.toggle(
+            "cursor-wait",
+            isLoading
+        );
+
+        button.classList.toggle(
+            "opacity-80",
+            isLoading
+        );
     });
+
+    if (!loadingPanel) {
+        return;
+    }
+
+    if (isLoading) {
+        loadingPanel.classList.remove(
+            "hidden"
+        );
+
+        loadingPanel.classList.add(
+            "flex"
+        );
+
+        updatePkmLoadingProgress(
+            8,
+            "Menghubungkan ke Google Spreadsheet..."
+        );
+
+        pkmLoadingInterval =
+            window.setInterval(
+                function () {
+                    if (
+                        pkmLoadingProgress >= 92
+                    ) {
+                        return;
+                    }
+
+                    const addition =
+                        Math.floor(
+                            Math.random() * 6
+                        ) + 2;
+
+                    updatePkmLoadingProgress(
+                        Math.min(
+                            92,
+                            pkmLoadingProgress +
+                            addition
+                        ),
+                        pkmLoadingProgress < 45
+                            ? "Membaca data PKM..."
+                            : pkmLoadingProgress < 75
+                                ? "Memproses dan memfilter data..."
+                                : "Menyiapkan tabel..."
+                    );
+                },
+                220
+            );
+
+        return;
+    }
+
+    updatePkmLoadingProgress(
+        100,
+        "Data berhasil dimuat."
+    );
+
+    pkmLoadingHideTimeout =
+        window.setTimeout(
+            function () {
+                loadingPanel.classList.add(
+                    "hidden"
+                );
+
+                loadingPanel.classList.remove(
+                    "flex"
+                );
+
+                updatePkmLoadingProgress(
+                    0
+                );
+            },
+            350
+        );
 }
 
 async function loadPkmData(prefix = "dashboard") {
@@ -4037,8 +4184,22 @@ async function prepareApprovalSignature() {
     savedApprovalSignatureAvailable =
         false;
 
-    status.textContent =
-        "Memeriksa TTD profil...";
+    approveWithSignatureButton.disabled =
+        true;
+
+    approveWithSignatureButton.innerHTML = `
+        <span class="flex items-center justify-center gap-2">
+            <span class="ui-spinner ui-spinner-small"></span>
+            Memuat TTD...
+        </span>
+    `;
+
+    status.innerHTML = `
+        <span class="inline-flex items-center gap-2 text-red-600">
+            <span class="ui-spinner ui-spinner-small"></span>
+            Memeriksa TTD profil...
+        </span>
+    `;
 
     image.removeAttribute("src");
 
@@ -4082,6 +4243,16 @@ async function prepareApprovalSignature() {
             "TTD profil gagal dimuat. Anda tetap dapat menggambar TTD.";
 
         resetApprovalSignatureSelection();
+    } finally {
+        approveWithSignatureButton.innerHTML =
+            "✓ Setujui Pengajuan";
+
+        approveWithSignatureButton.disabled =
+            approvalSignatureMode === "SAVED"
+                ? !savedApprovalSignatureAvailable
+                : approvalSignatureMode === "DRAWN"
+                    ? !signatureHasDrawing
+                    : true;
     }
 }
 
@@ -4685,8 +4856,12 @@ async function approvePkmWithSignature() {
         approveWithSignatureButton.disabled =
             true;
 
-        approveWithSignatureButton.textContent =
-            "Memproses...";
+        approveWithSignatureButton.innerHTML = `
+            <span class="flex items-center justify-center gap-2">
+                <span class="ui-spinner"></span>
+                Menyimpan approval...
+            </span>
+        `;
 
         const result =
             await requestBackend(
@@ -4702,9 +4877,16 @@ async function approvePkmWithSignature() {
                 }
             );
 
-        closeApprovalModal();
+        approveWithSignatureButton.innerHTML = `
+            <span class="flex items-center justify-center gap-2">
+                <span class="ui-spinner"></span>
+                Memperbarui data...
+            </span>
+        `;
 
         await loadPkmData("list");
+
+        closeApprovalModal();
 
         showToast(
             result.message ||
@@ -4716,7 +4898,7 @@ async function approvePkmWithSignature() {
             "Approval gagal diproses."
         );
     } finally {
-        approveWithSignatureButton.textContent =
+        approveWithSignatureButton.innerHTML =
             "✓ Setujui Pengajuan";
 
         approveWithSignatureButton.disabled =
@@ -5654,6 +5836,32 @@ async function loadCurrentProfileSignature() {
             "currentSignatureUpdatedAt"
         );
 
+    const loading =
+        document.getElementById(
+            "profileSignatureLoading"
+        );
+
+    /*
+    | Tampilkan loading dan sembunyikan
+    | preview/editor sementara.
+    */
+
+    loading.classList.remove(
+        "hidden"
+    );
+
+    loading.classList.add(
+        "flex"
+    );
+
+    currentSection.classList.add(
+        "hidden"
+    );
+
+    editor.classList.add(
+        "hidden"
+    );
+
     try {
         const result =
             await requestBackend(
@@ -5690,7 +5898,9 @@ async function loadCurrentProfileSignature() {
             return;
         }
 
-        image.removeAttribute("src");
+        image.removeAttribute(
+            "src"
+        );
 
         currentSection
             .classList
@@ -5714,6 +5924,19 @@ async function loadCurrentProfileSignature() {
         showToast(
             error.message ||
             "TTD saat ini gagal dimuat."
+        );
+    } finally {
+        /*
+        | Selalu hilangkan loading,
+        | baik berhasil maupun gagal.
+        */
+
+        loading.classList.add(
+            "hidden"
+        );
+
+        loading.classList.remove(
+            "flex"
         );
     }
 }

@@ -1248,24 +1248,73 @@
                         <p id="listResultCount" class="text-sm font-black text-slate-700">0 data</p>
                     </div>
 
-                    <div class="mt-6 overflow-x-auto">
-                        <table class="data-table min-w-[1100px]">
-                            <thead>
-                                <tr>
-                                    <th>ID PKM</th>
-                                    <th>Nama PKM</th>
-                                    <th>Cabang</th>
-                                    <th>Type</th>
-                                    <th>Pelaksanaan</th>
-                                    <th>Total dana</th>
-                                    <th>Status</th>
-                                    <th>Sumber</th>
-                                    <th class="text-right">Aksi</th>
-                                </tr>
-                            </thead>
+                    <div
+                        id="pkmTableContainer"
+                        class="relative mt-6 min-h-[240px]"
+                    >
+                        <!-- LOADING DATABASE -->
+                        <div
+                            id="pkmTableLoading"
+                            class="absolute inset-0 z-20 hidden items-center justify-center rounded-2xl bg-white/90 p-6 backdrop-blur-sm"
+                        >
+                            <div class="w-full max-w-md text-center">
+                                <div
+                                    class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600"
+                                >
+                                    <span class="ui-spinner h-7 w-7"></span>
+                                </div>
 
-                            <tbody id="pkmTableBody"></tbody>
-                        </table>
+                                <p
+                                    id="pkmLoadingTitle"
+                                    class="mt-4 font-black text-slate-900"
+                                >
+                                    Mengambil data PKM
+                                </p>
+
+                                <p
+                                    id="pkmLoadingMessage"
+                                    class="mt-1 text-sm text-slate-500"
+                                >
+                                    Menghubungkan ke database...
+                                </p>
+
+                                <div
+                                    class="mt-4 overflow-hidden rounded-full bg-slate-200"
+                                >
+                                    <div
+                                        id="pkmLoadingBar"
+                                        class="database-progress-bar h-2 rounded-full bg-red-600"
+                                    ></div>
+                                </div>
+
+                                <p
+                                    id="pkmLoadingPercentage"
+                                    class="mt-2 text-sm font-black text-red-600"
+                                >
+                                    0%
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="data-table min-w-[1100px]">
+                                <thead>
+                                    <tr>
+                                        <th>ID PKM</th>
+                                        <th>Nama PKM</th>
+                                        <th>Cabang</th>
+                                        <th>Type</th>
+                                        <th>Pelaksanaan</th>
+                                        <th>Total dana</th>
+                                        <th>Status</th>
+                                        <th>Sumber</th>
+                                        <th class="text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="pkmTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <div
@@ -1431,6 +1480,24 @@
                         <p class="mt-1 text-sm text-slate-500">
                             Tanda tangan ini digunakan untuk proses approval.
                         </p>
+                    </div>
+
+
+                    <div
+                        id="profileSignatureLoading"
+                        class="mt-4 hidden items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                        <span class="ui-spinner text-red-600"></span>
+
+                        <div>
+                            <p class="text-sm font-black text-slate-900">
+                                Memuat tanda tangan
+                            </p>
+
+                            <p class="text-xs text-slate-500">
+                                Mengambil TTD tersimpan dari Google Drive...
+                            </p>
+                        </div>
                     </div>
 
                     <!-- TTD YANG SUDAH TERSIMPAN -->

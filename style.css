@@ -1300,3 +1300,56 @@ body.modal-open {
     scroll-margin-top: 90px;
     scroll-margin-bottom: 100px;
 }
+
+/* Spinner umum */
+.ui-spinner {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 9999px;
+    animation: ui-spin 0.7s linear infinite;
+}
+
+.ui-spinner-small {
+    width: 14px;
+    height: 14px;
+}
+
+@keyframes ui-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Progress bar database */
+.database-progress-bar {
+    width: 0%;
+    transition: width 0.25s ease;
+}
+
+.loading-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.75),
+        transparent
+    );
+    animation: loading-shimmer 1.3s infinite;
+}
+
+@keyframes loading-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}

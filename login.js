@@ -48,6 +48,11 @@ const forgotPasswordForm =
         "forgotPasswordForm"
     );
 
+const loginSubmitButton =
+    document.getElementById(
+        "loginSubmitButton"
+    );
+
 
 /*
 |--------------------------------------------------------------------------
@@ -113,6 +118,11 @@ loginForm.addEventListener(
                         password: password
                     }
                 );
+
+            setLoginLoading(
+                true,
+                "Menyiapkan dashboard..."
+            );    
 
             sessionStorage.setItem(
                 "sessionToken",
@@ -305,26 +315,6 @@ function hideLoginMessage() {
 }
 
 
-function setLoginLoading(loading) {
-    const submitButton =
-        loginForm.querySelector(
-            'button[type="submit"]'
-        );
-
-    if (!submitButton) {
-        return;
-    }
-
-    submitButton.disabled =
-        loading;
-
-    submitButton.textContent =
-        loading
-            ? "Memeriksa..."
-            : "Masuk";
-}
-
-
 function closeForgotModal() {
     if (!forgotModal) {
         return;
@@ -345,4 +335,36 @@ function closeForgotModal() {
             "hidden"
         );
     }
+}
+
+function setLoginLoading(
+    isLoading,
+    message = "Memeriksa akun..."
+) {
+    if (isLoading) {
+        loginSubmitButton.disabled = true;
+
+        loginSubmitButton.innerHTML = `
+            <span class="flex items-center justify-center gap-2">
+                <span class="ui-spinner"></span>
+                <span>${message}</span>
+            </span>
+        `;
+
+        loginSubmitButton.classList.add(
+            "cursor-wait",
+            "opacity-90"
+        );
+
+        return;
+    }
+
+    loginSubmitButton.disabled = false;
+    loginSubmitButton.innerHTML =
+        "<span>Masuk</span>";
+
+    loginSubmitButton.classList.remove(
+        "cursor-wait",
+        "opacity-90"
+    );
 }
