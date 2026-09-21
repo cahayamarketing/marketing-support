@@ -83,6 +83,55 @@ if (
         "Session login tidak valid."
     );
 }
+
+/*
+|--------------------------------------------------------------------------
+| DETAIL BUDGET
+|--------------------------------------------------------------------------
+*/
+
+const budgetItemNameInput =
+    document.getElementById(
+        "budgetItemName"
+    );
+
+const budgetTotalPriceInput =
+    document.getElementById(
+        "budgetTotalPrice"
+    );
+
+const budgetQuantityInput =
+    document.getElementById(
+        "budgetQuantity"
+    );
+
+const budgetItemTypeInput =
+    document.getElementById(
+        "budgetItemType"
+    );
+
+const addBudgetDetailButton =
+    document.getElementById(
+        "addBudgetDetailButton"
+    );
+
+const cancelBudgetEditButton =
+    document.getElementById(
+        "cancelBudgetEditButton"
+    );
+
+const budgetDetailTableBody =
+    document.getElementById(
+        "budgetDetailTableBody"
+    );
+
+const emptyBudgetDetail =
+    document.getElementById(
+        "emptyBudgetDetail"
+    );
+
+let budgetDetails = [];
+let editingBudgetId = null;
 /*
 |--------------------------------------------------------------------------
 | DATA SEMENTARA
@@ -1378,6 +1427,18 @@ async function initializeApplication() {
 
     /*
     |--------------------------------------------------------------------------
+    | INISIALISASI DETAIL BUDGET
+    |--------------------------------------------------------------------------
+    */
+
+    budgetDetails = [];
+    editingBudgetId = null;
+
+    resetBudgetDetailForm();
+    renderBudgetDetails();
+
+    /*
+    |--------------------------------------------------------------------------
     | TAMPILKAN HALAMAN
     |--------------------------------------------------------------------------
     */
@@ -1789,7 +1850,8 @@ document
                     selectedValues(".type-pkm");
 
                 const useH23 =
-                    types.includes("H23");
+                    types.includes("H23") ||
+                    types.includes("H123");
 
                 document
                     .getElementById(
@@ -2196,16 +2258,20 @@ function fillAutomaticAtlLocation() {
 
     const automaticLocations = [];
 
-    if (selectedTypes.includes("H1")) {
-        automaticLocations.push(
-            `DEALER ${branchName}`
-        );
+    const useH1 =
+        selectedTypes.includes("H1") ||
+        selectedTypes.includes("H123");
+
+    const useH23 =
+        selectedTypes.includes("H23") ||
+        selectedTypes.includes("H123");
+
+    if (useH1) {
+        locations.push(`DEALER ${branchName}`);
     }
 
-    if (selectedTypes.includes("H23")) {
-        automaticLocations.push(
-            `AHASS ${branchName}`
-        );
+    if (useH23) {
+        locations.push(`AHASS ${branchName}`);
     }
 
     lokasiInput.value =
@@ -2760,6 +2826,62 @@ async function searchLocation() {
     }
 }
 
+addBudgetDetailButton.addEventListener(
+    "click",
+    saveBudgetDetail
+);
+
+
+cancelBudgetEditButton.addEventListener(
+    "click",
+    function () {
+        resetBudgetDetailForm();
+    }
+);
+
+
+budgetDetailTableBody.addEventListener(
+    "click",
+    function (event) {
+        const button =
+            event.target.closest(
+                "[data-budget-action]"
+            );
+
+        if (!button) {
+            return;
+        }
+
+        const action =
+            button.dataset.budgetAction;
+
+        const budgetId =
+            button.dataset.budgetId;
+
+        if (action === "edit") {
+            editBudgetDetail(
+                budgetId
+            );
+        }
+
+        if (action === "delete") {
+            deleteBudgetDetail(
+                budgetId
+            );
+        }
+    }
+);
+
+
+document
+    .querySelectorAll(".fund-input")
+    .forEach(function (input) {
+        input.addEventListener(
+            "input",
+            updateBudgetDetailSummary
+        );
+    });
+
 
 
 function chooseLocation(location) {
@@ -2847,11 +2969,436 @@ document
 
 /*
 |--------------------------------------------------------------------------
+| FUNCTION DETAIL BUDGET
+|--------------------------------------------------------------------------
+*/
+
+function generateTemporaryBudgetId() {
+    if (
+        window.crypto &&
+        typeof window.crypto.randomUUID ===
+            "function"
+    ) {
+        return window.crypto.randomUUID();
+    }
+
+    return (
+        "BUDGET-" +
+        Date.now() +
+        "-" +
+        Math.random()
+            .toString(16)
+            .slice(2)
+    );
+}
+
+
+function getBudgetDetailTotal() {
+    return budgetDetails.reduce(
+        function (total, item) {
+            return (
+                total +
+                Number(item.totalPrice || 0)
+            );
+        },
+        0
+    );
+}
+
+
+function resetBudgetDetailForm() {
+    editingBudgetId = null;
+
+    budgetItemNameInput.value = "";
+    budgetTotalPriceInput.value = "";
+    budgetQuantityInput.value = "1";
+    budgetItemTypeInput.value = "";
+
+    addBudgetDetailButton.textContent =
+        "+ Tambah item";
+
+    cancelBudgetEditButton.classList.add(
+        "hidden"
+    );
+}
+
+
+function updateBudgetDetailSummary() {
+    const detailTotal =
+        getBudgetDetailTotal();
+
+    const fundTotal =
+        calculateTotalFund().total;
+
+    const difference =
+        fundTotal - detailTotal;
+
+    document.getElementById(
+        "budgetDetailTotalDisplay"
+    ).textContent =
+        rupiah(detailTotal);
+
+    document.getElementById(
+        "budgetFundTotalDisplay"
+    ).textContent =
+        rupiah(fundTotal);
+
+    document.getElementById(
+        "budgetDifferenceDisplay"
+    ).textContent =
+        rupiah(Math.abs(difference));
+
+    const differenceBox =
+        document.getElementById(
+            "budgetDifferenceBox"
+        );
+
+    const message =
+        document.getElementById(
+            "budgetDetailMessage"
+        );
+
+    const balanced =
+        difference === 0;
+
+    differenceBox.classList.toggle(
+        "bg-emerald-50",
+        balanced
+    );
+
+    differenceBox.classList.toggle(
+        "bg-amber-50",
+        !balanced
+    );
+
+    differenceBox.classList.toggle(
+        "text-emerald-700",
+        balanced
+    );
+
+    differenceBox.classList.toggle(
+        "text-amber-700",
+        !balanced
+    );
+
+    message.classList.toggle(
+        "hidden",
+        balanced
+    );
+
+    message.textContent =
+        difference > 0
+            ? `Masih ada dana ${rupiah(
+                difference
+            )} yang belum dirinci.`
+            : difference < 0
+                ? `Detail budget melebihi dana sebesar ${rupiah(
+                    Math.abs(difference)
+                )}.`
+                : "Detail budget sudah sesuai dengan total dana.";
+}
+
+
+function renderBudgetDetails() {
+    emptyBudgetDetail.classList.toggle(
+        "hidden",
+        budgetDetails.length > 0
+    );
+
+    budgetDetailTableBody.innerHTML =
+        budgetDetails
+            .map(function (item, index) {
+                return `
+                    <tr>
+                        <td class="text-center font-bold">
+                            ${index + 1}
+                        </td>
+
+                        <td>
+                            <p class="font-black text-slate-900">
+                                ${escapeHtml(
+                                    item.itemName
+                                )}
+                            </p>
+
+                            <p class="mt-1 text-xs text-slate-400">
+                                Realisasi dilengkapi melalui LPJ
+                            </p>
+                        </td>
+
+                        <td>
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+                                ${escapeHtml(
+                                    item.itemType
+                                )}
+                            </span>
+                        </td>
+
+                        <td class="text-center font-bold">
+                            ${item.quantity}
+                        </td>
+
+                        <td class="text-right font-black">
+                            ${rupiah(
+                                item.totalPrice
+                            )}
+                        </td>
+
+                        <td>
+                            <div class="flex justify-center gap-2">
+                                <button
+                                    type="button"
+                                    data-budget-action="edit"
+                                    data-budget-id="${item.id}"
+                                    class="rounded-lg bg-blue-50 px-3 py-2 text-xs font-black text-blue-600 hover:bg-blue-100"
+                                >
+                                    Edit
+                                </button>
+
+                                <button
+                                    type="button"
+                                    data-budget-action="delete"
+                                    data-budget-id="${item.id}"
+                                    class="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 font-black text-red-600 hover:bg-red-100"
+                                    title="Hapus item"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+
+    updateBudgetDetailSummary();
+
+    if (
+        typeof validateFormState ===
+        "function"
+    ) {
+        validateFormState();
+    }
+}
+
+
+function saveBudgetDetail() {
+    const itemName =
+        budgetItemNameInput
+            .value
+            .trim();
+
+    const totalPrice =
+        Number(
+            budgetTotalPriceInput.value
+        );
+
+    const quantity =
+        Number(
+            budgetQuantityInput.value
+        );
+
+    const itemType =
+        budgetItemTypeInput
+            .value
+            .trim()
+            .toUpperCase();
+
+    if (!itemName) {
+        showToast(
+            "Nama item wajib diisi."
+        );
+
+        budgetItemNameInput.focus();
+        return;
+    }
+
+    if (
+        !Number.isFinite(totalPrice) ||
+        totalPrice <= 0
+    ) {
+        showToast(
+            "Harga total harus lebih dari 0."
+        );
+
+        budgetTotalPriceInput.focus();
+        return;
+    }
+
+    if (
+        !Number.isInteger(quantity) ||
+        quantity <= 0
+    ) {
+        showToast(
+            "Jumlah item minimal 1."
+        );
+
+        budgetQuantityInput.focus();
+        return;
+    }
+
+    if (!itemType) {
+        showToast(
+            "Jenis item wajib diisi."
+        );
+
+        budgetItemTypeInput.focus();
+        return;
+    }
+
+    if (editingBudgetId) {
+        const itemIndex =
+            budgetDetails.findIndex(
+                function (item) {
+                    return (
+                        item.id ===
+                        editingBudgetId
+                    );
+                }
+            );
+
+        if (itemIndex !== -1) {
+            budgetDetails[itemIndex] = {
+                ...budgetDetails[itemIndex],
+                itemName: itemName,
+                totalPrice: totalPrice,
+                quantity: quantity,
+                itemType: itemType
+            };
+        }
+
+        showToast(
+            "Detail budget berhasil diperbarui."
+        );
+    } else {
+        budgetDetails.push({
+            id:
+                generateTemporaryBudgetId(),
+
+            itemName: itemName,
+            totalPrice: totalPrice,
+            quantity: quantity,
+            itemType: itemType,
+
+            /*
+            | Diisi melalui menu LPJ.
+            */
+
+            realizationPrice: 0,
+            designImage: "",
+            photo: "",
+            note: ""
+        });
+
+        showToast(
+            "Detail budget berhasil ditambahkan."
+        );
+    }
+
+    resetBudgetDetailForm();
+    renderBudgetDetails();
+}
+
+
+function editBudgetDetail(budgetId) {
+    const item =
+        budgetDetails.find(
+            function (budgetItem) {
+                return (
+                    budgetItem.id ===
+                    budgetId
+                );
+            }
+        );
+
+    if (!item) {
+        showToast(
+            "Detail budget tidak ditemukan."
+        );
+
+        return;
+    }
+
+    editingBudgetId = item.id;
+
+    budgetItemNameInput.value =
+        item.itemName;
+
+    budgetTotalPriceInput.value =
+        item.totalPrice;
+
+    budgetQuantityInput.value =
+        item.quantity;
+
+    budgetItemTypeInput.value =
+        item.itemType;
+
+    addBudgetDetailButton.textContent =
+        "Simpan perubahan";
+
+    cancelBudgetEditButton.classList.remove(
+        "hidden"
+    );
+
+    budgetItemNameInput.focus();
+}
+
+
+function deleteBudgetDetail(budgetId) {
+    const item =
+        budgetDetails.find(
+            function (budgetItem) {
+                return (
+                    budgetItem.id ===
+                    budgetId
+                );
+            }
+        );
+
+    if (!item) {
+        return;
+    }
+
+    const confirmed =
+        window.confirm(
+            `Hapus item budget "${item.itemName}"?`
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+    budgetDetails =
+        budgetDetails.filter(
+            function (budgetItem) {
+                return (
+                    budgetItem.id !==
+                    budgetId
+                );
+            }
+        );
+
+    if (
+        editingBudgetId === budgetId
+    ) {
+        resetBudgetDetailForm();
+    }
+
+    renderBudgetDetails();
+
+    showToast(
+        "Detail budget berhasil dihapus."
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | SUBMIT PENGAJUAN
 |--------------------------------------------------------------------------
 */
 
-pkmForm.addEventListener("submit", function (event) {
+pkmForm.addEventListener("submit", async function (event) {
     event.preventDefault();
 
     const missingFields = getMissingFields();
@@ -2914,6 +3461,30 @@ pkmForm.addEventListener("submit", function (event) {
     const people = collectPeople();
     const leasing = collectLeasing();
     const fund = calculateTotalFund();
+
+    const budgetDetailTotal =
+        getBudgetDetailTotal();
+
+    if (
+        fund.total > 0 &&
+        budgetDetails.length === 0
+    ) {
+        showToast(
+            "Tambahkan minimal satu detail budget."
+        );
+
+        return;
+    }
+
+    if (
+        budgetDetailTotal !== fund.total
+    ) {
+        showToast(
+            "Total detail budget harus sama dengan total sumber dana."
+        );
+
+        return;
+    }
 
     const invalidLeasing = leasing.find(function (item) {
         return item.fund <= 0;
@@ -3014,6 +3585,27 @@ pkmForm.addEventListener("submit", function (event) {
         danaLeasing: fund.danaLeasing,
         danaLain: fund.danaLain,
         totalFund: fund.total,
+        budgetDetails:
+            budgetDetails.map(
+                function (item) {
+                    return {
+                        id: item.id,
+                        itemName:
+                            item.itemName,
+                        totalPrice:
+                            item.totalPrice,
+                        quantity:
+                            item.quantity,
+                        itemType:
+                            item.itemType,
+
+                        realizationPrice: 0,
+                        designImage: "",
+                        photo: "",
+                        note: ""
+                    };
+                }
+            ),
 
         targetDb:
             Number(
@@ -3025,16 +3617,18 @@ pkmForm.addEventListener("submit", function (event) {
                 document.getElementById("targetDeal").value
             ) || 0,
 
-        targetUe: typePkm.includes("H23")
-            ? Number(
-                document.getElementById("targetUe").value
-            ) || 0
-            : 0,
+        targetUe:
+            (
+                typePkm.includes("H23") ||
+                typePkm.includes("H123")
+            )
+                ? Number(targetUeInput.value || 0)
+                : 0,
 
         pengajuan: "DIAJUKAN",
 
-        status: "MENUNGGU_KACAB",
-        approvalStep: "KACAB",
+        status: "MENUNGGU_CRM",
+        approvalStep: "CRM",
 
         approvalHistory: [
             {
@@ -3054,19 +3648,21 @@ pkmForm.addEventListener("submit", function (event) {
         updatedAt: new Date().toISOString()
     };
 
-    const storedPkm = getStoredPkm();
+    /*
+    |--------------------------------------------------------------------------
+    | JANGAN LANGSUNG SIMPAN
+    |--------------------------------------------------------------------------
+    | Data ditahan sementara sampai CRM memberi TTD.
+    */
 
-    storedPkm.unshift(submission);
+    pendingCrmSubmission = submission;
+    pendingCrmSubmissionSaved = false;
+    approvalModalMode = "SUBMIT_CRM";
 
-    saveStoredPkm(storedPkm);
-
-    resetPkmForm();
-    renderAllData();
-    showPage("listPkmPage");
-
-    showToast(
-        `Pengajuan ${submission.id} berhasil disimpan.`
+    await openApprovalModal(
+        submission.id
     );
+
 });
 
 /*
@@ -3077,6 +3673,11 @@ pkmForm.addEventListener("submit", function (event) {
 
 function resetPkmForm() {
     pkmForm.reset();
+    budgetDetails = [];
+    editingBudgetId = null;
+
+    resetBudgetDetailForm();
+    renderBudgetDetails();
 
     document.getElementById("cabang").value =
         `${currentUser.branch} — ${currentUser.branchName}`;
@@ -3394,6 +3995,18 @@ const approvalStages = [
 
 let activeApprovalPkmId = null;
 let signatureHasDrawing = false;
+
+/*
+|--------------------------------------------------------------------------
+| MODE POPUP APPROVAL
+|--------------------------------------------------------------------------
+| APPROVAL   = memproses data yang sudah tersimpan
+| SUBMIT_CRM = TTD CRM ketika membuat pengajuan baru
+*/
+
+let approvalModalMode = "APPROVAL";
+let pendingCrmSubmission = null;
+let pendingCrmSubmissionSaved = false;
 
 
 function getCurrentUserRole() {
@@ -4263,12 +4876,24 @@ async function prepareApprovalSignature() {
 |--------------------------------------------------------------------------
 */
 
-async function openApprovalModal(itemId) {  
-    const item = getBranchPkm().find(
-        function (pkm) {
-            return pkm.id === itemId;
-        }
-    );
+async function openApprovalModal(itemId) {
+    const isCrmSubmission =
+        approvalModalMode === "SUBMIT_CRM";
+
+    const item =
+        isCrmSubmission &&
+        pendingCrmSubmission &&
+        String(pendingCrmSubmission.id) ===
+            String(itemId)
+            ? pendingCrmSubmission
+            : getBranchPkm().find(
+                function (pkm) {
+                    return (
+                        String(pkm.id) ===
+                        String(itemId)
+                    );
+                }
+            );
 
     if (!item) {
         showToast(
@@ -4368,7 +4993,9 @@ async function openApprovalModal(itemId) {
     renderApprovalHistory(item);
 
     const canProcess =
-        canCurrentUserProcess(item);
+        isCrmSubmission
+            ? getCurrentUserRole() === "CRM"
+            : canCurrentUserProcess(item);
 
     signatureSection.classList.toggle(
         "hidden",
@@ -4382,15 +5009,24 @@ async function openApprovalModal(itemId) {
 
     document.getElementById(
         "approvalModalLabel"
-    ).textContent = canProcess
-        ? `PROSES ${getCurrentUserRole()}`
-        : "DETAIL PENGAJUAN";
+    ).textContent = isCrmSubmission
+        ? "TTD PENGAJUAN CRM"
+        : canProcess
+            ? `PROSES ${getCurrentUserRole()}`
+            : "DETAIL PENGAJUAN";
 
     document.getElementById(
         "approvalModalSubtitle"
-    ).textContent = canProcess
-        ? "Periksa data, buat tanda tangan, kemudian setujui."
-        : "Data hanya dapat dilihat dan tidak dapat diubah.";
+    ).textContent = isCrmSubmission
+        ? "Periksa kembali pengajuan, lalu gunakan TTD tersimpan atau gambar TTD CRM."
+        : canProcess
+            ? "Periksa data, buat tanda tangan, kemudian setujui."
+            : "Data hanya dapat dilihat dan tidak dapat diubah.";
+
+    approveWithSignatureButton.textContent =
+    isCrmSubmission
+        ? "✓ TTD & Ajukan PKM"
+        : "✓ Setujui Pengajuan";
 
     approvalModal.classList.remove("hidden");
 
@@ -4539,6 +5175,22 @@ function closeApprovalModal() {
     activeApprovalPkmId = null;
 
     clearSignature();
+
+    /*
+    |--------------------------------------------------------------------------
+    | BATALKAN DRAFT YANG BELUM DISIMPAN
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        approvalModalMode === "SUBMIT_CRM" &&
+        !pendingCrmSubmissionSaved
+    ) {
+        pendingCrmSubmission = null;
+    }
+
+    approvalModalMode = "APPROVAL";
+    pendingCrmSubmissionSaved = false;
 }
 
 
@@ -4798,32 +5450,43 @@ async function approvePkmWithSignature() {
         return;
     }
 
-    /*
-    | Ambil data dari hasil Spreadsheet,
-    | bukan dari localStorage.
-    */
+    const isCrmSubmission =
+        approvalModalMode === "SUBMIT_CRM";
 
-    const item =
-        sheetPkmData.find(
+    const item = isCrmSubmission
+        ? pendingCrmSubmission
+        : sheetPkmData.find(
             function (pkm) {
                 return (
                     String(pkm.id) ===
-                    String(
-                        activeApprovalPkmId
-                    )
+                    String(activeApprovalPkmId)
                 );
             }
         );
 
     if (!item) {
         showToast(
-            "Data pengajuan tidak ditemukan. Silakan muat ulang List PKM."
+            "Data pengajuan tidak ditemukan."
         );
 
         return;
     }
 
-    if (!canCurrentUserProcess(item)) {
+    if (
+        isCrmSubmission &&
+        getCurrentUserRole() !== "CRM"
+    ) {
+        showToast(
+            "Hanya CRM yang dapat membuat pengajuan PKM."
+        );
+
+        return;
+    }
+
+    if (
+        !isCrmSubmission &&
+        !canCurrentUserProcess(item)
+    ) {
         showToast(
             "Pengajuan ini bukan giliran Anda."
         );
@@ -4831,12 +5494,12 @@ async function approvePkmWithSignature() {
         return;
     }
 
-    const confirmed =
-        window.confirm(
-            `Setujui pengajuan ${item.id}?`
-        );
+    const confirmationMessage =
+        isCrmSubmission
+            ? `Tandatangani dan ajukan PKM ${item.id}?`
+            : `Setujui pengajuan ${item.id}?`;
 
-    if (!confirmed) {
+    if (!window.confirm(confirmationMessage)) {
         return;
     }
 
@@ -4847,8 +5510,7 @@ async function approvePkmWithSignature() {
     ) {
         signatureData =
             signatureCanvas.toDataURL(
-                "image/jpeg",
-                0.6
+                "image/png"
             );
     }
 
@@ -4859,9 +5521,42 @@ async function approvePkmWithSignature() {
         approveWithSignatureButton.innerHTML = `
             <span class="flex items-center justify-center gap-2">
                 <span class="ui-spinner"></span>
-                Menyimpan approval...
+                <span>
+                    ${
+                        isCrmSubmission
+                            ? "Mengajukan PKM..."
+                            : "Memproses approval..."
+                    }
+                </span>
             </span>
         `;
+
+        /*
+        |--------------------------------------------------------------------------
+        | KHUSUS PENGAJUAN BARU
+        |--------------------------------------------------------------------------
+        | Simpan PKM terlebih dahulu sebagai MENUNGGU CRM.
+        | Jika approval gagal, penyimpanan tidak diulang.
+        */
+
+        if (
+            isCrmSubmission &&
+            !pendingCrmSubmissionSaved
+        ) {
+            await requestBackend(
+                "createPkm",
+                item
+            );
+
+            pendingCrmSubmissionSaved =
+                true;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PROSES TTD CRM / APPROVAL BERIKUTNYA
+        |--------------------------------------------------------------------------
+        */
 
         const result =
             await requestBackend(
@@ -4877,32 +5572,58 @@ async function approvePkmWithSignature() {
                 }
             );
 
-        approveWithSignatureButton.innerHTML = `
-            <span class="flex items-center justify-center gap-2">
-                <span class="ui-spinner"></span>
-                Memperbarui data...
-            </span>
-        `;
+        if (isCrmSubmission) {
+            resetPkmForm();
+        }
 
-        await loadPkmData("list");
+        /*
+        | Ubah mode sebelum modal ditutup.
+        */
+
+        approvalModalMode = "APPROVAL";
+        pendingCrmSubmission = null;
+        pendingCrmSubmissionSaved = false;
 
         closeApprovalModal();
 
+        /*
+        | Tunggu database selesai dimuat agar
+        | tampilan langsung berubah.
+        */
+
+        await loadPkmData("list");
+
+        showPage("listPkmPage");
+
         showToast(
             result.message ||
-            "Pengajuan berhasil disetujui."
+            (
+                isCrmSubmission
+                    ? "PKM berhasil diajukan dan menunggu ACC KACAB."
+                    : "Pengajuan berhasil disetujui."
+            )
         );
     } catch (error) {
         showToast(
             error.message ||
-            "Approval gagal diproses."
+            (
+                isCrmSubmission
+                    ? "Pengajuan PKM gagal disimpan."
+                    : "Approval gagal diproses."
+            )
         );
     } finally {
         approveWithSignatureButton.innerHTML =
-            "✓ Setujui Pengajuan";
+            approvalModalMode ===
+            "SUBMIT_CRM"
+                ? "✓ TTD & Ajukan PKM"
+                : "✓ Setujui Pengajuan";
 
         approveWithSignatureButton.disabled =
-            false;
+            approvalSignatureMode ===
+                "DRAWN"
+                ? !signatureHasDrawing
+                : !savedApprovalSignatureAvailable;
     }
 }
 
@@ -5136,7 +5857,9 @@ function getMissingFields() {
     }
 
     if (
-        selectedValues(".type-pkm").includes("H23") &&
+        selectedValues(".type-pkm").some(function (type) {
+            return type === "H23" || type === "H123";
+        }) &&
         (Number(document.getElementById("targetUe").value) || 0) <= 0
     ) {
         missingFields.push("Target UE");
@@ -6289,8 +7012,7 @@ function compressSignatureImage(file) {
 
                 const compressedData =
                     canvas.toDataURL(
-                        "image/jpeg",
-                        0.6
+                        "image/png",
                     );
 
                 resolve(
@@ -6360,8 +7082,7 @@ function compressDrawnSignature() {
     );
 
     return canvas.toDataURL(
-        "image/jpeg",
-        0.6
+        "image/png",
     );
 }
 
