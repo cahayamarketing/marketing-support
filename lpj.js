@@ -9,7 +9,9 @@ let activeLpjItem = null;
 let lpjBudgetItems = [];
 
 function initializeLpjFrontend() {
-    renderBranchFilter("lpj");
+    window.renderBranchFilter(
+        "lpj"
+    );
 
     document
         .querySelectorAll('[data-page="lpjPage"]')
@@ -354,7 +356,9 @@ function resetLpjFilter() {
         "lpjTypePkm"
     ).value = "ALL";
 
-    renderBranchFilter("lpj");
+    window.renderBranchFilter(
+        "lpj"
+    );
 
     loadLpjCandidates(1);
 }
@@ -795,4 +799,31 @@ function formatLpjDate(value) {
     ).format(date);
 }
 
-initializeLpjFrontend();
+function startLpjFrontend() {
+    if (
+        typeof window.renderBranchFilter !==
+            "function" ||
+        typeof window.getSelectedBranches !==
+            "function"
+    ) {
+        console.error(
+            "Function filter cabang dari app.js belum tersedia."
+        );
+
+        return;
+    }
+
+    initializeLpjFrontend();
+}
+
+if (
+    document.readyState ===
+    "loading"
+) {
+    document.addEventListener(
+        "DOMContentLoaded",
+        startLpjFrontend
+    );
+} else {
+    startLpjFrontend();
+}

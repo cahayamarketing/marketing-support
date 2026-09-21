@@ -877,6 +877,18 @@ function getSelectedBranches(prefix) {
     ].map(function (checkbox) {
         return checkbox.value;
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | BAGIKAN FUNCTION FILTER UNTUK LPJ.JS
+    |--------------------------------------------------------------------------
+    */
+
+    window.renderBranchFilter =
+        renderBranchFilter;
+
+    window.getSelectedBranches =
+        getSelectedBranches;
 }
 
 function readPkmFilters(prefix) {
