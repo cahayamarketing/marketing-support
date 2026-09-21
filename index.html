@@ -103,6 +103,14 @@
                         >
                             List PKM
                         </button>
+
+                        <button
+                            class="nav-subitem"
+                            data-page="lpjPage"
+                            type="button"
+                        >
+                            LPJ
+                        </button>
                     </div>
                 </div>
 
@@ -1580,9 +1588,218 @@
                 </div>
 
             </section>
+            <!-- ===================================================== -->
+            <!-- LPJ -->
+            <!-- ===================================================== -->
 
+            <section id="lpjPage" class="app-content hidden">
+
+                <div class="rounded-3xl bg-white p-6 shadow-sm">
+
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">
+                            Laporan Pertanggungjawaban
+                        </h2>
+
+                        <p class="mt-1 text-sm text-slate-500">
+                            Daftar PKM yang sudah selesai dan belum dibuatkan LPJ.
+                        </p>
+                    </div>
+
+                    <!-- FILTER -->
+                    <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+
+                        <div class="md:col-span-2 xl:col-span-2">
+                            <label for="lpjSearch" class="form-label">
+                                Pencarian lengkap
+                            </label>
+
+                            <input
+                                id="lpjSearch"
+                                class="form-input"
+                                type="search"
+                                placeholder="ID, nama PKM, lokasi atau people..."
+                            >
+                        </div>
+
+                        <div>
+                            <label for="lpjStartDate" class="form-label">
+                                Pelaksanaan awal
+                            </label>
+
+                            <input
+                                id="lpjStartDate"
+                                class="form-input"
+                                type="date"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="lpjEndDate" class="form-label">
+                                Pelaksanaan akhir
+                            </label>
+
+                            <input
+                                id="lpjEndDate"
+                                class="form-input"
+                                type="date"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="lpjJenisPkm" class="form-label">
+                                Jenis PKM
+                            </label>
+
+                            <select id="lpjJenisPkm" class="form-input">
+                                <option value="ALL">Semua jenis</option>
+                                <option value="ATL BIASA">ATL BIASA</option>
+                                <option value="ATL DEALER">ATL DEALER</option>
+                                <option value="BTL BIASA">BTL BIASA</option>
+                                <option value="BTL DEALER">BTL DEALER</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="lpjTypePkm" class="form-label">
+                                Type PKM
+                            </label>
+
+                            <select id="lpjTypePkm" class="form-input">
+                                <option value="ALL">Semua type</option>
+                                <option value="H1">H1</option>
+                                <option value="H23">H23</option>
+                                <option value="H123">H123</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-4 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-end lg:justify-between">
+
+                        <div id="lpjBranchFilterContainer" class="w-full lg:max-w-xl">
+                            <label class="form-label">
+                                Cabang
+                            </label>
+
+                            <div id="lpjBranchFilter"></div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button
+                                id="resetLpjFilter"
+                                type="button"
+                                class="btn-secondary"
+                            >
+                                Reset
+                            </button>
+
+                            <button
+                                id="applyLpjFilter"
+                                type="button"
+                                class="btn-primary"
+                            >
+                                Cari data
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <p id="lpjFilterInfo" class="text-xs font-semibold text-slate-500">
+                            Menampilkan PKM yang belum memiliki LPJ.
+                        </p>
+
+                        <p id="lpjResultCount" class="text-sm font-black text-slate-700">
+                            0 data
+                        </p>
+                    </div>
+
+                    <!-- TABEL -->
+                    <div class="relative mt-6 min-h-[240px]">
+
+                        <div
+                            id="lpjTableLoading"
+                            class="absolute inset-0 z-20 hidden items-center justify-center rounded-2xl bg-white/90 backdrop-blur-sm"
+                        >
+                            <div class="text-center">
+                                <span class="ui-spinner mx-auto h-8 w-8"></span>
+
+                                <p class="mt-4 font-black text-slate-900">
+                                    Mengambil data LPJ
+                                </p>
+
+                                <p class="mt-1 text-sm text-slate-500">
+                                    Membaca PKM yang belum memiliki LPJ...
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="data-table min-w-[1100px]">
+                                <thead>
+                                    <tr>
+                                        <th>ID PKM</th>
+                                        <th>Nama PKM</th>
+                                        <th>Cabang</th>
+                                        <th>Type</th>
+                                        <th>Pelaksanaan</th>
+                                        <th>Lokasi</th>
+                                        <th>Terlambat</th>
+                                        <th>Status</th>
+                                        <th class="text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="lpjTableBody"></tbody>
+                            </table>
+                        </div>
+
+                        <div id="emptyLpj" class="empty-state hidden">
+                            Tidak ada PKM yang menunggu LPJ.
+                        </div>
+                    </div>
+
+                    <!-- PAGINATION -->
+                    <div class="mt-5 flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-5 sm:flex-row">
+
+                        <p id="lpjPaginationInfo" class="text-sm font-bold text-slate-500">
+                            Halaman 1 dari 1
+                        </p>
+
+                        <div class="flex items-center gap-2">
+
+                            <button
+                                id="previousLpjPage"
+                                type="button"
+                                class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
+                                disabled
+                            >
+                                ← Sebelumnya
+                            </button>
+
+                            <span
+                                id="currentLpjPage"
+                                class="min-w-[42px] rounded-xl bg-red-600 px-3 py-2 text-center text-sm font-black text-white"
+                            >
+                                1
+                            </span>
+
+                            <button
+                                id="nextLpjPage"
+                                type="button"
+                                class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
+                                disabled
+                            >
+                                Selanjutnya →
+                            </button>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>         
         </div>
-
     </main>
 
 </section>
@@ -2490,6 +2707,266 @@
     </div>
 </div>
 
+<!-- ===================================================== -->
+<!-- MODAL BUAT LPJ -->
+<!-- ===================================================== -->
+
+<div
+    id="lpjModal"
+    class="fixed inset-0 z-[150] hidden"
+    aria-hidden="true"
+>
+    <div
+        id="lpjModalBackdrop"
+        class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+    ></div>
+
+    <div class="relative flex min-h-full items-center justify-center p-3 md:p-6">
+
+        <div class="relative max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+
+            <div class="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
+
+                <div>
+                    <p class="text-xs font-black uppercase tracking-widest text-red-600">
+                        Finalisasi kegiatan
+                    </p>
+
+                    <h2 class="mt-1 text-xl font-black text-slate-900">
+                        Buat LPJ
+                    </h2>
+
+                    <p id="lpjModalPkmId" class="mt-1 text-sm text-slate-500"></p>
+                </div>
+
+                <button
+                    id="closeLpjModal"
+                    type="button"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 font-black text-slate-600 hover:bg-red-50 hover:text-red-600"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <div class="space-y-6 p-6">
+
+                <!-- PREVIEW PKM -->
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+
+                    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+
+                        <div>
+                            <p class="text-xs font-bold uppercase text-slate-400">
+                                Nama PKM
+                            </p>
+                            <p id="lpjPreviewName" class="mt-1 font-black text-slate-900"></p>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-bold uppercase text-slate-400">
+                                Cabang
+                            </p>
+                            <p id="lpjPreviewBranch" class="mt-1 font-black text-slate-900"></p>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-bold uppercase text-slate-400">
+                                Pelaksanaan
+                            </p>
+                            <p id="lpjPreviewDate" class="mt-1 font-black text-slate-900"></p>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-bold uppercase text-slate-400">
+                                Lokasi
+                            </p>
+                            <p id="lpjPreviewLocation" class="mt-1 font-black text-slate-900"></p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- TARGET DAN ACTUAL -->
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">
+                        Hasil kegiatan
+                    </h3>
+
+                    <div class="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="data-table min-w-[700px]">
+                            <thead>
+                                <tr>
+                                    <th>Indikator</th>
+                                    <th>Target</th>
+                                    <th>Actual</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr>
+                                    <td class="font-black">Database</td>
+                                    <td id="lpjTargetDb">0</td>
+                                    <td>
+                                        <input
+                                            id="lpjActualDb"
+                                            class="form-input"
+                                            type="number"
+                                            min="0"
+                                            value="0"
+                                        >
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="font-black">Deal</td>
+                                    <td id="lpjTargetDeal">0</td>
+                                    <td>
+                                        <input
+                                            id="lpjActualDeal"
+                                            class="form-input"
+                                            type="number"
+                                            min="0"
+                                            value="0"
+                                        >
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="font-black">Unit Entry</td>
+                                    <td id="lpjTargetUe">0</td>
+                                    <td>
+                                        <input
+                                            id="lpjActualUe"
+                                            class="form-input"
+                                            type="number"
+                                            min="0"
+                                            value="0"
+                                        >
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ACTUAL BUDGET -->
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">
+                        Actual budget
+                    </h3>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        Lengkapi harga realisasi dan dokumentasi setiap item.
+                    </p>
+
+                    <div class="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="data-table min-w-[1250px]">
+                            <thead>
+                                <tr>
+                                    <th>Nama Item</th>
+                                    <th>Jenis</th>
+                                    <th>Qty</th>
+                                    <th>Pengajuan</th>
+                                    <th>Harga Realisasi</th>
+                                    <th>Gambar Desain</th>
+                                    <th>Foto</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="lpjBudgetTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="emptyLpjBudget" class="empty-state hidden">
+                        Detail budget pengajuan tidak ditemukan.
+                    </div>
+                </div>
+
+                <!-- FOTO UTAMA -->
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">
+                        Dokumentasi utama
+                    </h3>
+
+                    <div class="mt-4 grid gap-4 md:grid-cols-3">
+
+                        <div>
+                            <label for="lpjTentPhoto" class="form-label">
+                                Foto tenda/desain penuh
+                            </label>
+                            <input
+                                id="lpjTentPhoto"
+                                class="form-input"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="lpjActivityPhoto1" class="form-label">
+                                Foto kegiatan 1
+                            </label>
+                            <input
+                                id="lpjActivityPhoto1"
+                                class="form-input"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="lpjActivityPhoto2" class="form-label">
+                                Foto kegiatan 2
+                            </label>
+                            <input
+                                id="lpjActivityPhoto2"
+                                class="form-input"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                            >
+                        </div>
+
+                    </div>
+                </div>
+
+                <div>
+                    <label for="lpjEvaluation" class="form-label">
+                        Evaluasi dan tindak lanjut
+                    </label>
+
+                    <textarea
+                        id="lpjEvaluation"
+                        class="form-input min-h-32"
+                        placeholder="Tuliskan hasil kegiatan, kendala dan tindak lanjut..."
+                    ></textarea>
+                </div>
+
+            </div>
+
+            <div class="sticky bottom-0 z-20 flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:justify-end">
+
+                <button
+                    id="cancelLpjButton"
+                    type="button"
+                    class="btn-secondary"
+                >
+                    Tutup
+                </button>
+
+                <button
+                    id="finalizeLpjButton"
+                    type="button"
+                    class="btn-primary"
+                >
+                    Finalisasi LPJ
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -2497,6 +2974,7 @@
 ></script>
 
 <script src="api.js"></script>
+<script src="lpj.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

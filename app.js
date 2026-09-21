@@ -1710,6 +1710,12 @@ function showPage(pageId) {
             title: "List PKM",
             subtitle:
                 "Telusuri dan pantau status pengajuan"
+        },
+
+        lpjPage: {
+            title: "LPJ",
+            subtitle:
+                "Finalisasi hasil kegiatan marketing"
         }
     };
 
@@ -1792,7 +1798,8 @@ function showPage(pageId) {
 
     if (
         pageId === "pengajuanPage" ||
-        pageId === "listPkmPage"
+        pageId === "listPkmPage" ||
+        pageId === "lpjPage"
     ) {
         pkmSubmenu.classList.remove(
             "hidden"
