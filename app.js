@@ -5804,7 +5804,18 @@ function getProfileCanvasPosition(event) {
 profileSignatureCanvas.addEventListener(
     "pointerdown",
     function (event) {
+        event.preventDefault();
+
         profileSignatureDrawing = true;
+
+        try {
+            profileSignatureCanvas
+                .setPointerCapture(
+                    event.pointerId
+                );
+        } catch (error) {
+            // Abaikan jika tidak didukung.
+        }
 
         const position =
             getProfileCanvasPosition(
@@ -5828,13 +5839,19 @@ profileSignatureCanvas.addEventListener(
             return;
         }
 
+        event.preventDefault();
+
         const position =
             getProfileCanvasPosition(
                 event
             );
 
         profileSignatureContext.lineWidth = 4;
+
         profileSignatureContext.lineCap =
+            "round";
+
+        profileSignatureContext.lineJoin =
             "round";
 
         profileSignatureContext.strokeStyle =
@@ -5860,7 +5877,9 @@ document.addEventListener(
 );
 
 
-function clearProfileSignature() {
+function clearProfileSignature(
+    showCanvas = false
+) {
     profileSignatureContext.clearRect(
         0,
         0,
@@ -5868,7 +5887,22 @@ function clearProfileSignature() {
         profileSignatureCanvas.height
     );
 
+    /*
+    | Beri latar putih pada canvas.
+    */
+
+    profileSignatureContext.fillStyle =
+        "#ffffff";
+
+    profileSignatureContext.fillRect(
+        0,
+        0,
+        profileSignatureCanvas.width,
+        profileSignatureCanvas.height
+    );
+
     profileSignatureHasDrawing = false;
+    profileSignatureDrawing = false;
     uploadedSignatureData = "";
 
     const uploadInput =
@@ -5892,22 +5926,43 @@ function clearProfileSignature() {
         );
 
     uploadInput.value = "";
+
     preview.removeAttribute("src");
-    previewContainer.classList.add("hidden");
-    canvasContainer.classList.remove("hidden");
+
+    previewContainer.classList.add(
+        "hidden"
+    );
+
+    canvasContainer.classList.toggle(
+        "hidden",
+        !showCanvas
+    );
 }
 
 document
-    .getElementById("chooseDrawSignature")
+    .getElementById(
+        "chooseDrawSignature"
+    )
     .addEventListener(
         "click",
         function () {
-            clearProfileSignature();
+            clearProfileSignature(true);
 
-            profileSignatureCanvas.scrollIntoView({
-                behavior: "smooth",
-                block: "center"
-            });
+            window.requestAnimationFrame(
+                function () {
+                    document
+                        .getElementById(
+                            "profileSignatureCanvasContainer"
+                        )
+                        .scrollIntoView({
+                            behavior:
+                                "smooth",
+
+                            block:
+                                "nearest"
+                        });
+                }
+            );
         }
     );
 
@@ -6240,7 +6295,13 @@ document
     )
     .addEventListener(
         "click",
-        clearProfileSignature
+        function () {
+            /*
+            | Bersihkan tanpa menutup canvas.
+            */
+
+            clearProfileSignature(true);
+        }
     );
 
 

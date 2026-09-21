@@ -1287,3 +1287,16 @@ body.modal-open {
 #approvalModal {
     overscroll-behavior: contain;
 }
+
+#profileSignatureCanvas {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: contain;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#profileSignatureCanvasContainer {
+    scroll-margin-top: 90px;
+    scroll-margin-bottom: 100px;
+}
