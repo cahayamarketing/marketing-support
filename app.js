@@ -5416,28 +5416,134 @@ function clearProfileSignature() {
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| KOMPRES GAMBAR TTD
+|--------------------------------------------------------------------------
+| Gambar diperkecil agar request ke Vercel dan Apps Script lebih ringan.
+*/
+
+function compressSignatureImage(file) {
+    return new Promise(function (
+        resolve,
+        reject
+    ) {
+        const reader =
+            new FileReader();
+
+        reader.onerror = function () {
+            reject(
+                new Error(
+                    "Gambar tidak dapat dibaca."
+                )
+            );
+        };
+
+        reader.onload = function () {
+            const image =
+                new Image();
+
+            image.onerror = function () {
+                reject(
+                    new Error(
+                        "Format gambar tidak didukung."
+                    )
+                );
+            };
+
+            image.onload = function () {
+                const maximumWidth = 1000;
+                const maximumHeight = 400;
+
+                const scale = Math.min(
+                    1,
+                    maximumWidth / image.width,
+                    maximumHeight / image.height
+                );
+
+                const width = Math.max(
+                    1,
+                    Math.round(
+                        image.width * scale
+                    )
+                );
+
+                const height = Math.max(
+                    1,
+                    Math.round(
+                        image.height * scale
+                    )
+                );
+
+                const canvas =
+                    document.createElement(
+                        "canvas"
+                    );
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const context =
+                    canvas.getContext("2d");
+
+                /*
+                | Beri latar putih agar TTD transparan
+                | tidak berubah menjadi hitam.
+                */
+
+                context.fillStyle = "#ffffff";
+
+                context.fillRect(
+                    0,
+                    0,
+                    width,
+                    height
+                );
+
+                context.drawImage(
+                    image,
+                    0,
+                    0,
+                    width,
+                    height
+                );
+
+                /*
+                | JPEG kualitas 75% biasanya menghasilkan
+                | file kurang dari 300 KB.
+                */
+
+                const compressedData =
+                    canvas.toDataURL(
+                        "image/jpeg",
+                        0.75
+                    );
+
+                resolve(
+                    compressedData
+                );
+            };
+
+            image.src = reader.result;
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
 document
     .getElementById(
         "profileSignatureUpload"
     )
     .addEventListener(
         "change",
-        function (event) {
+        async function (event) {
             const file =
                 event.target.files[0];
 
             if (!file) {
                 return;
             }
-
-            profileSignatureContext.clearRect(
-                0,
-                0,
-                profileSignatureCanvas.width,
-                profileSignatureCanvas.height
-            );
-
-            profileSignatureHasDrawing = false;
 
             if (
                 !file.type.startsWith(
@@ -5452,28 +5558,51 @@ document
                 return;
             }
 
+            /*
+            | File asli maksimal 5 MB karena nantinya
+            | akan dikompres sebelum dikirim.
+            */
+
             if (
                 file.size >
-                2 * 1024 * 1024
+                5 * 1024 * 1024
             ) {
                 showToast(
-                    "Ukuran gambar maksimal 2 MB."
+                    "Ukuran gambar asli maksimal 5 MB."
                 );
 
                 event.target.value = "";
                 return;
             }
 
-            const reader =
-                new FileReader();
-
-            reader.onload = function () {
-                uploadedSignatureData =
-                    reader.result;
+            try {
+                showToast(
+                    "Memproses gambar tanda tangan..."
+                );
 
                 /*
-                | Tampilkan preview upload.
+                | Hapus hasil gambar manual.
                 */
+
+                profileSignatureContext
+                    .clearRect(
+                        0,
+                        0,
+                        profileSignatureCanvas.width,
+                        profileSignatureCanvas.height
+                    );
+
+                profileSignatureHasDrawing =
+                    false;
+
+                /*
+                | Kompres sebelum dimasukkan ke payload API.
+                */
+
+                uploadedSignatureData =
+                    await compressSignatureImage(
+                        file
+                    );
 
                 document.getElementById(
                     "uploadedSignaturePreview"
@@ -5486,18 +5615,25 @@ document
                     "hidden"
                 );
 
-                /*
-                | Sembunyikan kotak gambar manual.
-                */
-
                 document.getElementById(
                     "profileSignatureCanvasContainer"
                 ).classList.add(
                     "hidden"
                 );
-            };
 
-            reader.readAsDataURL(file);
+                showToast(
+                    "Gambar TTD siap disimpan."
+                );
+            } catch (error) {
+                uploadedSignatureData = "";
+
+                event.target.value = "";
+
+                showToast(
+                    error.message ||
+                    "Gambar TTD gagal diproses."
+                );
+            }
         }
     );
 
@@ -5603,6 +5739,24 @@ document
                         .toDataURL(
                             "image/png"
                         );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | CEK UKURAN HASIL BASE64
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                signatureData &&
+                signatureData.length >
+                900000
+            ) {
+                showToast(
+                    "Gambar TTD masih terlalu besar. Gunakan gambar yang lebih sederhana."
+                );
+
+                return;
             }
 
             try {
