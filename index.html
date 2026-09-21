@@ -384,14 +384,16 @@
                             </div>
 
                             <div>
-                                <label class="form-label">Type PKM</label>
+                                <label class="form-label">
+                                    Type PKM
+                                </label>
 
                                 <div class="option-group">
-
                                     <label class="check-card">
                                         <input
                                             class="type-pkm"
-                                            type="checkbox"
+                                            type="radio"
+                                            name="typePkm"
                                             value="H1"
                                         >
                                         <span>H1</span>
@@ -400,12 +402,22 @@
                                     <label class="check-card">
                                         <input
                                             class="type-pkm"
-                                            type="checkbox"
+                                            type="radio"
+                                            name="typePkm"
                                             value="H23"
                                         >
                                         <span>H23</span>
                                     </label>
 
+                                    <label class="check-card">
+                                        <input
+                                            class="type-pkm"
+                                            type="radio"
+                                            name="typePkm"
+                                            value="H123"
+                                        >
+                                        <span>H123</span>
+                                    </label>
                                 </div>
                             </div>
 
@@ -1059,6 +1071,209 @@
                         </div>
 
                     </div>
+                    
+                    <!-- ================================================= -->
+                    <!-- DETAIL BUDGET -->
+                    <!-- ================================================= -->
+
+                    <div class="form-section">
+                            <div class="section-heading">
+                                <span class="section-number">9</span>
+
+                                <div>
+                                    <h2>Detail budget</h2>
+
+                                    <p>
+                                        Masukkan rincian penggunaan dana kegiatan.
+                                        Realisasi dan dokumentasi dilengkapi melalui LPJ.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                    <div>
+                                        <label
+                                            class="form-label"
+                                            for="budgetItemName"
+                                        >
+                                            Nama item
+                                        </label>
+
+                                        <input
+                                            id="budgetItemName"
+                                            class="form-input"
+                                            type="text"
+                                            placeholder="Contoh: Banner kegiatan"
+                                        >
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="form-label"
+                                            for="budgetTotalPrice"
+                                        >
+                                            Harga total
+                                        </label>
+
+                                        <div class="input-currency">
+                                            <span>Rp</span>
+
+                                            <input
+                                                id="budgetTotalPrice"
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                placeholder="0"
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="form-label"
+                                            for="budgetQuantity"
+                                        >
+                                            Jumlah (qty)
+                                        </label>
+
+                                        <input
+                                            id="budgetQuantity"
+                                            class="form-input"
+                                            type="number"
+                                            min="1"
+                                            step="1"
+                                            value="1"
+                                        >
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="form-label"
+                                            for="budgetItemType"
+                                        >
+                                            Jenis item
+                                        </label>
+
+                                        <input
+                                            id="budgetItemType"
+                                            class="form-input"
+                                            type="text"
+                                            list="budgetItemTypeOptions"
+                                            placeholder="Pilih atau ketik jenis"
+                                        >
+
+                                        <datalist id="budgetItemTypeOptions">
+                                            <option value="PROMOSI"></option>
+                                            <option value="KONSUMSI"></option>
+                                            <option value="SEWA"></option>
+                                            <option value="PERLENGKAPAN"></option>
+                                            <option value="OPERASIONAL"></option>
+                                            <option value="TRANSPORTASI"></option>
+                                            <option value="LAIN-LAIN"></option>
+                                        </datalist>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 flex flex-wrap justify-end gap-3">
+                                    <button
+                                        id="cancelBudgetEditButton"
+                                        class="hidden rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-600 hover:bg-slate-100"
+                                        type="button"
+                                    >
+                                        Batal edit
+                                    </button>
+
+                                    <button
+                                        id="addBudgetDetailButton"
+                                        class="btn-primary"
+                                        type="button"
+                                    >
+                                        + Tambah item
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Tabel detail budget -->
+
+                            <div class="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+                                <table class="data-table min-w-[850px]">
+                                    <thead>
+                                        <tr>
+                                            <th class="w-12">No.</th>
+                                            <th>Nama item</th>
+                                            <th>Jenis item</th>
+                                            <th class="text-center">Qty</th>
+                                            <th class="text-right">Harga total</th>
+                                            <th class="w-32 text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="budgetDetailTableBody"></tbody>
+                                </table>
+
+                                <div
+                                    id="emptyBudgetDetail"
+                                    class="px-5 py-10 text-center text-sm text-slate-500"
+                                >
+                                    Belum ada detail budget.
+                                </div>
+                            </div>
+
+                            <!-- Ringkasan detail budget -->
+
+                            <div class="mt-4 grid gap-3 md:grid-cols-3">
+                                <div class="rounded-xl bg-slate-100 p-4">
+                                    <p class="text-xs font-bold uppercase text-slate-500">
+                                        Total detail budget
+                                    </p>
+
+                                    <p
+                                        id="budgetDetailTotalDisplay"
+                                        class="mt-1 text-lg font-black text-slate-900"
+                                    >
+                                        Rp0
+                                    </p>
+                                </div>
+
+                                <div class="rounded-xl bg-slate-100 p-4">
+                                    <p class="text-xs font-bold uppercase text-slate-500">
+                                        Total sumber dana
+                                    </p>
+
+                                    <p
+                                        id="budgetFundTotalDisplay"
+                                        class="mt-1 text-lg font-black text-slate-900"
+                                    >
+                                        Rp0
+                                    </p>
+                                </div>
+
+                                <div
+                                    id="budgetDifferenceBox"
+                                    class="rounded-xl bg-amber-50 p-4"
+                                >
+                                    <p class="text-xs font-bold uppercase text-amber-700">
+                                        Selisih
+                                    </p>
+
+                                    <p
+                                        id="budgetDifferenceDisplay"
+                                        class="mt-1 text-lg font-black text-amber-700"
+                                    >
+                                        Rp0
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p
+                                id="budgetDetailMessage"
+                                class="mt-3 text-sm font-bold text-amber-600"
+                            >
+                                Total detail budget harus sama dengan total sumber dana.
+                            </p>
+                    </div>                    
+                    
 
                     <!-- TARGET -->
                     <div class="form-section">
@@ -2082,208 +2297,6 @@
                                 type="text"
                                 readonly
                             >
-                        </div>
-
-                        <!-- ================================================= -->
-                        <!-- DETAIL BUDGET -->
-                        <!-- ================================================= -->
-
-                        <div class="form-section">
-                            <div class="section-heading">
-                                <span class="section-number">9</span>
-
-                                <div>
-                                    <h2>Detail budget</h2>
-
-                                    <p>
-                                        Masukkan rincian penggunaan dana kegiatan.
-                                        Realisasi dan dokumentasi dilengkapi melalui LPJ.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                                    <div>
-                                        <label
-                                            class="form-label"
-                                            for="budgetItemName"
-                                        >
-                                            Nama item
-                                        </label>
-
-                                        <input
-                                            id="budgetItemName"
-                                            class="form-input"
-                                            type="text"
-                                            placeholder="Contoh: Banner kegiatan"
-                                        >
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            class="form-label"
-                                            for="budgetTotalPrice"
-                                        >
-                                            Harga total
-                                        </label>
-
-                                        <div class="input-currency">
-                                            <span>Rp</span>
-
-                                            <input
-                                                id="budgetTotalPrice"
-                                                type="number"
-                                                min="0"
-                                                step="1"
-                                                placeholder="0"
-                                            >
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            class="form-label"
-                                            for="budgetQuantity"
-                                        >
-                                            Jumlah (qty)
-                                        </label>
-
-                                        <input
-                                            id="budgetQuantity"
-                                            class="form-input"
-                                            type="number"
-                                            min="1"
-                                            step="1"
-                                            value="1"
-                                        >
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            class="form-label"
-                                            for="budgetItemType"
-                                        >
-                                            Jenis item
-                                        </label>
-
-                                        <input
-                                            id="budgetItemType"
-                                            class="form-input"
-                                            type="text"
-                                            list="budgetItemTypeOptions"
-                                            placeholder="Pilih atau ketik jenis"
-                                        >
-
-                                        <datalist id="budgetItemTypeOptions">
-                                            <option value="PROMOSI"></option>
-                                            <option value="KONSUMSI"></option>
-                                            <option value="SEWA"></option>
-                                            <option value="PERLENGKAPAN"></option>
-                                            <option value="OPERASIONAL"></option>
-                                            <option value="TRANSPORTASI"></option>
-                                            <option value="LAIN-LAIN"></option>
-                                        </datalist>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4 flex flex-wrap justify-end gap-3">
-                                    <button
-                                        id="cancelBudgetEditButton"
-                                        class="hidden rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-600 hover:bg-slate-100"
-                                        type="button"
-                                    >
-                                        Batal edit
-                                    </button>
-
-                                    <button
-                                        id="addBudgetDetailButton"
-                                        class="btn-primary"
-                                        type="button"
-                                    >
-                                        + Tambah item
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Tabel detail budget -->
-
-                            <div class="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
-                                <table class="data-table min-w-[850px]">
-                                    <thead>
-                                        <tr>
-                                            <th class="w-12">No.</th>
-                                            <th>Nama item</th>
-                                            <th>Jenis item</th>
-                                            <th class="text-center">Qty</th>
-                                            <th class="text-right">Harga total</th>
-                                            <th class="w-32 text-center">Aksi</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody id="budgetDetailTableBody"></tbody>
-                                </table>
-
-                                <div
-                                    id="emptyBudgetDetail"
-                                    class="px-5 py-10 text-center text-sm text-slate-500"
-                                >
-                                    Belum ada detail budget.
-                                </div>
-                            </div>
-
-                            <!-- Ringkasan detail budget -->
-
-                            <div class="mt-4 grid gap-3 md:grid-cols-3">
-                                <div class="rounded-xl bg-slate-100 p-4">
-                                    <p class="text-xs font-bold uppercase text-slate-500">
-                                        Total detail budget
-                                    </p>
-
-                                    <p
-                                        id="budgetDetailTotalDisplay"
-                                        class="mt-1 text-lg font-black text-slate-900"
-                                    >
-                                        Rp0
-                                    </p>
-                                </div>
-
-                                <div class="rounded-xl bg-slate-100 p-4">
-                                    <p class="text-xs font-bold uppercase text-slate-500">
-                                        Total sumber dana
-                                    </p>
-
-                                    <p
-                                        id="budgetFundTotalDisplay"
-                                        class="mt-1 text-lg font-black text-slate-900"
-                                    >
-                                        Rp0
-                                    </p>
-                                </div>
-
-                                <div
-                                    id="budgetDifferenceBox"
-                                    class="rounded-xl bg-amber-50 p-4"
-                                >
-                                    <p class="text-xs font-bold uppercase text-amber-700">
-                                        Selisih
-                                    </p>
-
-                                    <p
-                                        id="budgetDifferenceDisplay"
-                                        class="mt-1 text-lg font-black text-amber-700"
-                                    >
-                                        Rp0
-                                    </p>
-                                </div>
-                            </div>
-
-                            <p
-                                id="budgetDetailMessage"
-                                class="mt-3 text-sm font-bold text-amber-600"
-                            >
-                                Total detail budget harus sama dengan total sumber dana.
-                            </p>
                         </div>
 
                         <div>
