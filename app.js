@@ -3116,20 +3116,29 @@ document
 function generateTemporaryBudgetId() {
     if (
         window.crypto &&
-        typeof window.crypto.randomUUID ===
+        typeof window.crypto.getRandomValues ===
             "function"
     ) {
-        return window.crypto.randomUUID();
+        const bytes =
+            new Uint8Array(4);
+
+        window.crypto.getRandomValues(
+            bytes
+        );
+
+        return Array.from(bytes)
+            .map(function (byte) {
+                return byte
+                    .toString(16)
+                    .padStart(2, "0");
+            })
+            .join("");
     }
 
-    return (
-        "BUDGET-" +
-        Date.now() +
-        "-" +
-        Math.random()
-            .toString(16)
-            .slice(2)
-    );
+    return Math.random()
+        .toString(16)
+        .slice(2, 10)
+        .padEnd(8, "0");
 }
 
 
