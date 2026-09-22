@@ -141,6 +141,7 @@ let leasingOptions = [];
 let pkmTypeOptions = [];
 let eventOptions = [];
 let focusTypeOptions = [];
+let selectedFocusTypes = [];
 
 /*
 |--------------------------------------------------------------------------
@@ -2463,6 +2464,7 @@ document
                 | UPDATE LOKASI OTOMATIS KHUSUS ATL
                 |----------------------------------------------------------
                 */
+                updateProgramFieldsByPkmType();
 
                 fillAutomaticAtlLocation();
 
@@ -2477,32 +2479,56 @@ document
 |--------------------------------------------------------------------------
 */
 
-document
-    .querySelectorAll(".focus-type")
-    .forEach(function (input) {
-        input.addEventListener("change", function () {
-            const focusTypes = selectedValues(".focus-type");
+function updateProgramFieldsByPkmType() {
+    const selectedTypes =
+        selectedValues(
+            ".type-pkm"
+        );
 
-            const useH1 = focusTypes.includes("H1");
-            const useH23 = focusTypes.includes("H23");
+    const useH1 =
+        selectedTypes.includes("H1") ||
+        selectedTypes.includes("H123");
 
-            document
-                .getElementById("programH1Container")
-                .classList.toggle("hidden", !useH1);
+    const useH23 =
+        selectedTypes.includes("H23") ||
+        selectedTypes.includes("H123");
 
-            document
-                .getElementById("programH23Container")
-                .classList.toggle("hidden", !useH23);
+    const programH1Container =
+        document.getElementById(
+            "programH1Container"
+        );
 
-            if (!useH1) {
-                document.getElementById("programH1").value = "";
-            }
+    const programH23Container =
+        document.getElementById(
+            "programH23Container"
+        );
 
-            if (!useH23) {
-                document.getElementById("programH23").value = "";
-            }
-        });
-    });
+    if (programH1Container) {
+        programH1Container.classList.toggle(
+            "hidden",
+            !useH1
+        );
+    }
+
+    if (programH23Container) {
+        programH23Container.classList.toggle(
+            "hidden",
+            !useH23
+        );
+    }
+
+    if (!useH1) {
+        document.getElementById(
+            "programH1"
+        ).value = "";
+    }
+
+    if (!useH23) {
+        document.getElementById(
+            "programH23"
+        ).value = "";
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -4231,19 +4257,27 @@ pkmForm.addEventListener("submit", async function (event) {
         people,
         focusType,
 
-        programH1: focusType.includes("H1")
-            ? document
-                .getElementById("programH1")
-                .value
-                .trim()
-            : "",
+        programH1:
+            (
+                typePkm.includes("H1") ||
+                typePkm.includes("H123")
+            )
+                ? document
+                    .getElementById("programH1")
+                    .value
+                    .trim()
+                : "",
 
-        programH23: focusType.includes("H23")
-            ? document
-                .getElementById("programH23")
-                .value
-                .trim()
-            : "",
+        programH23:
+            (
+                typePkm.includes("H23") ||
+                typePkm.includes("H123")
+            )
+                ? document
+                    .getElementById("programH23")
+                    .value
+                    .trim()
+                : "",
 
         publication,
         leasing,
@@ -4341,6 +4375,18 @@ pkmForm.addEventListener("submit", async function (event) {
 
 function resetPkmForm() {
     pkmForm.reset();
+    selectedFocusTypes = [];
+
+    renderSelectedFocusTypes();
+
+    const focusTypeSearch =
+        document.getElementById(
+            "focusTypeSearch"
+        );
+
+    if (focusTypeSearch) {
+        focusTypeSearch.value = "";
+    }
     budgetDetails = [];
     editingBudgetId = null;
 
@@ -6805,22 +6851,48 @@ function getMissingFields() {
     const focusTypes =
         selectedValues(".focus-type");
 
-    if (!focusTypes.length) {
-        missingFields.push("Fokus type");
+    const selectedPkmTypes =
+        selectedValues(".type-pkm");
+
+    if (
+        isBtlSelected() &&
+        !focusTypes.length
+    ) {
+        missingFields.push(
+            "Fokus type"
+        );
     }
 
     if (
-        focusTypes.includes("H1") &&
-        !document.getElementById("programH1").value.trim()
+        isBtlSelected() &&
+        (
+            selectedPkmTypes.includes("H1") ||
+            selectedPkmTypes.includes("H123")
+        ) &&
+        !document
+            .getElementById("programH1")
+            .value
+            .trim()
     ) {
-        missingFields.push("Nama program H1");
+        missingFields.push(
+            "Nama program H1"
+        );
     }
 
     if (
-        focusTypes.includes("H23") &&
-        !document.getElementById("programH23").value.trim()
+        isBtlSelected() &&
+        (
+            selectedPkmTypes.includes("H23") ||
+            selectedPkmTypes.includes("H123")
+        ) &&
+        !document
+            .getElementById("programH23")
+            .value
+            .trim()
     ) {
-        missingFields.push("Nama program H23");
+        missingFields.push(
+            "Nama program H23"
+        );
     }
 
     const targetDb =
@@ -8149,40 +8221,326 @@ function compressDrawnSignature() {
 }
 
 function renderFocusTypeOptions() {
+    const searchInput =
+        document.getElementById(
+            "focusTypeSearch"
+        );
+
+    const searchResults =
+        document.getElementById(
+            "focusTypeSearchResults"
+        );
+
+    const selectedContainer =
+        document.getElementById(
+            "selectedFocusTypeContainer"
+        );
+
+    if (
+        !searchInput ||
+        !searchResults ||
+        !selectedContainer
+    ) {
+        return;
+    }
+
+    searchInput.disabled =
+        !focusTypeOptions.length;
+
+    searchInput.placeholder =
+        focusTypeOptions.length
+            ? "Cari kode atau nama unit..."
+            : "Data focus type tidak tersedia";
+
+    renderSelectedFocusTypes();
+
+    /*
+    | Mencegah event dipasang berulang kali
+    | ketika data master dimuat ulang.
+    */
+
+    if (
+        searchInput.dataset.listenerBound ===
+        "true"
+    ) {
+        return;
+    }
+
+    searchInput.dataset.listenerBound =
+        "true";
+
+    searchInput.addEventListener(
+        "input",
+        function () {
+            showFocusTypeSearchResults(
+                this.value
+            );
+        }
+    );
+
+    searchInput.addEventListener(
+        "focus",
+        function () {
+            if (this.value.trim()) {
+                showFocusTypeSearchResults(
+                    this.value
+                );
+            }
+        }
+    );
+
+    searchResults.addEventListener(
+        "click",
+        function (event) {
+            const button =
+                event.target.closest(
+                    "[data-focus-type]"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            addSelectedFocusType(
+                button.dataset.focusType
+            );
+        }
+    );
+
+    selectedContainer.addEventListener(
+        "click",
+        function (event) {
+            const button =
+                event.target.closest(
+                    "[data-remove-focus-type]"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            removeSelectedFocusType(
+                button.dataset
+                    .removeFocusType
+            );
+        }
+    );
+
+    document.addEventListener(
+        "click",
+        function (event) {
+            if (
+                event.target !==
+                    searchInput &&
+                !searchResults.contains(
+                    event.target
+                )
+            ) {
+                searchResults.classList.add(
+                    "hidden"
+                );
+            }
+        }
+    );
+}
+
+function showFocusTypeSearchResults(
+    keyword
+) {
+    const resultsContainer =
+        document.getElementById(
+            "focusTypeSearchResults"
+        );
+
+    if (!resultsContainer) {
+        return;
+    }
+
+    const normalizedKeyword =
+        String(keyword || "")
+            .trim()
+            .toLowerCase();
+
+    if (!normalizedKeyword) {
+        resultsContainer.innerHTML = "";
+        resultsContainer.classList.add(
+            "hidden"
+        );
+
+        return;
+    }
+
+    const matches =
+        focusTypeOptions
+            .filter(function (gab) {
+                const value =
+                    String(gab || "");
+
+                return (
+                    value
+                        .toLowerCase()
+                        .includes(
+                            normalizedKeyword
+                        ) &&
+                    !selectedFocusTypes.includes(
+                        value
+                    )
+                );
+            })
+            .slice(0, 15);
+
+    if (!matches.length) {
+        resultsContainer.innerHTML = `
+            <div class="px-4 py-3 text-sm text-slate-500">
+                Focus type tidak ditemukan.
+            </div>
+        `;
+
+        resultsContainer.classList.remove(
+            "hidden"
+        );
+
+        return;
+    }
+
+    resultsContainer.innerHTML =
+        matches.map(function (gab) {
+            return `
+                <button
+                    type="button"
+                    data-focus-type="${escapeHtml(gab)}"
+                    class="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-red-50"
+                >
+                    <span class="font-bold text-slate-800">
+                        ${escapeHtml(gab)}
+                    </span>
+
+                    <span class="text-xs font-bold text-red-600">
+                        Pilih
+                    </span>
+                </button>
+            `;
+        }).join("");
+
+    resultsContainer.classList.remove(
+        "hidden"
+    );
+}
+
+
+function addSelectedFocusType(gab) {
+    const value =
+        String(gab || "").trim();
+
+    if (
+        !value ||
+        selectedFocusTypes.includes(value)
+    ) {
+        return;
+    }
+
+    selectedFocusTypes.push(value);
+
+    const searchInput =
+        document.getElementById(
+            "focusTypeSearch"
+        );
+
+    const searchResults =
+        document.getElementById(
+            "focusTypeSearchResults"
+        );
+
+    if (searchInput) {
+        searchInput.value = "";
+        searchInput.focus();
+    }
+
+    if (searchResults) {
+        searchResults.innerHTML = "";
+        searchResults.classList.add(
+            "hidden"
+        );
+    }
+
+    renderSelectedFocusTypes();
+    validateFormState();
+}
+
+
+function removeSelectedFocusType(gab) {
+    selectedFocusTypes =
+        selectedFocusTypes.filter(
+            function (item) {
+                return item !== gab;
+            }
+        );
+
+    renderSelectedFocusTypes();
+    validateFormState();
+}
+
+
+function renderSelectedFocusTypes() {
     const container =
         document.getElementById(
-            "focusTypeOptions"
+            "selectedFocusTypeContainer"
+        );
+
+    const count =
+        document.getElementById(
+            "selectedFocusTypeCount"
         );
 
     if (!container) {
         return;
     }
 
-    if (!focusTypeOptions.length) {
+    if (count) {
+        count.textContent =
+            `${selectedFocusTypes.length} type`;
+    }
+
+    if (!selectedFocusTypes.length) {
         container.innerHTML = `
-            <p class="text-sm text-slate-400">
-                Data focus type tidak tersedia.
-            </p>
+            <div
+                id="focusTypeEmptyState"
+                class="people-empty-state"
+            >
+                Belum ada focus type yang dipilih.
+            </div>
         `;
 
         return;
     }
 
     container.innerHTML =
-        focusTypeOptions.map(
+        selectedFocusTypes.map(
             function (gab) {
                 return `
-                    <label class="check-card">
+                    <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
                         <input
                             class="focus-type"
                             type="checkbox"
                             value="${escapeHtml(gab)}"
+                            checked
+                            hidden
                         >
 
-                        <span>
+                        <span class="font-bold text-slate-800">
                             ${escapeHtml(gab)}
                         </span>
-                    </label>
+
+                        <button
+                            type="button"
+                            data-remove-focus-type="${escapeHtml(gab)}"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 font-black text-red-600 transition hover:bg-red-100"
+                            aria-label="Hapus ${escapeHtml(gab)}"
+                            title="Hapus"
+                        >
+                            ×
+                        </button>
+                    </div>
                 `;
             }
         ).join("");

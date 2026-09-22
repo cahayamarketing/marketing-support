@@ -1247,13 +1247,55 @@
                                 <div>
                                     <label class="form-label">Fokus type</label>
 
-                                    <div
-                                        id="focusTypeOptions"
-                                        class="option-group"
-                                    >
-                                        <p class="text-sm text-slate-400">
-                                            Memuat focus type...
-                                        </p>
+                                    <div>
+                                        <label
+                                            for="focusTypeSearch"
+                                            class="form-label"
+                                        >
+                                            Fokus type
+                                        </label>
+
+                                        <div class="people-picker">
+                                            <div class="people-search-wrapper">
+                                                <span class="people-search-icon">
+                                                    ⌕
+                                                </span>
+
+                                                <input
+                                                    id="focusTypeSearch"
+                                                    class="form-input people-search-input"
+                                                    type="search"
+                                                    placeholder="Cari kode atau nama unit..."
+                                                    autocomplete="off"
+                                                    disabled
+                                                >
+
+                                                <div
+                                                    id="focusTypeSearchResults"
+                                                    class="people-search-results hidden"
+                                                ></div>
+                                            </div>
+
+                                            <div class="selected-people-header">
+                                                <span>Fokus type terpilih</span>
+
+                                                <span id="selectedFocusTypeCount">
+                                                    0 type
+                                                </span>
+                                            </div>
+
+                                            <div
+                                                id="selectedFocusTypeContainer"
+                                                class="selected-people-container"
+                                            >
+                                                <div
+                                                    id="focusTypeEmptyState"
+                                                    class="people-empty-state"
+                                                >
+                                                    Belum ada focus type yang dipilih.
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
