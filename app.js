@@ -1833,7 +1833,7 @@ async function initializeApplication() {
     |--------------------------------------------------------------------------
     */
 
-    await loadReferenceMasters();
+    void loadReferenceMasters();
 
     populateJenisPkmOptions();
     initializePkmFilters();
