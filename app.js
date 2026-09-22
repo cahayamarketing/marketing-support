@@ -2016,7 +2016,20 @@ function showPage(pageId) {
             title: "LPJ",
             subtitle:
                 "Finalisasi hasil kegiatan marketing"
+        },
+        
+        crmKpiPage: {
+            title: "KPI CRM",
+            subtitle:
+                "Pengisian dan verifikasi performance CRM"
+        },
+
+        sipedeKpiPage: {
+            title: "KPI SiPede",
+            subtitle:
+                "Monitoring performance SiPede"
         }
+
     };
 
     /*
@@ -2138,6 +2151,40 @@ function showPage(pageId) {
                 }
             }
         }, 150);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BUKA SUBMENU KPI
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        pageId === "crmKpiPage" ||
+        pageId === "sipedeKpiPage"
+    ) {
+        document
+            .getElementById("kpiSubmenu")
+            .classList.remove("hidden");
+
+        document
+            .getElementById("kpiArrow")
+            .textContent = "⌃";
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MUAT KPI CRM
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        pageId === "crmKpiPage" &&
+        typeof window.loadCrmKpiPage ===
+            "function"
+    ) {
+        window.loadCrmKpiPage();
     }
 
     window.scrollTo({
