@@ -613,15 +613,26 @@ async function requestBackend(
         "approvePkm",
         "savePkmPdf",
         "getPkmPdfFile",
-        "updateMyProfile"
+        "updateMyProfile",
+        "getCrmKpiData",
+        "saveCrmKpi",
+        "verifyCrmKpi"
+    ];
+
+    const kpiActions = [
+        "getCrmKpiData",
+        "saveCrmKpi",
+        "verifyCrmKpi"
     ];
 
     const timeoutDuration =
-        longActions.includes(action)
-            ? 55000
-            : action === "getPkmData"
-                ? 35000
-                : 25000;
+        kpiActions.includes(action)
+            ? 90000
+            : longActions.includes(action)
+                ? 55000
+                : action === "getPkmData"
+                    ? 35000
+                    : 25000;
 
     const timeoutId =
         window.setTimeout(

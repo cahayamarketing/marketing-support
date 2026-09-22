@@ -392,7 +392,6 @@ async function loadCrmKpiPage() {
                     branch: branch,
                     year: year,
                     month: month,
-
                     week:
                         week
                             ? Number(week)
@@ -433,6 +432,11 @@ async function loadCrmKpiPage() {
 
         crmKpiEditing = false;
         crmKpiVerifying = false;
+
+        /*
+        | Setelah fungsi yang hilang diperbaiki,
+        | bagian ini tidak akan menghasilkan error kedua.
+        */
 
         renderCrmKpiTable();
         updateCrmKpiButtons("");
@@ -1106,6 +1110,22 @@ function renderCrmKpiActual(
 |--------------------------------------------------------------------------
 */
 
+function hasKpiValue(value) {
+    if (Array.isArray(value)) {
+        return value.some(function (item) {
+            return item !== "" &&
+                item !== null &&
+                item !== undefined;
+        });
+    }
+
+    return (
+        value !== "" &&
+        value !== null &&
+        value !== undefined
+    );
+}
+
 function calculateCrmKpiScore(
     metric,
     row
@@ -1144,9 +1164,9 @@ function calculateCrmKpiScore(
     ) {
         if (
             useHoResult &&
-            hasStoredCrmKpiScore(
+            hasKpiValue(
                 row.scoreHo
-            )
+            )       
         ) {
             return Number(
                 row.scoreHo
@@ -1154,7 +1174,7 @@ function calculateCrmKpiScore(
         }
 
         if (
-            hasStoredCrmKpiScore(
+            hasKpiValue(
                 row.scoreCrm
             )
         ) {
@@ -2029,22 +2049,6 @@ function formatCrmKpiTarget(metric, target) {
     }
 
     return metric.targetLabel;
-}
-
-function hasKpiValue(value) {
-    if (Array.isArray(value)) {
-        return value.some(function (item) {
-            return item !== "" &&
-                item !== null &&
-                item !== undefined;
-        });
-    }
-
-    return (
-        value !== "" &&
-        value !== null &&
-        value !== undefined
-    );
 }
 
 function averageKpiArray(values) {
