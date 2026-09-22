@@ -1393,18 +1393,51 @@ function getDifferenceClass(metric, row) {
 */
 
 function startCrmKpiInput() {
-    if (!crmKpiWeek.value) {
+    if (!canInputCrmKpi()) {
         showToast(
-            "Pilih Week terlebih dahulu sebelum membuat input KPI."
+            "Hanya CRM yang dapat mengisi KPI."
         );
 
         return;
     }
 
+    const today =
+        new Date();
+
+    const currentYear =
+        today.getFullYear();
+
+    const currentMonth =
+        today.getMonth() + 1;
+
+    const currentWeek =
+        getCurrentCrmKpiWeek();
+
+    /*
+    | Input baru selalu mengikuti tanggal
+    | saat CRM melakukan input.
+    */
+
+    crmKpiYear.value =
+        String(currentYear);
+
+    crmKpiMonth.value =
+        String(currentMonth);
+
+    crmKpiWeek.value =
+        String(currentWeek);
+
     crmKpiEditing = true;
     crmKpiVerifying = false;
 
-    updateCrmKpiButtons("");
+    updateCrmKpiPeriodInformation(
+        ""
+    );
+
+    updateCrmKpiButtons(
+        ""
+    );
+
     renderCrmKpiTable();
 }
 
@@ -1679,15 +1712,29 @@ function updateCrmKpiButtons(status) {
 |--------------------------------------------------------------------------
 */
 
-function updateCrmKpiPeriodInformation(status) {
-    const week = crmKpiWeek.value;
+function updateCrmKpiPeriodInformation(
+    status
+) {
+    const week =
+        Number(
+            crmKpiWeek.value || 0
+        );
 
-    document.getElementById(
-        "crmKpiPeriodLabel"
-    ).textContent =
-        week
-            ? `Week ${week}`
-            : "Rata-rata MTD";
+    const year =
+        Number(crmKpiYear.value);
+
+    const month =
+        Number(crmKpiMonth.value);
+
+    const periodLabel =
+        document.getElementById(
+            "crmKpiPeriodLabel"
+        );
+
+    const information =
+        document.getElementById(
+            "crmKpiInformation"
+        );
 
     document.getElementById(
         "crmKpiStatus"
@@ -1695,12 +1742,52 @@ function updateCrmKpiPeriodInformation(status) {
         status ||
         "Belum ada data";
 
-    document.getElementById(
-        "crmKpiInformation"
-    ).textContent =
-        week
-            ? "Nilai KPI mingguan cabang."
-            : "Nilai merupakan rata-rata seluruh Week pada bulan terpilih.";
+    if (!week) {
+        periodLabel.textContent =
+            "Rata-rata MTD";
+
+        information.textContent =
+            "Nilai merupakan rata-rata seluruh Week pada bulan terpilih.";
+
+        return;
+    }
+
+    const range =
+        getCrmKpiWeekRange(
+            year,
+            month,
+            week
+        );
+
+    if (!range) {
+        periodLabel.textContent =
+            `Week ${week}`;
+
+        information.textContent =
+            "Week tidak tersedia pada bulan ini.";
+
+        return;
+    }
+
+    const dateFormatter =
+        new Intl.DateTimeFormat(
+            "id-ID",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }
+        );
+
+    periodLabel.textContent =
+        `Week ${week}`;
+
+    information.textContent =
+        `${dateFormatter.format(
+            range.start
+        )} – ${dateFormatter.format(
+            range.end
+        )} · Minggu sampai Sabtu`;
 }
 
 function setCrmKpiLoading(loading) {
@@ -1804,6 +1891,101 @@ function formatKpiNumber(value) {
                 maximumFractionDigits: 2
             }
         );
+}
+
+function getCrmKpiWeekRange(
+    year,
+    month,
+    week
+) {
+    const firstDate =
+        new Date(
+            year,
+            month - 1,
+            1
+        );
+
+    const firstSunday =
+        new Date(firstDate);
+
+    firstSunday.setDate(
+        firstDate.getDate() -
+        firstDate.getDay()
+    );
+
+    const start =
+        new Date(firstSunday);
+
+    start.setDate(
+        firstSunday.getDate() +
+        ((week - 1) * 7)
+    );
+
+    const end =
+        new Date(start);
+
+    end.setDate(
+        start.getDate() + 6
+    );
+
+    const monthStart =
+        new Date(
+            year,
+            month - 1,
+            1
+        );
+
+    const monthEnd =
+        new Date(
+            year,
+            month,
+            0
+        );
+
+    if (
+        end < monthStart ||
+        start > monthEnd
+    ) {
+        return null;
+    }
+
+    return {
+        start:
+            start < monthStart
+                ? monthStart
+                : start,
+
+        end:
+            end > monthEnd
+                ? monthEnd
+                : end
+    };
+}
+
+function getCurrentCrmKpiWeek() {
+    const today =
+        new Date();
+
+    const firstDate =
+        new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            1
+        );
+
+    const calculatedWeek =
+        Math.floor(
+            (
+                today.getDate() +
+                firstDate.getDay() -
+                1
+            ) / 7
+        ) + 1;
+
+    return Math.min(
+        calculatedWeek,
+        5
+    );
 }
 
 
