@@ -114,23 +114,42 @@
                     </div>
                 </div>
 
-                <button class="nav-item disabled-menu" type="button">
-                    <span>◎</span>
-                    <span>KPI</span>
-                    <span class="menu-badge">Segera</span>
-                </button>
+                <div>
+                    <button
+                        id="kpiMenuButton"
+                        class="nav-item"
+                        type="button"
+                    >
+                        <span>◎</span>
 
-                <button class="nav-item disabled-menu" type="button">
-                    <span>◉</span>
-                    <span>CRM</span>
-                    <span class="menu-badge">Segera</span>
-                </button>
+                        <span class="flex-1 text-left">
+                            KPI
+                        </span>
 
-                <button class="nav-item disabled-menu" type="button">
-                    <span>▤</span>
-                    <span>SIPEDE</span>
-                    <span class="menu-badge">Segera</span>
-                </button>
+                        <span id="kpiArrow">⌄</span>
+                    </button>
+
+                    <div
+                        id="kpiSubmenu"
+                        class="ml-5 mt-2 hidden space-y-1 border-l border-white/20 pl-4"
+                    >
+                        <button
+                            class="nav-subitem"
+                            data-page="crmKpiPage"
+                            type="button"
+                        >
+                            CRM
+                        </button>
+
+                        <button
+                            class="nav-subitem"
+                            data-page="sipedeKpiPage"
+                            type="button"
+                        >
+                            SiPede
+                        </button>
+                    </div>
+                </div>
 
             </nav>
         </div>
@@ -344,6 +363,314 @@
                 </div>
 
             </section>
+
+            <!-- ===================================================== -->
+            <!-- KPI CRM -->
+            <!-- ===================================================== -->
+
+            <section
+                id="crmKpiPage"
+                class="app-content hidden"
+            >
+                <div class="space-y-6">
+
+                    <!-- HEADER KPI -->
+                    <div class="rounded-3xl bg-gradient-to-r from-red-700 to-red-500 p-6 text-white shadow-lg">
+                        <div class="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+
+                            <div>
+                                <p class="text-sm font-bold uppercase tracking-[0.18em] text-red-100">
+                                    KPI CRM
+                                </p>
+
+                                <h2 class="mt-2 text-3xl font-black">
+                                    Performance CRM Cabang
+                                </h2>
+
+                                <p class="mt-2 text-sm text-red-100">
+                                    Pengisian CRM dilakukan setiap minggu dan diperbarui paling lambat hari Jumat.
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+
+                                <div class="rounded-2xl bg-white/15 px-5 py-4 backdrop-blur">
+                                    <p class="text-xs font-bold uppercase text-red-100">
+                                        Total KPI
+                                    </p>
+
+                                    <div class="mt-1 flex items-end gap-1">
+                                        <span
+                                            id="crmKpiTotal"
+                                            class="text-3xl font-black"
+                                        >
+                                            0
+                                        </span>
+
+                                        <span class="pb-1 text-sm font-bold text-red-100">
+                                            / 115
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-2xl bg-white/15 px-5 py-4 backdrop-blur">
+                                    <p class="text-xs font-bold uppercase text-red-100">
+                                        Status
+                                    </p>
+
+                                    <p
+                                        id="crmKpiStatus"
+                                        class="mt-2 text-sm font-black"
+                                    >
+                                        Belum ada data
+                                    </p>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FILTER -->
+                    <div class="rounded-3xl bg-white p-5 shadow-sm">
+
+                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+
+                            <div>
+                                <label
+                                    for="crmKpiBranch"
+                                    class="form-label"
+                                >
+                                    Cabang
+                                </label>
+
+                                <select
+                                    id="crmKpiBranch"
+                                    class="form-input"
+                                ></select>
+                            </div>
+
+                            <div>
+                                <label
+                                    for="crmKpiYear"
+                                    class="form-label"
+                                >
+                                    Tahun
+                                </label>
+
+                                <select
+                                    id="crmKpiYear"
+                                    class="form-input"
+                                ></select>
+                            </div>
+
+                            <div>
+                                <label
+                                    for="crmKpiMonth"
+                                    class="form-label"
+                                >
+                                    Bulan
+                                </label>
+
+                                <select
+                                    id="crmKpiMonth"
+                                    class="form-input"
+                                >
+                                    <option value="1">Januari</option>
+                                    <option value="2">Februari</option>
+                                    <option value="3">Maret</option>
+                                    <option value="4">April</option>
+                                    <option value="5">Mei</option>
+                                    <option value="6">Juni</option>
+                                    <option value="7">Juli</option>
+                                    <option value="8">Agustus</option>
+                                    <option value="9">September</option>
+                                    <option value="10">Oktober</option>
+                                    <option value="11">November</option>
+                                    <option value="12">Desember</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label
+                                    for="crmKpiWeek"
+                                    class="form-label"
+                                >
+                                    Periode
+                                </label>
+
+                                <select
+                                    id="crmKpiWeek"
+                                    class="form-input"
+                                >
+                                    <option value="">Rata-rata MTD</option>
+                                    <option value="1">Week 1</option>
+                                    <option value="2">Week 2</option>
+                                    <option value="3">Week 3</option>
+                                    <option value="4">Week 4</option>
+                                    <option value="5">Week 5</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-end">
+                                <button
+                                    id="loadCrmKpiButton"
+                                    type="button"
+                                    class="btn-primary w-full"
+                                >
+                                    Tampilkan KPI
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ACTION -->
+                    <div class="flex flex-col justify-between gap-4 rounded-3xl bg-white p-5 shadow-sm sm:flex-row sm:items-center">
+
+                        <div>
+                            <p
+                                id="crmKpiPeriodLabel"
+                                class="font-black text-slate-900"
+                            >
+                                Rata-rata MTD
+                            </p>
+
+                            <p
+                                id="crmKpiInformation"
+                                class="mt-1 text-sm text-slate-500"
+                            >
+                                Pilih periode untuk melihat KPI.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+
+                            <button
+                                id="cancelCrmKpiButton"
+                                type="button"
+                                class="btn-secondary hidden"
+                            >
+                                Batal
+                            </button>
+
+                            <button
+                                id="newCrmKpiButton"
+                                type="button"
+                                class="btn-primary hidden"
+                            >
+                                + Input Baru
+                            </button>
+
+                            <button
+                                id="saveCrmKpiButton"
+                                type="button"
+                                class="btn-primary hidden"
+                            >
+                                Simpan KPI
+                            </button>
+
+                            <button
+                                id="verifyCrmKpiButton"
+                                type="button"
+                                class="btn-primary hidden"
+                            >
+                                Verifikasi MSCM
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <!-- TABEL -->
+                    <div class="overflow-hidden rounded-3xl bg-white shadow-sm">
+
+                        <div
+                            id="crmKpiLoading"
+                            class="hidden p-12 text-center"
+                        >
+                            <span class="ui-spinner mx-auto"></span>
+
+                            <p class="mt-3 text-sm font-bold text-slate-500">
+                                Memuat KPI CRM...
+                            </p>
+                        </div>
+
+                        <div
+                            id="crmKpiTableContainer"
+                            class="overflow-x-auto"
+                        >
+                            <table class="data-table min-w-[1250px]">
+
+                                <thead>
+                                    <tr>
+                                        <th class="w-12">No</th>
+                                        <th class="min-w-[260px]">Kategori</th>
+                                        <th class="min-w-[180px]">Target</th>
+                                        <th class="min-w-[190px]">Actual CRM</th>
+                                        <th class="min-w-[190px]">Actual HO</th>
+                                        <th class="min-w-[110px]">Selisih</th>
+                                        <th class="min-w-[110px]">Bobot Max</th>
+                                        <th class="min-w-[110px]">Nilai KPI</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="crmKpiTableBody"></tbody>
+
+                                <tfoot>
+                                    <tr class="bg-slate-900 text-white">
+                                        <td colspan="6" class="px-4 py-4 text-right font-black">
+                                            Total KPI
+                                        </td>
+
+                                        <td class="px-4 py-4 font-black">
+                                            115
+                                        </td>
+
+                                        <td
+                                            id="crmKpiTableTotal"
+                                            class="px-4 py-4 text-lg font-black"
+                                        >
+                                            0
+                                        </td>
+                                    </tr>
+                                </tfoot>
+
+                            </table>
+                        </div>
+
+                        <div
+                            id="emptyCrmKpi"
+                            class="empty-state hidden"
+                        >
+                            Belum ada pengisian KPI pada periode ini.
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+
+<!-- ===================================================== -->
+<!-- KPI SIPEDE -->
+<!-- ===================================================== -->
+
+<section
+    id="sipedeKpiPage"
+    class="app-content hidden"
+>
+    <div class="rounded-3xl bg-white p-8 shadow-sm">
+        <h2 class="text-2xl font-black text-slate-900">
+            KPI SiPede
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-500">
+            Modul KPI SiPede akan dibuat setelah KPI CRM selesai.
+        </p>
+    </div>
+</section>
+
+
+
+
 
             <!-- PENGAJUAN PKM -->
             <section id="pengajuanPage" class="app-content hidden">
