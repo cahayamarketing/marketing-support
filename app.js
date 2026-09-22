@@ -137,14 +137,10 @@ let editingBudgetId = null;
 
 let salesmanData = [];
 
-const leasingOptions = [
-    "FIF",
-    "OTO",
-    "ADIRA",
-    "MANDIRI UTAMA FINANCE",
-    "INDOMOBIL FINANCE",
-    "BCA FINANCE"
-];
+let leasingOptions = [];
+let pkmTypeOptions = [];
+let eventOptions = [];
+let focusTypeOptions = [];
 
 /*
 |--------------------------------------------------------------------------
@@ -1434,50 +1430,107 @@ function generatePkmId(branch, jenisPkm) {
 |--------------------------------------------------------------------------
 */
 
-function populateJenisPkmOptions() {
-    const jenisPkmSelect =
-        document.getElementById("jenisPkm");
+function populateJenisKegiatanOptions(
+    selectedCategory = ""
+) {
+    const select =
+        document.getElementById(
+            "jenisKegiatan"
+        );
 
-    if (!jenisPkmSelect) {
+    if (!select) {
         return;
     }
 
-    jenisPkmSelect.innerHTML = `
+    const filteredEvents =
+        selectedCategory
+            ? eventOptions.filter(
+                function (item) {
+                    return (
+                        item.category ===
+                        selectedCategory
+                    );
+                }
+            )
+            : eventOptions;
+
+    select.innerHTML = `
+        <option value="" selected disabled>
+            Pilih jenis kegiatan
+        </option>
+
+        ${filteredEvents.map(
+            function (item) {
+                return `
+                    <option
+                        value="${escapeHtml(item.name)}"
+                        data-code="${escapeHtml(item.code)}"
+                    >
+                        ${escapeHtml(item.name)}
+                    </option>
+                `;
+            }
+        ).join("")}
+    `;
+}
+
+function populateJenisPkmOptions() {
+    const select =
+        document.getElementById(
+            "jenisPkm"
+        );
+
+    if (!select) {
+        return;
+    }
+
+    const categories = [
+        ...new Set(
+            pkmTypeOptions.map(
+                function (item) {
+                    return item.category;
+                }
+            )
+        )
+    ];
+
+    select.innerHTML = `
         <option value="" selected disabled>
             Pilih jenis PKM
         </option>
 
-        <optgroup label="ATL">
-            <option
-                value="ATL BIASA"
-                data-category="ATL"
-            >
-                ATL BIASA
-            </option>
+        ${categories.map(
+            function (category) {
+                const options =
+                    pkmTypeOptions.filter(
+                        function (item) {
+                            return (
+                                item.category ===
+                                category
+                            );
+                        }
+                    );
 
-            <option
-                value="ATL DEALER"
-                data-category="ATL"
-            >
-                ATL DEALER
-            </option>
-        </optgroup>
-
-        <optgroup label="BTL">
-            <option
-                value="BTL BIASA"
-                data-category="BTL"
-            >
-                BTL BIASA
-            </option>
-
-            <option
-                value="BTL DEALER"
-                data-category="BTL"
-            >
-                BTL DEALER
-            </option>
-        </optgroup>
+                return `
+                    <optgroup
+                        label="${escapeHtml(category)}"
+                    >
+                        ${options.map(
+                            function (item) {
+                                return `
+                                    <option
+                                        value="${escapeHtml(item.name)}"
+                                        data-category="${escapeHtml(item.category)}"
+                                    >
+                                        ${escapeHtml(item.name)}
+                                    </option>
+                                `;
+                            }
+                        ).join("")}
+                    </optgroup>
+                `;
+            }
+        ).join("")}
     `;
 }
 
@@ -1663,6 +1716,54 @@ async function loadSalesmanWithRetry() {
 |--------------------------------------------------------------------------
 */
 
+async function loadReferenceMasters() {
+    try {
+        const result =
+            await requestBackend(
+                "getReferenceMasters",
+                {}
+            );
+
+        leasingOptions =
+            Array.isArray(result.leasing)
+                ? result.leasing
+                : [];
+
+        pkmTypeOptions =
+            Array.isArray(result.pkmTypes)
+                ? result.pkmTypes
+                : [];
+
+        eventOptions =
+            Array.isArray(result.events)
+                ? result.events
+                : [];
+
+        focusTypeOptions =
+            Array.isArray(result.focusTypes)
+                ? result.focusTypes
+                : [];
+
+        populateJenisPkmOptions();
+        populateJenisKegiatanOptions();
+        renderFocusTypeOptions();
+
+        return result;
+    } catch (error) {
+        console.error(
+            "Gagal memuat master:",
+            error
+        );
+
+        showToast(
+            "Master PKM gagal dimuat.",
+            "error"
+        );
+
+        return null;
+    }
+}
+
 async function initializeApplication() {
 
     /*
@@ -1730,6 +1831,8 @@ async function initializeApplication() {
     | BUAT OPSI JENIS PKM
     |--------------------------------------------------------------------------
     */
+
+    await loadReferenceMasters();
 
     populateJenisPkmOptions();
     initializePkmFilters();
@@ -3012,12 +3115,45 @@ function updateBtlSections() {
 */
 
 const jenisPkmSelect =
-    document.getElementById("jenisPkm");
+    document.getElementById(
+        "jenisPkm"
+    );
 
 if (jenisPkmSelect) {
     jenisPkmSelect.addEventListener(
         "change",
-        updateBtlSections
+        function () {
+            const selectedOption =
+                this.options[
+                    this.selectedIndex
+                ];
+
+            const category =
+                selectedOption
+                    ? (
+                        selectedOption
+                            .dataset
+                            .category ||
+                        ""
+                    )
+                    : "";
+
+            /*
+            | Filter jenis kegiatan berdasarkan
+            | kategori ATL, BTL, atau OTHER.
+            */
+
+            populateJenisKegiatanOptions(
+                category
+            );
+
+            /*
+            | Fungsi yang sudah ada di kode Anda
+            | untuk hide/show bagian BTL.
+            */
+
+            updateBtlSections();
+        }
     );
 }
 
@@ -3050,8 +3186,12 @@ function addLeasingRow() {
 
                 ${leasingOptions.map(function (leasing) {
                     return `
-                        <option value="${escapeHtml(leasing)}">
-                            ${escapeHtml(leasing)}
+                        <option
+                            value="${escapeHtml(leasing.name)}"
+                            data-code="${escapeHtml(leasing.code)}"
+                            data-init="${escapeHtml(leasing.init)}"
+                        >
+                            ${escapeHtml(leasing.name)}
                         </option>
                     `;
                 }).join("")}
@@ -7947,6 +8087,8 @@ function compressSignatureImage(file) {
     });
 }
 
+
+
 function compressDrawnSignature() {
     const maximumWidth = 400;
     const maximumHeight = 120;
@@ -8004,6 +8146,46 @@ function compressDrawnSignature() {
     return canvas.toDataURL(
         "image/png",
     );
+}
+
+function renderFocusTypeOptions() {
+    const container =
+        document.getElementById(
+            "focusTypeOptions"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    if (!focusTypeOptions.length) {
+        container.innerHTML = `
+            <p class="text-sm text-slate-400">
+                Data focus type tidak tersedia.
+            </p>
+        `;
+
+        return;
+    }
+
+    container.innerHTML =
+        focusTypeOptions.map(
+            function (gab) {
+                return `
+                    <label class="check-card">
+                        <input
+                            class="focus-type"
+                            type="checkbox"
+                            value="${escapeHtml(gab)}"
+                        >
+
+                        <span>
+                            ${escapeHtml(gab)}
+                        </span>
+                    </label>
+                `;
+            }
+        ).join("");
 }
 
 document
@@ -8304,6 +8486,8 @@ document
             }
         }
     );
+
+
 
 
 
