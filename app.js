@@ -23,6 +23,12 @@ if (!savedSession || !sessionToken) {
 
 let currentUser;
 let activePageId = "";
+const MASTER_ACCOUNT_NIKS =
+    Object.freeze([
+        "911117",
+        "911120",
+        "911147"
+    ]);
 
 let sheetPkmData = [];
 
@@ -1938,14 +1944,17 @@ async function initializeApplication() {
 */
 
 function isMasterAccount() {
+    const currentNik =
+        String(
+            currentUser.nik ||
+            currentUser.username ||
+            ""
+        ).trim();
+
     return (
         currentUser.isMaster === true ||
         MASTER_ACCOUNT_NIKS.includes(
-            String(
-                currentUser.nik ||
-                currentUser.username ||
-                ""
-            )
+            currentNik
         )
     );
 }
@@ -8079,7 +8088,9 @@ function selectManagedAccount(nik) {
 
     if (
         MASTER_ACCOUNT_NIKS.includes(
-            account.nik
+            String(
+                account.nik || ""
+            ).trim()
         )
     ) {
         document.getElementById(
