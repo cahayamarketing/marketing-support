@@ -2005,6 +2005,75 @@ const masterDataTableBody =
         "masterDataTableBody"
     );
 
+const addMasterDataButton =
+    document.getElementById(
+        "addMasterDataButton"
+    );
+
+const masterDataFormModal =
+    document.getElementById(
+        "masterDataFormModal"
+    );
+
+const masterDataForm =
+    document.getElementById(
+        "masterDataForm"
+    );
+
+const masterDataFormTitle =
+    document.getElementById(
+        "masterDataFormTitle"
+    );
+
+const masterDataFormFields =
+    document.getElementById(
+        "masterDataFormFields"
+    );
+
+const closeMasterDataFormButton =
+    document.getElementById(
+        "closeMasterDataForm"
+    );
+
+const cancelMasterDataFormButton =
+    document.getElementById(
+        "cancelMasterDataForm"
+    );
+
+const saveMasterDataButton =
+    document.getElementById(
+        "saveMasterDataButton"
+    );
+
+
+let currentMasterType =
+    "LEASING";
+
+let currentMasterHeaders = [];
+
+let currentMasterRows = [];
+
+let editingMasterRowIndex =
+    null;
+
+let masterDataSaving =
+    false;
+
+
+const MASTER_KEY_HEADERS = {
+    LEASING: "KODE",
+    PKM: "ID PKM",
+    EVENT: "ID EVENT",
+    KPI_CRM: "ID"
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| BUKA MASTER DATA
+|--------------------------------------------------------------------------
+*/
+
 async function openMasterDataModal() {
     if (!isMasterAccount()) {
         showToast(
@@ -2036,9 +2105,17 @@ function closeMasterDataModal() {
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| MUAT TABEL MASTER
+|--------------------------------------------------------------------------
+*/
+
 async function loadMasterDataTable(
     type
 ) {
+    currentMasterType = type;
+
     masterDataLoading.classList.remove(
         "hidden"
     );
@@ -2055,19 +2132,19 @@ async function loadMasterDataTable(
                 }
             );
 
-        const headers =
+        currentMasterHeaders =
             Array.isArray(result.headers)
                 ? result.headers
                 : [];
 
-        const rows =
+        currentMasterRows =
             Array.isArray(result.data)
                 ? result.data
                 : [];
 
         masterDataTableHead.innerHTML = `
             <tr>
-                ${headers.map(
+                ${currentMasterHeaders.map(
                     function (header) {
                         return `
                             <th class="whitespace-nowrap px-4 py-3">
@@ -2076,14 +2153,21 @@ async function loadMasterDataTable(
                         `;
                     }
                 ).join("")}
+
+                <th class="sticky right-0 bg-slate-100 px-4 py-3 text-right">
+                    Aksi
+                </th>
             </tr>
         `;
 
-        if (!rows.length) {
+        if (!currentMasterRows.length) {
             masterDataTableBody.innerHTML = `
                 <tr>
                     <td
-                        colspan="${Math.max(headers.length, 1)}"
+                        colspan="${Math.max(
+                            currentMasterHeaders.length + 1,
+                            1
+                        )}"
                         class="px-4 py-10 text-center text-slate-500"
                     >
                         Data belum tersedia.
@@ -2095,21 +2179,42 @@ async function loadMasterDataTable(
         }
 
         masterDataTableBody.innerHTML =
-            rows.map(function (row) {
-                return `
-                    <tr class="hover:bg-slate-50">
-                        ${headers.map(
-                            function (header) {
-                                return `
-                                    <td class="whitespace-nowrap px-4 py-3 text-slate-700">
-                                        ${escapeHtml(row[header] || "-")}
-                                    </td>
-                                `;
-                            }
-                        ).join("")}
-                    </tr>
-                `;
-            }).join("");
+            currentMasterRows.map(
+                function (row, rowIndex) {
+                    return `
+                        <tr class="hover:bg-slate-50">
+                            ${currentMasterHeaders.map(
+                                function (header) {
+                                    const value =
+                                        row[header];
+
+                                    return `
+                                        <td class="whitespace-nowrap px-4 py-3 text-slate-700">
+                                            ${escapeHtml(
+                                                value === "" ||
+                                                value === null ||
+                                                value === undefined
+                                                    ? "-"
+                                                    : String(value)
+                                            )}
+                                        </td>
+                                    `;
+                                }
+                            ).join("")}
+
+                            <td class="sticky right-0 bg-white px-4 py-3 text-right">
+                                <button
+                                    type="button"
+                                    data-edit-master-row="${rowIndex}"
+                                    class="rounded-lg bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100"
+                                >
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }
+            ).join("");
     } catch (error) {
         console.error(
             "Gagal memuat Master Data:",
@@ -2131,6 +2236,308 @@ async function loadMasterDataTable(
         );
     }
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| FORM TAMBAH DAN EDIT
+|--------------------------------------------------------------------------
+*/
+
+function openMasterDataForm(
+    rowIndex = null
+) {
+    const isEditing =
+        rowIndex !== null;
+
+    editingMasterRowIndex =
+        isEditing
+            ? Number(rowIndex)
+            : null;
+
+    const row =
+        isEditing
+            ? currentMasterRows[
+                editingMasterRowIndex
+            ] || {}
+            : {};
+
+    masterDataFormTitle.textContent =
+        isEditing
+            ? "Edit Master Data"
+            : "Tambah Master Data";
+
+    masterDataFormFields.innerHTML =
+        currentMasterHeaders.map(
+            function (header) {
+                const keyHeader =
+                    MASTER_KEY_HEADERS[
+                        currentMasterType
+                    ];
+
+                const keyLocked =
+                    isEditing &&
+                    header === keyHeader;
+
+                let value =
+                    isEditing
+                        ? row[header] || ""
+                        : getDefaultMasterValue(
+                            header
+                        );
+
+                const numericHeaders = [
+                    "ID",
+                    "ID PKM",
+                    "ID EVENT",
+                    "%",
+                    "BOBOT"
+                ];
+
+                const inputType =
+                    numericHeaders.includes(
+                        header
+                    )
+                        ? "number"
+                        : "text";
+
+                const step =
+                    (
+                        header === "%" ||
+                        header === "BOBOT"
+                    )
+                        ? 'step="any"'
+                        : "";
+
+                return `
+                    <div class="${
+                        header === "INDIKATOR KPI"
+                            ? "md:col-span-2"
+                            : ""
+                    }">
+                        <label class="form-label">
+                            ${escapeHtml(header)}
+                        </label>
+
+                        <input
+                            type="${inputType}"
+                            ${step}
+                            data-master-field="${escapeHtml(header)}"
+                            value="${escapeHtml(String(value))}"
+                            class="form-input ${
+                                keyLocked
+                                    ? "bg-slate-100"
+                                    : ""
+                            }"
+                            ${
+                                keyLocked
+                                    ? "readonly"
+                                    : ""
+                            }
+                        >
+                    </div>
+                `;
+            }
+        ).join("");
+
+    masterDataFormModal.classList.remove(
+        "hidden"
+    );
+}
+
+
+function getDefaultMasterValue(
+    header
+) {
+    if (header === "STATUS") {
+        return "AKTIF";
+    }
+
+    const keyHeader =
+        MASTER_KEY_HEADERS[
+            currentMasterType
+        ];
+
+    if (
+        header !== keyHeader ||
+        currentMasterType === "LEASING"
+    ) {
+        return "";
+    }
+
+    const existingIds =
+        currentMasterRows
+            .map(function (row) {
+                return Number(
+                    row[keyHeader]
+                );
+            })
+            .filter(function (value) {
+                return Number.isFinite(
+                    value
+                );
+            });
+
+    return existingIds.length
+        ? Math.max(...existingIds) + 1
+        : 1;
+}
+
+
+function closeMasterDataForm() {
+    if (
+        masterDataSaving
+    ) {
+        return;
+    }
+
+    masterDataFormModal.classList.add(
+        "hidden"
+    );
+
+    masterDataForm.reset();
+    masterDataFormFields.innerHTML = "";
+
+    editingMasterRowIndex = null;
+}
+
+
+function collectMasterFormValues() {
+    const values = {};
+
+    masterDataFormFields
+        .querySelectorAll(
+            "[data-master-field]"
+        )
+        .forEach(function (field) {
+            values[
+                field.dataset.masterField
+            ] = field.value.trim();
+        });
+
+    return values;
+}
+
+
+function setMasterDataSaving(
+    saving
+) {
+    masterDataSaving = saving;
+
+    saveMasterDataButton.disabled =
+        saving;
+
+    saveMasterDataButton.innerHTML =
+        saving
+            ? `
+                <span class="flex items-center justify-center gap-2">
+                    <span class="ui-spinner"></span>
+                    <span>Menyimpan...</span>
+                </span>
+            `
+            : "Simpan Data";
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SIMPAN MASTER DATA
+|--------------------------------------------------------------------------
+*/
+
+async function submitMasterDataForm(
+    event
+) {
+    event.preventDefault();
+
+    if (masterDataSaving) {
+        return;
+    }
+
+    const values =
+        collectMasterFormValues();
+
+    const keyHeader =
+        MASTER_KEY_HEADERS[
+            currentMasterType
+        ];
+
+    if (
+        !keyHeader ||
+        !String(
+            values[keyHeader] || ""
+        ).trim()
+    ) {
+        showToast(
+            `${keyHeader || "ID"} wajib diisi.`,
+            "error"
+        );
+
+        return;
+    }
+
+    setMasterDataSaving(true);
+
+    try {
+        const result =
+            await requestBackend(
+                "saveMasterData",
+                {
+                    type:
+                        currentMasterType,
+
+                    values:
+                        values
+                }
+            );
+
+        /*
+        | Izinkan modal ditutup setelah
+        | penyimpanan selesai.
+        */
+
+        masterDataSaving = false;
+
+        closeMasterDataForm();
+
+        showToast(
+            result.mode === "UPDATE"
+                ? "Master data berhasil diperbarui."
+                : "Master data berhasil ditambahkan.",
+            "success"
+        );
+
+        await loadMasterDataTable(
+            currentMasterType
+        );
+
+        /*
+        | Refresh pilihan PKM, Event,
+        | Leasing dan Focus Type.
+        */
+
+        await loadReferenceMasters();
+    } catch (error) {
+        console.error(
+            "Gagal menyimpan Master Data:",
+            error
+        );
+
+        showToast(
+            getApiErrorMessage(error),
+            "error"
+        );
+    } finally {
+        setMasterDataSaving(false);
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| EVENT MASTER DATA
+|--------------------------------------------------------------------------
+*/
 
 if (masterDataButton) {
     masterDataButton.addEventListener(
@@ -2157,6 +2564,57 @@ if (masterDataType) {
     );
 }
 
+if (addMasterDataButton) {
+    addMasterDataButton.addEventListener(
+        "click",
+        function () {
+            openMasterDataForm();
+        }
+    );
+}
+
+if (masterDataTableBody) {
+    masterDataTableBody.addEventListener(
+        "click",
+        function (event) {
+            const editButton =
+                event.target.closest(
+                    "[data-edit-master-row]"
+                );
+
+            if (!editButton) {
+                return;
+            }
+
+            openMasterDataForm(
+                editButton.dataset
+                    .editMasterRow
+            );
+        }
+    );
+}
+
+if (masterDataForm) {
+    masterDataForm.addEventListener(
+        "submit",
+        submitMasterDataForm
+    );
+}
+
+if (closeMasterDataFormButton) {
+    closeMasterDataFormButton.addEventListener(
+        "click",
+        closeMasterDataForm
+    );
+}
+
+if (cancelMasterDataFormButton) {
+    cancelMasterDataFormButton.addEventListener(
+        "click",
+        closeMasterDataForm
+    );
+}
+
 if (masterDataModal) {
     masterDataModal.addEventListener(
         "click",
@@ -2170,6 +2628,21 @@ if (masterDataModal) {
         }
     );
 }
+
+if (masterDataFormModal) {
+    masterDataFormModal.addEventListener(
+        "click",
+        function (event) {
+            if (
+                event.target ===
+                masterDataFormModal
+            ) {
+                closeMasterDataForm();
+            }
+        }
+    );
+}
+
 
 accountMenuButton.addEventListener(
     "click",
