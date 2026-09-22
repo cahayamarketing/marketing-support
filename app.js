@@ -9673,36 +9673,41 @@ async function runDashboardPreload() {
 
     /*
     |--------------------------------------------------------------------------
-    | KPI
+    | MODUL KPI
     |--------------------------------------------------------------------------
+    | Data KPI tidak ditarik saat login.
+    | Data baru dimuat ketika menu KPI CRM dibuka.
     */
 
     updateDashboardPreload(
-        70,
-        "Memuat data KPI..."
+        75,
+        "Menyiapkan modul KPI..."
     );
 
     setDashboardPreloadItem(
         "preloadKpi",
         "loading",
-        "Memuat data KPI"
+        "Menyiapkan modul KPI"
     );
 
     try {
         await waitForKpiFrontend();
 
-        await window.loadCrmKpiPage();
-
         setDashboardPreloadItem(
             "preloadKpi",
             "success",
-            "Data KPI siap"
+            "Modul KPI siap"
         );
     } catch (error) {
+        console.warn(
+            "Modul KPI belum siap:",
+            error
+        );
+
         setDashboardPreloadItem(
             "preloadKpi",
             "error",
-            "Data KPI gagal"
+            "Modul KPI belum siap"
         );
     }
 
