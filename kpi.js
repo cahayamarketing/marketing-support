@@ -341,11 +341,11 @@ function createEmptyCrmKpiRows() {
                 : metric.target,
             actualCrm:
                 metric.unit === "KPB"
-                    ? ["", "", "", ""]
+                    ? ["", "", "", "", ""]
                     : "",
             actualHo:
                 metric.unit === "KPB"
-                    ? ["", "", "", ""]
+                    ? ["", "", "", "", ""]
                     : "",
             status: ""
         };
@@ -861,6 +861,84 @@ function renderCrmKpiTarget(metric, row) {
     `;
 }
 
+function calculateKpbDisplayAverage(
+    values
+) {
+    if (!Array.isArray(values)) {
+        return "";
+    }
+
+    const numbers =
+        values
+            .slice(0, 4)
+            .filter(function (value) {
+                return (
+                    value !== "" &&
+                    value !== null &&
+                    value !== undefined &&
+                    Number.isFinite(
+                        Number(value)
+                    )
+                );
+            })
+            .map(Number);
+
+    if (!numbers.length) {
+        return "";
+    }
+
+    return roundCrmKpiNumber(
+        numbers.reduce(
+            function (total, value) {
+                return total + value;
+            },
+            0
+        ) / numbers.length
+    );
+}
+
+
+function normalizeKpbDisplayValues(
+    value
+) {
+    /*
+    | Data lama hanya satu nilai.
+    | Masukkan ke kolom Rata-rata.
+    */
+
+    if (!Array.isArray(value)) {
+        return [
+            "",
+            "",
+            "",
+            "",
+            value ?? ""
+        ];
+    }
+
+    const firstFour = [
+        value[0] ?? "",
+        value[1] ?? "",
+        value[2] ?? "",
+        value[3] ?? ""
+    ];
+
+    const calculatedAverage =
+        calculateKpbDisplayAverage(
+            firstFour
+        );
+
+    const average =
+        calculatedAverage !== ""
+            ? calculatedAverage
+            : value[4] ?? "";
+
+    return [
+        ...firstFour,
+        average
+    ];
+}
+
 function renderCrmKpiActual(
     metric,
     value,
@@ -869,33 +947,53 @@ function renderCrmKpiActual(
 ) {
     if (metric.unit === "KPB") {
         const values =
-            Array.isArray(value)
-                ? value
-                : ["", "", "", ""];
+            normalizeKpbDisplayValues(
+                value
+            );
 
         return `
-            <div class="grid min-w-[300px] grid-cols-4 gap-2">
-                ${values.map(function (item, index) {
-                    return `
-                        <div>
-                            <span class="mb-1 block text-[10px] font-black text-slate-400">
-                                KPB${index + 1}
-                            </span>
+            <div class="grid min-w-[390px] grid-cols-5 gap-2">
+                ${values
+                    .slice(0, 4)
+                    .map(function (
+                        item,
+                        index
+                    ) {
+                        return `
+                            <div>
+                                <span class="mb-1 block text-[10px] font-black text-slate-400">
+                                    KPB${index + 1}
+                                </span>
 
-                            <input
-                                class="form-input px-2 text-sm"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                data-kpi-actual="${owner}"
-                                data-kpi-code="${metric.code}"
-                                data-kpi-index="${index}"
-                                value="${escapeHtml(item)}"
-                                ${editable ? "" : "disabled"}
-                            >
-                        </div>
-                    `;
-                }).join("")}
+                                <input
+                                    class="form-input px-2 text-sm"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    data-kpi-actual="${owner}"
+                                    data-kpi-code="${metric.code}"
+                                    data-kpi-index="${index}"
+                                    value="${escapeHtml(item)}"
+                                    ${editable ? "" : "disabled"}
+                                >
+                            </div>
+                        `;
+                    })
+                    .join("")}
+
+                <div>
+                    <span class="mb-1 block text-[10px] font-black text-red-500">
+                        Rata-rata
+                    </span>
+
+                    <input
+                        class="form-input bg-red-50 px-2 text-sm font-black text-red-700"
+                        type="text"
+                        data-kpi-kpb-average="${owner}"
+                        value="${escapeHtml(values[4])}"
+                        disabled
+                    >
+                </div>
             </div>
         `;
     }
@@ -1020,23 +1118,6 @@ function hasKpiValue(value) {
         value !== "" &&
         value !== null &&
         value !== undefined
-    );
-}
-
-function roundCrmKpiNumber(
-    value
-) {
-    const number =
-        Number(value || 0);
-
-    if (!Number.isFinite(number)) {
-        return 0;
-    }
-
-    return (
-        Math.round(
-            number * 100
-        ) / 100
     );
 }
 
@@ -1491,6 +1572,54 @@ function collectCrmKpiTableValues(owner) {
                     input.value;
             }
         });
+
+    const kpbRow =
+        crmKpiRows.find(
+            function (item) {
+                return (
+                    item.code ===
+                    "KPB"
+                );
+            }
+        );
+
+    if (kpbRow) {
+        const property =
+            owner === "crm"
+                ? "actualCrm"
+                : "actualHo";
+
+        const currentValues =
+            Array.isArray(
+                kpbRow[property]
+            )
+                ? kpbRow[property]
+                : [
+                    "",
+                    "",
+                    "",
+                    "",
+                    ""
+                ];
+
+        const firstFour =
+            [
+                currentValues[0] ?? "",
+                currentValues[1] ?? "",
+                currentValues[2] ?? "",
+                currentValues[3] ?? ""
+            ];
+
+        const average =
+            calculateKpbDisplayAverage(
+                firstFour
+            );
+
+        kpbRow[property] = [
+            ...firstFour,
+            average
+        ];
+    }
 
     document
         .querySelectorAll(
@@ -1965,16 +2094,26 @@ function formatCrmKpiTarget(metric, target) {
     return metric.targetLabel;
 }
 
-function averageKpiArray(values) {
-    const numbers =
-        values.map(function (value) {
-            return Number(value || 0);
-        });
+function averageKpiArray(
+    values
+) {
+    if (!Array.isArray(values)) {
+        return Number(
+            values || 0
+        );
+    }
 
-    return (
-        numbers.reduce(function (total, value) {
-            return total + value;
-        }, 0) / numbers.length
+    const normalized =
+        normalizeKpbDisplayValues(
+            values
+        );
+
+    /*
+    | Elemen kelima merupakan rata-rata.
+    */
+
+    return Number(
+        normalized[4] || 0
     );
 }
 
@@ -2093,6 +2232,74 @@ function getCurrentCrmKpiWeek() {
         5
     );
 }
+
+document.addEventListener(
+    "input",
+    function (event) {
+        const input =
+            event.target.closest(
+                '[data-kpi-code="KPB"][data-kpi-index]'
+            );
+
+        if (!input) {
+            return;
+        }
+
+        const owner =
+            input.dataset.kpiActual;
+
+        const inputs =
+            Array.from(
+                document.querySelectorAll(
+                    `[data-kpi-actual="${owner}"][data-kpi-code="KPB"][data-kpi-index]`
+                )
+            );
+
+        const values =
+            inputs.map(function (item) {
+                return item.value;
+            });
+
+        const average =
+            calculateKpbDisplayAverage(
+                values
+            );
+
+        const averageInput =
+            document.querySelector(
+                `[data-kpi-kpb-average="${owner}"]`
+            );
+
+        if (averageInput) {
+            averageInput.value =
+                average;
+        }
+
+        const row =
+            crmKpiRows.find(
+                function (item) {
+                    return (
+                        item.code ===
+                        "KPB"
+                    );
+                }
+            );
+
+        if (!row) {
+            return;
+        }
+
+        const property =
+            owner === "crm"
+                ? "actualCrm"
+                : "actualHo";
+
+        row[property] = [
+            ...values,
+            average
+        ];
+    }
+);
 
 
 /*
