@@ -60,6 +60,33 @@ async function downloadPkmPdf(
     }
 }
 
+function getPdfImageFormat(dataUrl) {
+    const value =
+        String(dataUrl || "")
+            .toLowerCase();
+
+    if (
+        value.startsWith(
+            "data:image/jpeg"
+        ) ||
+        value.startsWith(
+            "data:image/jpg"
+        )
+    ) {
+        return "JPEG";
+    }
+
+    if (
+        value.startsWith(
+            "data:image/webp"
+        )
+    ) {
+        return "WEBP";
+    }
+
+    return "PNG";
+}
+
 
 function generatePkmPdf(
     pkm,
@@ -108,11 +135,15 @@ function generatePkmPdf(
 
     documentPdf.addImage(
         headerImage,
-        "PNG",
+        getPdfImageFormat(
+            headerImage
+        ),
         margin,
         10,
         usableWidth,
-        18.7
+        18.7,
+        undefined,
+        "FAST"
     );
 
     let y = 38;
@@ -805,11 +836,15 @@ function drawPdfSignatures(
             try {
                 documentPdf.addImage(
                     item.dataUrl,
-                    "PNG",
+                    getPdfImageFormat(
+                        item.dataUrl
+                    ),
                     centerX - 13,
                     startY,
                     26,
-                    14
+                    14,
+                    undefined,
+                    "FAST"
                 );
             } catch (error) {
                 // Tetap tampilkan nama dan role.
@@ -1150,6 +1185,12 @@ async function createAndStorePkmPdf(
             await loadImageAsDataUrl(
                 "data/header-pkm.png"
             );
+        headerDataUrl =
+            await optimizePdfImage(
+                headerDataUrl,
+                1400,
+                320
+            );
     } catch (error) {
         throw new Error(
             "Header PDF gagal dimuat. Pastikan data/header-pkm.png tersedia."
@@ -1199,6 +1240,21 @@ async function createAndStorePkmPdf(
         Math.ceil(
             pdfBase64.length * 3 / 4
         );
+
+    console.log(
+        "Ukuran PDF:",
+        {
+            bytes:
+                estimatedPdfBytes,
+
+            megabytes:
+                (
+                    estimatedPdfBytes /
+                    1024 /
+                    1024
+                ).toFixed(2)
+        }
+    );
 
     if (
         estimatedPdfBytes >

@@ -792,8 +792,8 @@ async function requestBackend(
                 : longActions.includes(action)
                     ? 55000
                     : action === "getPkmData"
-                        ? 35000
-                        : 25000;
+                        ? 70000
+                        : 30000;
 
     const timeoutId =
         window.setTimeout(
@@ -7879,7 +7879,6 @@ async function approvePkmWithSignature() {
             "MGR",
             "MANAGER",
             "MANAGER H1",
-            "KOORDINATOR H23"
         ].includes(approvalRole);
 
         let pdfSaved = false;
@@ -8579,10 +8578,34 @@ document
 
 document
     .getElementById("applyPkmFilter")
-    .addEventListener("click", function () {
-        currentPkmPage = 1;
-        loadPkmData("list");
-    });
+    .addEventListener(
+        "click",
+        async function () {
+            if (pkmDataLoading) {
+                showToast(
+                    "Data PKM masih dimuat. Mohon tunggu."
+                );
+
+                return;
+            }
+
+            currentPkmPage = 1;
+
+            try {
+                this.disabled = true;
+                this.textContent =
+                    "Memuat...";
+
+                await loadPkmData(
+                    "list"
+                );
+            } finally {
+                this.disabled = false;
+                this.textContent =
+                    "Cari data";
+            }
+        }
+    );
 
 document
     .getElementById("resetPkmFilter")
