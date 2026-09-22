@@ -944,20 +944,40 @@ function formatPdfDate(value) {
         .replace(/\./g, ":");
 }
 
-async function createAndStorePkmPdf(pkmId) {
+async function createAndStorePkmPdf(
+    pkmId
+) {
     if (!pkmId) {
         throw new Error(
             "ID PKM tidak tersedia."
         );
     }
 
-    const pdfData =
-        await requestBackend(
-            "getPkmPdfData",
-            {
-                pkmId: pkmId
-            }
+    let pdfData;
+
+    /*
+    |--------------------------------------------------------------------------
+    | AMBIL DATA PDF
+    |--------------------------------------------------------------------------
+    */
+
+    try {
+        pdfData =
+            await requestBackend(
+                "getPkmPdfData",
+                {
+                    pkmId: pkmId
+                }
+            );
+    } catch (error) {
+        throw new Error(
+            "Gagal mengambil data PDF: " +
+            (
+                error.message ||
+                "server tidak merespons"
+            )
         );
+    }
 
     if (
         !pdfData ||
@@ -968,10 +988,24 @@ async function createAndStorePkmPdf(pkmId) {
         );
     }
 
-    const headerDataUrl =
-        await loadImageAsDataUrl(
-            "data/header-pkm.png"
+    /*
+    |--------------------------------------------------------------------------
+    | AMBIL HEADER DAN BUAT PDF
+    |--------------------------------------------------------------------------
+    */
+
+    let headerDataUrl;
+
+    try {
+        headerDataUrl =
+            await loadImageAsDataUrl(
+                "data/header-pkm.png"
+            );
+    } catch (error) {
+        throw new Error(
+            "Header PDF gagal dimuat. Pastikan data/header-pkm.png tersedia."
         );
+    }
 
     const generated =
         generatePkmPdf(
@@ -998,12 +1032,18 @@ async function createAndStorePkmPdf(pkmId) {
 
     if (!pdfBase64) {
         throw new Error(
-            "Data hasil PDF tidak valid."
+            "Hasil PDF tidak valid."
         );
     }
 
-    const saveResult =
-        await requestBackend(
+    /*
+    |--------------------------------------------------------------------------
+    | SIMPAN PDF KE DRIVE
+    |--------------------------------------------------------------------------
+    */
+
+    try {
+        return await requestBackend(
             "savePkmPdf",
             {
                 pkmId: pkmId,
@@ -1013,8 +1053,15 @@ async function createAndStorePkmPdf(pkmId) {
                     pdfBase64
             }
         );
-
-    return saveResult;
+    } catch (error) {
+        throw new Error(
+            "PDF sudah dibuat tetapi gagal disimpan ke Drive: " +
+            (
+                error.message ||
+                "server tidak merespons"
+            )
+        );
+    }
 }
 
 
@@ -1086,14 +1133,17 @@ async function downloadStoredPkmPdf(
 
         URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-        showToast(
-            getApiErrorMessage(error),
-            "error"
+        console.error(
+            "Download PDF gagal:",
+            error
         );
+
+        throw error;
     } finally {
         if (button) {
             button.disabled = false;
-            button.innerHTML = originalContent;
+            button.innerHTML =
+                originalContent;
         }
     }
 }

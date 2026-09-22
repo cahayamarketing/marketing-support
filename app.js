@@ -583,7 +583,11 @@ function saveStoredPkm(data) {
 |--------------------------------------------------------------------------
 */
 
-async function requestBackend(action, payload = {}) {
+async function requestBackend(
+    action,
+    payload = {},
+    retryCount = 0
+) {
     const response = await fetch("/api/gas", {
         method: "POST",
 
@@ -601,17 +605,76 @@ async function requestBackend(action, payload = {}) {
 const responseText =
     await response.text();
 
-    let data;
+/*
+|--------------------------------------------------------------------------
+| RETRY JIKA GAS MENGEMBALIKAN HTTP 200 TANPA BODY
+|--------------------------------------------------------------------------
+*/
 
-    try {
-        data = JSON.parse(responseText);
-    } catch (error) {
-        throw new Error(
-            responseText
-                ? `Server HTTP ${response.status}: ${responseText.slice(0, 300)}`
-                : `Server tidak memberikan respons. HTTP ${response.status}.`
+if (!responseText.trim()) {
+    const retryableActions = [
+        "getPkmPdfData",
+        "savePkmPdf",
+        "getPkmPdfFile",
+        "getPkmData",
+        "getSalesmen"
+    ];
+
+    if (
+        response.status === 200 &&
+        retryableActions.includes(action) &&
+        retryCount < 2
+    ) {
+        console.warn(
+            `Respons kosong untuk ${action}. Percobaan ulang ${retryCount + 1}.`
+        );
+
+        await new Promise(
+            function (resolve) {
+                window.setTimeout(
+                    resolve,
+                    800 *
+                    (
+                        retryCount + 1
+                    )
+                );
+            }
+        );
+
+        return requestBackend(
+            action,
+            payload,
+            retryCount + 1
         );
     }
+
+    throw new Error(
+        `Server tidak memberikan respons untuk action "${action}". HTTP ${response.status}.`
+    );
+}
+
+let data;
+
+try {
+    data = JSON.parse(
+        responseText
+    );
+} catch (error) {
+    console.error(
+        "Respons server bukan JSON:",
+        {
+            action: action,
+            status:
+                response.status,
+            response:
+                responseText
+        }
+    );
+
+    throw new Error(
+        `Respons action "${action}" tidak valid. HTTP ${response.status}.`
+    );
+}
 
     /*
     |--------------------------------------------------------------------------
@@ -6006,23 +6069,77 @@ document
 document.addEventListener(
     "click",
     async function (event) {
-        const button = event.target.closest(
-            "[data-download-stored-pdf]"
-        );
+        const button =
+            event.target.closest(
+                "[data-download-stored-pdf]"
+            );
 
         if (!button) {
             return;
         }
 
         const pkmId =
-            button.dataset.downloadStoredPdf;
+            button.dataset
+                .downloadStoredPdf;
 
-        await window.downloadStoredPkmPdf(
-            pkmId,
-            button
-        );
+        const originalContent =
+            button.innerHTML;
+
+        try {
+            button.disabled = true;
+
+            button.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <span class="ui-spinner"></span>
+                    Memeriksa PDF...
+                </span>
+            `;
+
+            /*
+            | Coba mengambil PDF yang sudah ada.
+            */
+
+            try {
+                await window.downloadStoredPkmPdf(
+                    pkmId,
+                    button
+                );
+
+                return;
+            } catch (downloadError) {
+                console.warn(
+                    "PDF belum tersedia, membuat ulang.",
+                    downloadError
+                );
+            }
+
+            button.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <span class="ui-spinner"></span>
+                    Membuat PDF...
+                </span>
+            `;
+
+            await window.createAndStorePkmPdf(
+                pkmId
+            );
+
+            await window.downloadStoredPkmPdf(
+                pkmId,
+                button
+            );
+        } catch (error) {
+            showToast(
+                error.message ||
+                "PDF gagal diproses."
+            );
+        } finally {
+            button.disabled = false;
+            button.innerHTML =
+                originalContent;
+        }
     }
-);    
+);
 
 /*
 |--------------------------------------------------------------------------
