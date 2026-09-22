@@ -1975,6 +1975,202 @@ const masterDataButton =
         "masterDataButton"
     );
 
+const masterDataModal =
+    document.getElementById(
+        "masterDataModal"
+    );
+
+const closeMasterDataModalButton =
+    document.getElementById(
+        "closeMasterDataModal"
+    );
+
+const masterDataType =
+    document.getElementById(
+        "masterDataType"
+    );
+
+const masterDataLoading =
+    document.getElementById(
+        "masterDataLoading"
+    );
+
+const masterDataTableHead =
+    document.getElementById(
+        "masterDataTableHead"
+    );
+
+const masterDataTableBody =
+    document.getElementById(
+        "masterDataTableBody"
+    );
+
+async function openMasterDataModal() {
+    if (!isMasterAccount()) {
+        showToast(
+            "Anda tidak memiliki akses Master Data.",
+            "error"
+        );
+
+        return;
+    }
+
+    accountMenu.classList.add(
+        "hidden"
+    );
+
+    masterDataModal.classList.remove(
+        "hidden"
+    );
+
+    await loadMasterDataTable(
+        masterDataType.value
+    );
+}
+
+
+function closeMasterDataModal() {
+    masterDataModal.classList.add(
+        "hidden"
+    );
+}
+
+
+async function loadMasterDataTable(
+    type
+) {
+    masterDataLoading.classList.remove(
+        "hidden"
+    );
+
+    masterDataTableHead.innerHTML = "";
+    masterDataTableBody.innerHTML = "";
+
+    try {
+        const result =
+            await requestBackend(
+                "getMasterData",
+                {
+                    type: type
+                }
+            );
+
+        const headers =
+            Array.isArray(result.headers)
+                ? result.headers
+                : [];
+
+        const rows =
+            Array.isArray(result.data)
+                ? result.data
+                : [];
+
+        masterDataTableHead.innerHTML = `
+            <tr>
+                ${headers.map(
+                    function (header) {
+                        return `
+                            <th class="whitespace-nowrap px-4 py-3">
+                                ${escapeHtml(header)}
+                            </th>
+                        `;
+                    }
+                ).join("")}
+            </tr>
+        `;
+
+        if (!rows.length) {
+            masterDataTableBody.innerHTML = `
+                <tr>
+                    <td
+                        colspan="${Math.max(headers.length, 1)}"
+                        class="px-4 py-10 text-center text-slate-500"
+                    >
+                        Data belum tersedia.
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        masterDataTableBody.innerHTML =
+            rows.map(function (row) {
+                return `
+                    <tr class="hover:bg-slate-50">
+                        ${headers.map(
+                            function (header) {
+                                return `
+                                    <td class="whitespace-nowrap px-4 py-3 text-slate-700">
+                                        ${escapeHtml(row[header] || "-")}
+                                    </td>
+                                `;
+                            }
+                        ).join("")}
+                    </tr>
+                `;
+            }).join("");
+    } catch (error) {
+        console.error(
+            "Gagal memuat Master Data:",
+            error
+        );
+
+        masterDataTableBody.innerHTML = `
+            <tr>
+                <td class="px-4 py-10 text-center font-bold text-red-600">
+                    ${escapeHtml(
+                        getApiErrorMessage(error)
+                    )}
+                </td>
+            </tr>
+        `;
+    } finally {
+        masterDataLoading.classList.add(
+            "hidden"
+        );
+    }
+}
+
+if (masterDataButton) {
+    masterDataButton.addEventListener(
+        "click",
+        openMasterDataModal
+    );
+}
+
+if (closeMasterDataModalButton) {
+    closeMasterDataModalButton.addEventListener(
+        "click",
+        closeMasterDataModal
+    );
+}
+
+if (masterDataType) {
+    masterDataType.addEventListener(
+        "change",
+        function () {
+            loadMasterDataTable(
+                this.value
+            );
+        }
+    );
+}
+
+if (masterDataModal) {
+    masterDataModal.addEventListener(
+        "click",
+        function (event) {
+            if (
+                event.target ===
+                masterDataModal
+            ) {
+                closeMasterDataModal();
+            }
+        }
+    );
+}
+
 accountMenuButton.addEventListener(
     "click",
     function (event) {

@@ -3447,6 +3447,97 @@
     </div>
 </div>
 
+<div
+    id="masterDataModal"
+    class="fixed inset-0 z-[120] hidden bg-slate-950/60 p-4 backdrop-blur-sm"
+>
+    <div class="mx-auto flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+
+        <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+            <div>
+                <h2 class="text-xl font-black text-slate-900">
+                    Master Data
+                </h2>
+
+                <p class="mt-1 text-sm text-slate-500">
+                    Lihat dan kelola sumber data aplikasi.
+                </p>
+            </div>
+
+            <button
+                id="closeMasterDataModal"
+                type="button"
+                class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xl font-black text-slate-600 hover:bg-red-50 hover:text-red-600"
+            >
+                ×
+            </button>
+        </div>
+
+        <div class="border-b border-slate-200 p-6">
+            <label
+                for="masterDataType"
+                class="form-label"
+            >
+                Pilih master
+            </label>
+
+            <select
+                id="masterDataType"
+                class="form-input"
+            >
+                <option value="LEASING">
+                    Master Leasing
+                </option>
+
+                <option value="PKM">
+                    Master Jenis PKM
+                </option>
+
+                <option value="EVENT">
+                    Master Event
+                </option>
+
+                <option value="KPI_CRM">
+                    Master CRM
+                </option>
+
+                <option
+                    value="KPI_SIPEDE"
+                    disabled
+                >
+                    Master Sipede — segera
+                </option>
+            </select>
+        </div>
+
+        <div
+            id="masterDataLoading"
+            class="hidden p-10 text-center"
+        >
+            <span class="ui-spinner"></span>
+
+            <p class="mt-3 font-bold text-slate-600">
+                Memuat master data...
+            </p>
+        </div>
+
+        <div class="flex-1 overflow-auto p-6">
+            <table class="w-full min-w-[800px] text-left">
+                <thead
+                    id="masterDataTableHead"
+                    class="bg-slate-100 text-xs uppercase text-slate-500"
+                ></thead>
+
+                <tbody
+                    id="masterDataTableBody"
+                    class="divide-y divide-slate-100 text-sm"
+                ></tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
