@@ -7378,6 +7378,73 @@ async function approvePkmWithSignature() {
 
         /*
         |--------------------------------------------------------------------------
+        | PENGAJUAN CRM SELESAI
+        |--------------------------------------------------------------------------
+        | Tutup modal segera setelah backend berhasil menyimpan TTD.
+        | Reset form dan refresh data dilakukan setelah modal ditutup.
+        */
+
+        if (isCrmSubmission) {
+            const successMessage =
+                result.message ||
+                "PKM berhasil diajukan dan menunggu ACC KACAB.";
+
+            /*
+            | Bersihkan status modal lebih dahulu.
+            */
+
+            approvalModalMode = "APPROVAL";
+            pendingCrmSubmission = null;
+            pendingCrmSubmissionSaved = false;
+
+            /*
+            | Tutup modal tanpa menunggu refresh database.
+            */
+
+            closeApprovalModal(true);
+
+            /*
+            | Pindah langsung ke List PKM.
+            */
+
+            showPage("listPkmPage");
+
+            showToast(
+                successMessage,
+                "success"
+            );
+
+            /*
+            | Reset form tidak boleh menggagalkan penutupan modal.
+            */
+
+            try {
+                resetPkmForm();
+            } catch (resetError) {
+                console.warn(
+                    "PKM berhasil disimpan, tetapi form gagal direset:",
+                    resetError
+                );
+            }
+
+            /*
+            | Refresh dilakukan di belakang agar UI tidak tertahan.
+            */
+
+            loadPkmData("list").catch(
+                function (refreshError) {
+                    console.warn(
+                        "PKM berhasil disimpan, tetapi list belum diperbarui:",
+                        refreshError
+                    );
+                }
+            );
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
         | CEK APAKAH INI APPROVAL TERAKHIR
         |--------------------------------------------------------------------------
         */
@@ -7427,10 +7494,6 @@ async function approvePkmWithSignature() {
             }
         }
 
-        if (isCrmSubmission) {
-            resetPkmForm();
-        }
-
         /*
         | Ubah mode sebelum modal ditutup.
         */
@@ -7476,13 +7539,62 @@ async function approvePkmWithSignature() {
             );
         }
     } catch (error) {
+        /*
+        | createPkm sudah berhasil, tetapi respons approvePkm
+        | mungkin terputus setelah TTD ditulis ke database.
+        */
+
+        if (
+            isCrmSubmission &&
+            pendingCrmSubmissionSaved
+        ) {
+            console.warn(
+                "Respons approval CRM terputus. Status akan disinkronkan:",
+                error
+            );
+
+            approvalModalMode = "APPROVAL";
+            pendingCrmSubmission = null;
+            pendingCrmSubmissionSaved = false;
+
+            closeApprovalModal(true);
+
+            try {
+                resetPkmForm();
+            } catch (resetError) {
+                console.warn(
+                    "Form gagal direset:",
+                    resetError
+                );
+            }
+
+            showPage("listPkmPage");
+
+            showToast(
+                "Pengajuan sudah tersimpan. Status sedang diperbarui.",
+                "success"
+            );
+
+            loadPkmData("list").catch(
+                function (refreshError) {
+                    console.warn(
+                        "List PKM belum berhasil diperbarui:",
+                        refreshError
+                    );
+                }
+            );
+
+            return;
+        }
+
         showToast(
             error.message ||
             (
                 isCrmSubmission
                     ? "Pengajuan PKM gagal disimpan."
                     : "Approval gagal diproses."
-            )
+            ),
+            "error"
         );
     } finally {
 
