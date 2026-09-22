@@ -4635,30 +4635,6 @@ function renderPkmTable() {
 
     /*
     |--------------------------------------------------------------------------
-    | DEFAULT: SEMBUNYIKAN DATA YANG SUDAH ACC
-    |--------------------------------------------------------------------------
-    */
-
-    const isDefaultList =
-        search === "" &&
-        statusFilter === "ALL";
-
-    if (isDefaultList) {
-        data = data.filter(function (item) {
-            const normalizedStatus =
-                String(item.status || "")
-                    .trim()
-                    .toUpperCase();
-
-            return ![
-                "ACC",
-                "DISETUJUI"
-            ].includes(normalizedStatus);
-        });
-    }
-
-    /*
-    |--------------------------------------------------------------------------
     | PAGINATION
     |--------------------------------------------------------------------------
     */
@@ -6174,8 +6150,20 @@ document.addEventListener(
 
                 return;
             } catch (downloadError) {
+                /*
+                | Jangan membuat PDF baru jika error-nya
+                | adalah session, akses, koneksi, atau server.
+                */
+
+                if (
+                    downloadError.code !==
+                    "PDF_NOT_FOUND"
+                ) {
+                    throw downloadError;
+                }
+
                 console.warn(
-                    "PDF belum tersedia, membuat ulang.",
+                    "PDF tidak ditemukan di Drive. Membuat PDF baru.",
                     downloadError
                 );
             }

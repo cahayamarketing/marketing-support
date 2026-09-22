@@ -1092,6 +1092,23 @@ async function downloadStoredPkmPdf(
             }
         );
 
+        if (
+            !result ||
+            result.found === false ||
+            !result.pdfBase64
+        ) {
+            const notFoundError =
+                new Error(
+                    result?.message ||
+                    "PDF belum tersedia."
+                );
+
+            notFoundError.code =
+                "PDF_NOT_FOUND";
+
+            throw notFoundError;
+        }
+
         const binaryString = atob(
             result.pdfBase64
         );
