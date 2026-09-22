@@ -226,6 +226,15 @@ function canVerifyCrmKpi() {
     return getCrmKpiRole() === "MSCM";
 }
 
+function canViewCrmKpiHo() {
+    return [
+        "MSCM",
+        "MGR"
+    ].includes(
+        getCrmKpiRole()
+    );
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -244,6 +253,7 @@ function initializeCrmKpi() {
     initializeCrmKpiBranch();
     initializeCrmKpiPeriod();
 
+    updateCrmKpiHoVisibility();
     renderCrmKpiTable();
 }
 
@@ -401,62 +411,232 @@ async function loadCrmKpiPage() {
     }
 }
 
-function mergeCrmKpiRows(data) {
-    return CRM_KPI_METRICS.map(function (metric) {
-        const saved = data.find(function (item) {
-            return item.code === metric.code;
+function updateCrmKpiHoVisibility() {
+    const visible =
+        canViewCrmKpiHo();
+
+    document
+        .querySelectorAll(
+            "[data-kpi-ho-only]"
+        )
+        .forEach(function (element) {
+            element.classList.toggle(
+                "hidden",
+                !visible
+            );
         });
+}
 
-        return {
-            code: metric.code,
+function mergeCrmKpiRows(data) {
+    const sourceData =
+        Array.isArray(data)
+            ? data
+            : [];
 
-            target:
-                saved && saved.target !== undefined
-                    ? saved.target
-                    : Array.isArray(metric.target)
-                        ? [...metric.target]
-                        : metric.target,
+    return CRM_KPI_METRICS.map(
+        function (metric) {
+            const saved =
+                sourceData.find(
+                    function (item) {
+                        return (
+                            String(
+                                item.code || ""
+                            )
+                                .trim()
+                                .toUpperCase() ===
+                            metric.code
+                        );
+                    }
+                );
 
-            actualCrm:
-                saved && saved.actualCrm !== undefined
-                    ? saved.actualCrm
-                    : metric.unit === "KPB"
-                        ? ["", "", "", ""]
+            const defaultActual =
+                metric.unit === "KPB"
+                    ? [
+                        "",
+                        "",
+                        "",
+                        ""
+                    ]
+                    : "";
+
+            if (!saved) {
+                return {
+                    code: metric.code,
+
+                    target:
+                        Array.isArray(
+                            metric.target
+                        )
+                            ? [
+                                ...metric.target
+                            ]
+                            : metric.target,
+
+                    actualCrm:
+                        Array.isArray(
+                            defaultActual
+                        )
+                            ? [
+                                ...defaultActual
+                            ]
+                            : defaultActual,
+
+                    actualHo:
+                        Array.isArray(
+                            defaultActual
+                        )
+                            ? [
+                                ...defaultActual
+                            ]
+                            : defaultActual,
+
+                    scoreCrm: "",
+                    scoreHo: "",
+                    status: ""
+                };
+            }
+
+            return {
+                code: metric.code,
+
+                target:
+                    saved.target !==
+                        undefined &&
+                    saved.target !==
+                        null &&
+                    saved.target !==
+                        ""
+                        ? saved.target
+                        : Array.isArray(
+                            metric.target
+                        )
+                            ? [
+                                ...metric.target
+                            ]
+                            : metric.target,
+
+                actualCrm:
+                    saved.actualCrm !==
+                        undefined &&
+                    saved.actualCrm !==
+                        null
+                        ? saved.actualCrm
+                        : Array.isArray(
+                            defaultActual
+                        )
+                            ? [
+                                ...defaultActual
+                            ]
+                            : defaultActual,
+
+                /*
+                | Backend tidak akan mengirim Actual HO
+                | kepada akun cabang.
+                */
+
+                actualHo:
+                    canViewCrmKpiHo() &&
+                    saved.actualHo !==
+                        undefined &&
+                    saved.actualHo !==
+                        null
+                        ? saved.actualHo
+                        : Array.isArray(
+                            defaultActual
+                        )
+                            ? [
+                                ...defaultActual
+                            ]
+                            : defaultActual,
+
+                scoreCrm:
+                    saved.scoreCrm !==
+                        undefined &&
+                    saved.scoreCrm !==
+                        null
+                        ? saved.scoreCrm
                         : "",
 
-            actualHo:
-                saved && saved.actualHo !== undefined
-                    ? saved.actualHo
-                    : metric.unit === "KPB"
-                        ? ["", "", "", ""]
+                scoreHo:
+                    canViewCrmKpiHo() &&
+                    saved.scoreHo !==
+                        undefined &&
+                    saved.scoreHo !==
+                        null
+                        ? saved.scoreHo
                         : "",
 
-            status:
-                saved
-                    ? saved.status || ""
-                    : ""
-        };
-    });
+                status:
+                    String(
+                        saved.status || ""
+                    )
+                        .trim()
+                        .toUpperCase()
+            };
+        }
+    );
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| RENDER
-|--------------------------------------------------------------------------
-*/
-
 function renderCrmKpiTable() {
+    const showHoColumns =
+        canViewCrmKpiHo();
+
+    if (
+        !Array.isArray(crmKpiRows) ||
+        !crmKpiRows.length
+    ) {
+        crmKpiRows =
+            createEmptyCrmKpiRows();
+    }
+
     crmKpiTableBody.innerHTML =
         CRM_KPI_METRICS
-            .map(function (metric, index) {
+            .map(function (
+                metric,
+                index
+            ) {
                 const row =
-                    crmKpiRows.find(function (item) {
-                        return item.code === metric.code;
-                    }) || {
-                        target: metric.target,
-                        actualCrm: "",
-                        actualHo: ""
+                    crmKpiRows.find(
+                        function (item) {
+                            return (
+                                item.code ===
+                                metric.code
+                            );
+                        }
+                    ) || {
+                        code: metric.code,
+                        target:
+                            Array.isArray(
+                                metric.target
+                            )
+                                ? [
+                                    ...metric.target
+                                ]
+                                : metric.target,
+                        actualCrm:
+                            metric.unit ===
+                            "KPB"
+                                ? [
+                                    "",
+                                    "",
+                                    "",
+                                    ""
+                                ]
+                                : "",
+                        actualHo:
+                            metric.unit ===
+                            "KPB"
+                                ? [
+                                    "",
+                                    "",
+                                    "",
+                                    ""
+                                ]
+                                : "",
+                        scoreCrm: "",
+                        scoreHo: "",
+                        status: ""
                     };
 
                 const score =
@@ -464,6 +644,33 @@ function renderCrmKpiTable() {
                         metric,
                         row
                     );
+
+                const hoColumns =
+                    showHoColumns
+                        ? `
+                            <td data-kpi-ho-only>
+                                ${renderCrmKpiActual(
+                                    metric,
+                                    row.actualHo,
+                                    "ho",
+                                    crmKpiVerifying
+                                )}
+                            </td>
+
+                            <td
+                                data-kpi-ho-only
+                                class="font-black ${getDifferenceClass(
+                                    metric,
+                                    row
+                                )}"
+                            >
+                                ${formatCrmKpiDifference(
+                                    metric,
+                                    row
+                                )}
+                            </td>
+                        `
+                        : "";
 
                 return `
                     <tr>
@@ -473,16 +680,25 @@ function renderCrmKpiTable() {
 
                         <td>
                             <p class="font-black text-slate-900">
-                                ${escapeHtml(metric.name)}
+                                ${escapeHtml(
+                                    metric.name
+                                )}
                             </p>
 
                             <p class="mt-1 text-xs text-slate-500">
-                                ${getMetricInformation(metric)}
+                                ${escapeHtml(
+                                    getMetricInformation(
+                                        metric
+                                    )
+                                )}
                             </p>
                         </td>
 
                         <td>
-                            ${renderCrmKpiTarget(metric, row)}
+                            ${renderCrmKpiTarget(
+                                metric,
+                                row
+                            )}
                         </td>
 
                         <td>
@@ -494,44 +710,266 @@ function renderCrmKpiTable() {
                             )}
                         </td>
 
-                        <td>
-                            ${renderCrmKpiActual(
-                                metric,
-                                row.actualHo,
-                                "ho",
-                                crmKpiVerifying
+                        ${hoColumns}
+
+                        <td class="font-black text-slate-900">
+                            ${formatKpiNumber(
+                                metric.weight
                             )}
                         </td>
 
-                        <td class="font-black ${getDifferenceClass(metric, row)}">
-                            ${formatCrmKpiDifference(metric, row)}
-                        </td>
-
-                        <td class="font-black text-slate-900">
-                            ${metric.weight}
-                        </td>
-
                         <td class="font-black text-red-600">
-                            ${formatKpiNumber(score)}
+                            ${formatKpiNumber(
+                                score
+                            )}
                         </td>
                     </tr>
                 `;
             })
             .join("");
 
-    document
-        .getElementById("crmKpiTableTotal")
-        .textContent =
-            formatKpiNumber(
-                calculateTotalCrmKpi()
-            );
+    const totalScore =
+        calculateTotalCrmKpi();
 
-    document
-        .getElementById("crmKpiTotal")
-        .textContent =
-            formatKpiNumber(
-                calculateTotalCrmKpi()
-            );
+    const totalPercentage =
+        calculateCrmKpiPercentage(
+            totalScore
+        );
+
+    const percentageText =
+        `${formatKpiNumber(
+            totalPercentage
+        )}%`;
+
+    document.getElementById(
+        "crmKpiTableTotal"
+    ).textContent =
+        percentageText;
+
+    document.getElementById(
+        "crmKpiTotal"
+    ).textContent =
+        percentageText;
+
+    const totalLabel =
+        document.getElementById(
+            "crmKpiTotalLabel"
+        );
+
+    if (totalLabel) {
+        /*
+        | Ada 8 kolom jika Actual HO tampil.
+        | Ada 6 kolom jika Actual HO disembunyikan.
+        | Kolom terakhir dipakai untuk nilai total.
+        */
+
+        totalLabel.colSpan =
+            showHoColumns
+                ? 7
+                : 5;
+    }
+
+    updateCrmKpiHoVisibility();
+}
+
+/*
+|--------------------------------------------------------------------------
+| RENDER
+|--------------------------------------------------------------------------
+*/
+
+function renderCrmKpiTable() {
+    const showHoColumns =
+        canViewCrmKpiHo();
+
+    if (
+        !Array.isArray(crmKpiRows) ||
+        !crmKpiRows.length
+    ) {
+        crmKpiRows =
+            createEmptyCrmKpiRows();
+    }
+
+    crmKpiTableBody.innerHTML =
+        CRM_KPI_METRICS
+            .map(function (
+                metric,
+                index
+            ) {
+                const row =
+                    crmKpiRows.find(
+                        function (item) {
+                            return (
+                                item.code ===
+                                metric.code
+                            );
+                        }
+                    ) || {
+                        code: metric.code,
+                        target:
+                            Array.isArray(
+                                metric.target
+                            )
+                                ? [
+                                    ...metric.target
+                                ]
+                                : metric.target,
+                        actualCrm:
+                            metric.unit ===
+                            "KPB"
+                                ? [
+                                    "",
+                                    "",
+                                    "",
+                                    ""
+                                ]
+                                : "",
+                        actualHo:
+                            metric.unit ===
+                            "KPB"
+                                ? [
+                                    "",
+                                    "",
+                                    "",
+                                    ""
+                                ]
+                                : "",
+                        scoreCrm: "",
+                        scoreHo: "",
+                        status: ""
+                    };
+
+                const score =
+                    calculateCrmKpiScore(
+                        metric,
+                        row
+                    );
+
+                const hoColumns =
+                    showHoColumns
+                        ? `
+                            <td data-kpi-ho-only>
+                                ${renderCrmKpiActual(
+                                    metric,
+                                    row.actualHo,
+                                    "ho",
+                                    crmKpiVerifying
+                                )}
+                            </td>
+
+                            <td
+                                data-kpi-ho-only
+                                class="font-black ${getDifferenceClass(
+                                    metric,
+                                    row
+                                )}"
+                            >
+                                ${formatCrmKpiDifference(
+                                    metric,
+                                    row
+                                )}
+                            </td>
+                        `
+                        : "";
+
+                return `
+                    <tr>
+                        <td class="font-black text-slate-400">
+                            ${index + 1}
+                        </td>
+
+                        <td>
+                            <p class="font-black text-slate-900">
+                                ${escapeHtml(
+                                    metric.name
+                                )}
+                            </p>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                ${escapeHtml(
+                                    getMetricInformation(
+                                        metric
+                                    )
+                                )}
+                            </p>
+                        </td>
+
+                        <td>
+                            ${renderCrmKpiTarget(
+                                metric,
+                                row
+                            )}
+                        </td>
+
+                        <td>
+                            ${renderCrmKpiActual(
+                                metric,
+                                row.actualCrm,
+                                "crm",
+                                crmKpiEditing
+                            )}
+                        </td>
+
+                        ${hoColumns}
+
+                        <td class="font-black text-slate-900">
+                            ${formatKpiNumber(
+                                metric.weight
+                            )}
+                        </td>
+
+                        <td class="font-black text-red-600">
+                            ${formatKpiNumber(
+                                score
+                            )}
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+
+    const totalScore =
+        calculateTotalCrmKpi();
+
+    const totalPercentage =
+        calculateCrmKpiPercentage(
+            totalScore
+        );
+
+    const percentageText =
+        `${formatKpiNumber(
+            totalPercentage
+        )}%`;
+
+    document.getElementById(
+        "crmKpiTableTotal"
+    ).textContent =
+        percentageText;
+
+    document.getElementById(
+        "crmKpiTotal"
+    ).textContent =
+        percentageText;
+
+    const totalLabel =
+        document.getElementById(
+            "crmKpiTotalLabel"
+        );
+
+    if (totalLabel) {
+        /*
+        | Ada 8 kolom jika Actual HO tampil.
+        | Ada 6 kolom jika Actual HO disembunyikan.
+        | Kolom terakhir dipakai untuk nilai total.
+        */
+
+        totalLabel.colSpan =
+            showHoColumns
+                ? 7
+                : 5;
+    }
+
+    updateCrmKpiHoVisibility();
 }
 
 function renderCrmKpiTarget(metric, row) {
@@ -633,54 +1071,186 @@ function renderCrmKpiActual(
 |--------------------------------------------------------------------------
 */
 
-function calculateCrmKpiScore(metric, row) {
-    const verified =
+function calculateCrmKpiScore(
+    metric,
+    row
+) {
+    if (!metric || !row) {
+        return 0;
+    }
+
+    const status =
         String(row.status || "")
-            .toUpperCase() === "TERVERIFIKASI";
+            .trim()
+            .toUpperCase();
+
+    const verified =
+        status === "TERVERIFIKASI";
+
+    const useHoResult =
+        verified &&
+        canViewCrmKpiHo() &&
+        hasKpiValue(
+            row.actualHo
+        );
+
+    /*
+    |--------------------------------------------------------------------------
+    | SAAT MODE LIHAT
+    |--------------------------------------------------------------------------
+    | Gunakan skor yang sudah disimpan di database.
+    | Ini penting agar data historis AppSheet tidak dihitung ulang
+    | dengan formula frontend yang baru.
+    */
+
+    if (
+        !crmKpiEditing &&
+        !crmKpiVerifying
+    ) {
+        if (
+            useHoResult &&
+            hasStoredCrmKpiScore(
+                row.scoreHo
+            )
+        ) {
+            return Number(
+                row.scoreHo
+            );
+        }
+
+        if (
+            hasStoredCrmKpiScore(
+                row.scoreCrm
+            )
+        ) {
+            return Number(
+                row.scoreCrm
+            );
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PILIH ACTUAL
+    |--------------------------------------------------------------------------
+    */
 
     const selectedActual =
-        verified &&
-        hasKpiValue(row.actualHo)
+        useHoResult ||
+        crmKpiVerifying
             ? row.actualHo
             : row.actualCrm;
+
+    /*
+    |--------------------------------------------------------------------------
+    | KPI KPB
+    |--------------------------------------------------------------------------
+    */
 
     if (metric.unit === "KPB") {
         const targets =
             Array.isArray(row.target)
                 ? row.target
-                : metric.target;
+                : Array.isArray(
+                    metric.target
+                )
+                    ? metric.target
+                    : [
+                        60,
+                        50,
+                        30,
+                        40
+                    ];
 
         const actuals =
-            Array.isArray(selectedActual)
+            Array.isArray(
+                selectedActual
+            )
                 ? selectedActual
-                : [];
+                : [
+                    selectedActual,
+                    "",
+                    "",
+                    ""
+                ];
 
         const achievements =
-            targets.map(function (target, index) {
+            targets.map(function (
+                targetValue,
+                index
+            ) {
+                const actualValue =
+                    Number(
+                        actuals[index] || 0
+                    );
+
                 return calculateAchievement(
-                    Number(target),
-                    Number(actuals[index] || 0),
+                    Number(
+                        targetValue || 0
+                    ),
+                    actualValue,
                     false
                 );
             });
 
-        const average =
-            achievements.reduce(function (total, value) {
-                return total + value;
-            }, 0) / achievements.length;
+        if (!achievements.length) {
+            return 0;
+        }
 
-        return average * metric.weight;
+        const averageAchievement =
+            achievements.reduce(
+                function (
+                    total,
+                    achievement
+                ) {
+                    return (
+                        total +
+                        achievement
+                    );
+                },
+                0
+            ) /
+            achievements.length;
+
+        return roundCrmKpiNumber(
+            averageAchievement *
+            Number(
+                metric.weight || 0
+            )
+        );
     }
 
-    const target = Number(row.target || metric.target || 0);
-    const actual = Number(selectedActual || 0);
+    /*
+    |--------------------------------------------------------------------------
+    | KPI BIASA
+    |--------------------------------------------------------------------------
+    */
 
-    return (
+    const target =
+        Number(
+            row.target !== "" &&
+            row.target !== null &&
+            row.target !== undefined
+                ? row.target
+                : metric.target || 0
+        );
+
+    const actual =
+        Number(
+            selectedActual || 0
+        );
+
+    const achievement =
         calculateAchievement(
             target,
             actual,
-            metric.lowerIsBetter === true
-        ) * metric.weight
+            metric.lowerIsBetter ===
+                true
+        );
+
+    return roundCrmKpiNumber(
+        achievement *
+        Number(metric.weight || 0)
     );
 }
 
@@ -689,23 +1259,58 @@ function calculateAchievement(
     actual,
     lowerIsBetter
 ) {
-    if (!target || actual < 0) {
+    const targetNumber =
+        Number(target || 0);
+
+    const actualNumber =
+        Number(actual || 0);
+
+    if (
+        !Number.isFinite(
+            targetNumber
+        ) ||
+        !Number.isFinite(
+            actualNumber
+        ) ||
+        targetNumber <= 0 ||
+        actualNumber < 0
+    ) {
         return 0;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | SEMAKIN KECIL SEMAKIN BAIK
+    |--------------------------------------------------------------------------
+    | Contoh:
+    | Target maksimal 5%, Actual 5%  = 100%
+    | Target maksimal 5%, Actual 10% = 50%
+    */
+
     if (lowerIsBetter) {
-        if (actual <= target) {
+        if (
+            actualNumber <=
+            targetNumber
+        ) {
             return 1;
         }
 
         return Math.min(
-            target / actual,
+            targetNumber /
+            actualNumber,
             1
         );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | SEMAKIN BESAR SEMAKIN BAIK
+    |--------------------------------------------------------------------------
+    */
+
     return Math.min(
-        actual / target,
+        actualNumber /
+        targetNumber,
         1
     );
 }

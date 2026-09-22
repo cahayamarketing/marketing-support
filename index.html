@@ -399,18 +399,12 @@
                                         Total KPI
                                     </p>
 
-                                    <div class="mt-1 flex items-end gap-1">
-                                        <span
-                                            id="crmKpiTotal"
-                                            class="text-3xl font-black"
-                                        >
-                                            0
-                                        </span>
-
-                                        <span class="pb-1 text-sm font-bold text-red-100">
-                                            / 115
-                                        </span>
-                                    </div>
+                                    <p
+                                        id="crmKpiTotal"
+                                        class="mt-1 text-3xl font-black"
+                                    >
+                                        0%
+                                    </p>
                                 </div>
 
                                 <div class="rounded-2xl bg-white/15 px-5 py-4 backdrop-blur">
@@ -606,8 +600,19 @@
                                         <th class="min-w-[260px]">Kategori</th>
                                         <th class="min-w-[180px]">Target</th>
                                         <th class="min-w-[190px]">Actual CRM</th>
-                                        <th class="min-w-[190px]">Actual HO</th>
-                                        <th class="min-w-[110px]">Selisih</th>
+                                        <th
+                                            data-kpi-ho-only
+                                            class="min-w-[190px]"
+                                        >
+                                            Actual HO
+                                        </th>
+
+                                        <th
+                                            data-kpi-ho-only
+                                            class="min-w-[110px]"
+                                        >
+                                            Selisih
+                                        </th>
                                         <th class="min-w-[110px]">Bobot Max</th>
                                         <th class="min-w-[110px]">Nilai KPI</th>
                                     </tr>
@@ -617,21 +622,20 @@
 
                                 <tfoot>
                                     <tr class="bg-slate-900 text-white">
-                                        <td colspan="6" class="px-4 py-4 text-right font-black">
+                                        <td
+                                            id="crmKpiTotalLabel"
+                                            colspan="7"
+                                            class="px-4 py-4 text-right font-black"
+                                        >
                                             Total KPI
-                                        </td>
-
-                                        <td class="px-4 py-4 font-black">
-                                            115
                                         </td>
 
                                         <td
                                             id="crmKpiTableTotal"
                                             class="px-4 py-4 text-lg font-black"
                                         >
-                                            0
+                                            0%
                                         </td>
-                                    </tr>
                                 </tfoot>
 
                             </table>
