@@ -632,9 +632,24 @@ const responseText =
                     : ""
             );
 
+        console.error(
+            "BACKEND REQUEST GAGAL",
+            {
+                action: action,
+                httpStatus:
+                    response.status,
+                message:
+                    serverMessage,
+                response:
+                    data,
+                payload:
+                    payload
+            }
+        );
+
         throw new Error(
             serverMessage ||
-            `Permintaan ke server gagal (HTTP ${response.status}).`
+            `Permintaan "${action}" gagal (HTTP ${response.status}).`
         );
     }
 
