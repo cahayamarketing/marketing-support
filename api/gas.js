@@ -1,20 +1,7 @@
-export const config = {
-    maxDuration: 60
-};
-
-
 export default async function handler(
     request,
     response
 ) {
-    const startedAt =
-        Date.now();
-
-    response.setHeader(
-        "Cache-Control",
-        "no-store, no-cache, must-revalidate"
-    );
-
     if (request.method !== "POST") {
         return response.status(405).json({
             success: false,
@@ -34,29 +21,15 @@ export default async function handler(
         });
     }
 
-    const controller =
-        new AbortController();
-
-    const timeoutId =
-        setTimeout(
-            function () {
-                controller.abort();
-            },
-            55000
-        );
-
     try {
         let requestBody =
             request.body || {};
 
         if (
-            typeof requestBody ===
-            "string"
+            typeof requestBody === "string"
         ) {
             requestBody =
-                JSON.parse(
-                    requestBody
-                );
+                JSON.parse(requestBody);
         }
 
         const appsScriptResponse =
@@ -75,10 +48,7 @@ export default async function handler(
                             requestBody
                         ),
 
-                    redirect: "follow",
-
-                    signal:
-                        controller.signal
+                    redirect: "follow"
                 }
             );
 
@@ -89,30 +59,12 @@ export default async function handler(
 
         try {
             result =
-                JSON.parse(
-                    responseText
-                );
+                JSON.parse(responseText);
         } catch (error) {
-            console.error(
-                "Respons GAS bukan JSON:",
-                responseText.slice(
-                    0,
-                    500
-                )
-            );
-
             throw new Error(
                 "Respons Apps Script bukan JSON."
             );
         }
-
-        const duration =
-            Date.now() - startedAt;
-
-        response.setHeader(
-            "Server-Timing",
-            `gas;dur=${duration}`
-        );
 
         if (!result.success) {
             return response
@@ -122,64 +74,23 @@ export default async function handler(
 
                     message:
                         result.message ||
-                        "Apps Script gagal memproses data.",
-
-                    durationMs:
-                        duration
+                        "Apps Script gagal memproses data."
                 });
         }
 
         return response
             .status(200)
-            .json({
-                ...result.result,
-
-                /*
-                | Untuk melihat durasi backend
-                | pada Network Response.
-                */
-
-                _serverDurationMs:
-                    duration
-            });
-
+            .json(result.result);
     } catch (error) {
-        const duration =
-            Date.now() - startedAt;
-
-        if (
-            error &&
-            error.name ===
-                "AbortError"
-        ) {
-            return response
-                .status(504)
-                .json({
-                    success: false,
-                    message:
-                        "Google Apps Script tidak merespons dalam 55 detik.",
-                    durationMs:
-                        duration
-                });
-        }
-
         return response
             .status(500)
             .json({
                 success: false,
 
                 message:
-                    error &&
-                    error.message
+                    error && error.message
                         ? error.message
-                        : "Gagal menghubungi Apps Script.",
-
-                durationMs:
-                    duration
+                        : "Gagal menghubungi Apps Script."
             });
-    } finally {
-        clearTimeout(
-            timeoutId
-        );
     }
 }

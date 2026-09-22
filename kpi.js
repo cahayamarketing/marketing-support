@@ -949,6 +949,23 @@ function hasKpiValue(value) {
     );
 }
 
+function roundCrmKpiNumber(
+    value
+) {
+    const number =
+        Number(value || 0);
+
+    if (!Number.isFinite(number)) {
+        return 0;
+    }
+
+    return (
+        Math.round(
+            number * 100
+        ) / 100
+    );
+}
+
 function calculateCrmKpiScore(
     metric,
     row
