@@ -111,8 +111,7 @@ loginForm.addEventListener(
 
         try {
             const result =
-                await callApi(
-                    "login",
+                await loginWithRetry(
                     {
                         nik: nik,
                         password: password
@@ -228,6 +227,70 @@ if (forgotModal) {
             }
         }
     );
+}
+
+function waitLoginRetry(milliseconds) {
+    return new Promise(function (resolve) {
+        window.setTimeout(
+            resolve,
+            milliseconds
+        );
+    });
+}
+
+
+async function loginWithRetry(
+    payload,
+    maximumAttempt = 3
+) {
+    let lastError = null;
+
+    for (
+        let attempt = 1;
+        attempt <= maximumAttempt;
+        attempt += 1
+    ) {
+        try {
+            return await callApi(
+                "login",
+                payload
+            );
+        } catch (error) {
+            lastError = error;
+
+            const message =
+                String(
+                    error.message || ""
+                ).toLowerCase();
+
+            /*
+            | Jangan retry jika memang data login salah.
+            */
+
+            const permanentError =
+                message.includes("password") ||
+                message.includes("nik atau") ||
+                message.includes("nonaktif");
+
+            if (
+                permanentError ||
+                attempt === maximumAttempt
+            ) {
+                throw error;
+            }
+
+            setLoginLoading(
+                true,
+                `Menghubungkan ulang (${attempt}/${maximumAttempt})...`
+            );
+
+            await waitLoginRetry(
+                attempt * 1200
+            );
+        }
+    }
+
+    throw lastError;
 }
 
 

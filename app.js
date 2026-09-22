@@ -1978,6 +1978,8 @@ async function initializeApplication() {
             .charAt(0)
             .toUpperCase();
 
+    setDefaultApprovalStepFilter();
+
     document.getElementById(
         "cabang"
     ).value =
@@ -3042,6 +3044,12 @@ function showPage(pageId) {
                 "Telusuri dan pantau status pengajuan"
         },
 
+        pdfPkmPage: {
+            title: "PDF PKM",
+            subtitle:
+                "Dokumen pengajuan yang sudah disetujui"
+        },
+
         lpjPage: {
             title: "LPJ",
             subtitle:
@@ -3144,6 +3152,7 @@ function showPage(pageId) {
     if (
         pageId === "pengajuanPage" ||
         pageId === "listPkmPage" ||
+        pageId === "pdfPkmPage" ||
         pageId === "lpjPage"
     ) {
         pkmSubmenu.classList.remove(
@@ -3165,6 +3174,11 @@ function showPage(pageId) {
         renderPkmTable();
     }
 
+    if (pageId === "pdfPkmPage") {
+        currentPdfPkmPage = 1;
+        renderPkmPdfTable();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | REFRESH MAP
@@ -3172,7 +3186,30 @@ function showPage(pageId) {
     */
 
     if (pageId === "pengajuanPage") {
-        void loadReferenceMasters();
+        /*
+        | Muat berurutan supaya Apps Script
+        | tidak menerima banyak request bersamaan.
+        */
+
+        loadReferenceMasters()
+            .then(function () {
+                populateJenisPkmOptions();
+                refreshLeasingMasterOptions();
+
+                return loadSalesmanData();
+            })
+            .catch(function (error) {
+                console.warn(
+                    "Data pengajuan belum lengkap:",
+                    error
+                );
+
+                showToast(
+                    "Sebagian data pengajuan belum berhasil dimuat.",
+                    "error"
+                );
+            });
+
         window.setTimeout(function () {
             if (isBtlSelected()) {
                 initializeLocationMap();
@@ -6046,6 +6083,141 @@ function renderPkmTable() {
 
     /*
     |--------------------------------------------------------------------------
+    | FILTER STEP APPROVAL
+    |--------------------------------------------------------------------------
+    */
+
+    const currentRole =
+        getCurrentUserRole();
+
+    const approvalQueueRoles = [
+        "KACAB",
+        "MSCM",
+        "PIC_H23",
+        "MGR"
+    ];
+
+    const approvalStepFilter =
+        String(
+            document.getElementById(
+                "approvalStepFilter"
+            )?.value || "ALL"
+        )
+            .trim()
+            .toUpperCase();
+
+
+    if (
+        approvalStepFilter ===
+        "MY_QUEUE"
+    ) {
+        /*
+        | Hanya pengajuan yang bisa diproses
+        | oleh akun login saat ini.
+        */
+
+        data = data.filter(function (item) {
+            return canCurrentUserProcess(
+                item
+            );
+        });
+    } else if (
+        approvalStepFilter !== "ALL"
+    ) {
+        /*
+        | Filter berdasarkan step yang dipilih.
+        */
+
+        data = data.filter(function (item) {
+            const itemStep =
+                String(
+                    getApprovalStep(item) ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            return (
+                itemStep ===
+                approvalStepFilter
+            );
+        });
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | URUTKAN YANG PERLU DIPROSES DI ATAS
+    |--------------------------------------------------------------------------
+    */
+
+    data.sort(function (first, second) {
+        const firstCanProcess =
+            canCurrentUserProcess(first)
+                ? 1
+                : 0;
+
+        const secondCanProcess =
+            canCurrentUserProcess(second)
+                ? 1
+                : 0;
+
+        /*
+        | Pengajuan yang menjadi giliran user
+        | ditempatkan paling atas.
+        */
+
+        if (
+            firstCanProcess !==
+            secondCanProcess
+        ) {
+            return (
+                secondCanProcess -
+                firstCanProcess
+            );
+        }
+
+        /*
+        | Dalam antrean yang sama, tampilkan
+        | pengajuan paling lama terlebih dahulu.
+        */
+
+        return (
+            new Date(
+                first.createdAt ||
+                first.startDate ||
+                0
+            ).getTime() -
+            new Date(
+                second.createdAt ||
+                second.startDate ||
+                0
+            ).getTime()
+        );
+    });
+
+    /*
+    | Pengajuan paling lama ditempatkan paling atas
+    | supaya antrean approval dikerjakan berurutan.
+    */
+
+    data.sort(function (first, second) {
+        return (
+            new Date(
+                first.createdAt ||
+                first.startDate ||
+                0
+            ).getTime() -
+            new Date(
+                second.createdAt ||
+                second.startDate ||
+                0
+            ).getTime()
+        );
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | PAGINATION
     |--------------------------------------------------------------------------
     */
@@ -6090,8 +6262,10 @@ function renderPkmTable() {
 
     if (resultCount) {
         resultCount.textContent =
-            `${totalData} data ditemukan`;
-    }
+            approvalQueueRoles.includes(currentRole)
+                ? `${totalData} pengajuan perlu diproses`
+                : `${totalData} data ditemukan`;
+            }
 
     /*
     |--------------------------------------------------------------------------
@@ -6142,16 +6316,6 @@ function renderPkmTable() {
                             class="whitespace-nowrap rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white shadow-md shadow-red-100 transition hover:bg-red-700"
                         >
                             Proses
-                        </button>
-                    `;
-                } else if (pdfAvailable) {
-                    actionButton = `
-                        <button
-                            type="button"
-                            data-download-stored-pdf="${escapeHtml(item.id)}"
-                            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-md transition hover:bg-red-700"
-                        >
-                            ↓ Download PDF
                         </button>
                     `;
                 } else {
@@ -6318,6 +6482,259 @@ function renderPkmTable() {
             );
         });
 }
+
+function setDefaultApprovalStepFilter() {
+    const filter =
+        document.getElementById(
+            "approvalStepFilter"
+        );
+
+    if (!filter) {
+        return;
+    }
+
+    const role =
+        getCurrentUserRole();
+
+    const approvalRoles = [
+        "KACAB",
+        "MSCM",
+        "PIC_H23",
+        "MGR"
+    ];
+
+    filter.value =
+        approvalRoles.includes(role)
+            ? "MY_QUEUE"
+            : "ALL";
+}
+
+/*
+|--------------------------------------------------------------------------
+| HALAMAN PDF PKM
+|--------------------------------------------------------------------------
+*/
+
+let currentPdfPkmPage = 1;
+const PDF_PKM_PAGE_SIZE = 7;
+
+
+function renderPkmPdfTable() {
+    const tableBody =
+        document.getElementById(
+            "pdfPkmTableBody"
+        );
+
+    if (!tableBody) {
+        return;
+    }
+
+    const search =
+        String(
+            document.getElementById(
+                "searchPdfPkm"
+            )?.value || ""
+        )
+            .trim()
+            .toLowerCase();
+
+    let data =
+        getBranchPkm()
+            .filter(function (item) {
+                const status =
+                    String(item.status || "")
+                        .trim()
+                        .toUpperCase();
+
+                return [
+                    "ACC",
+                    "DISETUJUI"
+                ].includes(status);
+            })
+            .filter(function (item) {
+                if (!search) {
+                    return true;
+                }
+
+                return [
+                    item.id,
+                    item.name,
+                    item.branch,
+                    item.branchName,
+                    item.kegiatan,
+                    item.jenisPkm,
+                    item.location
+                ]
+                    .join(" ")
+                    .toLowerCase()
+                    .includes(search);
+            })
+            .sort(function (first, second) {
+                return (
+                    new Date(
+                        second.startDate || 0
+                    ).getTime() -
+                    new Date(
+                        first.startDate || 0
+                    ).getTime()
+                );
+            });
+
+    const totalData = data.length;
+
+    const totalPages = Math.max(
+        1,
+        Math.ceil(
+            totalData /
+            PDF_PKM_PAGE_SIZE
+        )
+    );
+
+    currentPdfPkmPage =
+        Math.min(
+            currentPdfPkmPage,
+            totalPages
+        );
+
+    const startIndex =
+        (
+            currentPdfPkmPage - 1
+        ) * PDF_PKM_PAGE_SIZE;
+
+    const pageData =
+        data.slice(
+            startIndex,
+            startIndex +
+                PDF_PKM_PAGE_SIZE
+        );
+
+    tableBody.innerHTML =
+        pageData
+            .map(function (item) {
+                const typeText =
+                    Array.isArray(item.type)
+                        ? item.type.join(", ")
+                        : item.type || "-";
+
+                return `
+                    <tr>
+                        <td class="font-bold">
+                            ${escapeHtml(item.id || "-")}
+                        </td>
+
+                        <td>
+                            <p class="font-black text-slate-900">
+                                ${escapeHtml(item.name || "-")}
+                            </p>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                ${escapeHtml(item.kegiatan || "-")}
+                            </p>
+                        </td>
+
+                        <td>
+                            ${escapeHtml(item.branch || "-")}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(typeText)}
+                        </td>
+
+                        <td>
+                            ${formatDateTime(item.startDate)}
+                        </td>
+
+                        <td>
+                            ${statusBadge(item.status)}
+                        </td>
+
+                        <td class="text-right">
+                            <button
+                                type="button"
+                                data-download-stored-pdf="${escapeHtml(item.id)}"
+                                class="whitespace-nowrap rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-700"
+                            >
+                                ↓ Download PDF
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+
+    document
+        .getElementById("emptyPdfPkm")
+        ?.classList.toggle(
+            "hidden",
+            totalData > 0
+        );
+
+    document.getElementById(
+        "pdfPkmPaginationInfo"
+    ).textContent =
+        totalData
+            ? `Menampilkan ${startIndex + 1}–${Math.min(
+                startIndex +
+                    PDF_PKM_PAGE_SIZE,
+                totalData
+            )} dari ${totalData} dokumen`
+            : "Tidak ada dokumen";
+
+    document.getElementById(
+        "currentPdfPkmPage"
+    ).textContent =
+        currentPdfPkmPage;
+
+    document.getElementById(
+        "previousPdfPkmPage"
+    ).disabled =
+        currentPdfPkmPage <= 1;
+
+    document.getElementById(
+        "nextPdfPkmPage"
+    ).disabled =
+        currentPdfPkmPage >= totalPages;
+}
+
+document
+    .getElementById("searchPdfPkm")
+    ?.addEventListener(
+        "input",
+        function () {
+            currentPdfPkmPage = 1;
+            renderPkmPdfTable();
+        }
+    );
+
+
+document
+    .getElementById(
+        "previousPdfPkmPage"
+    )
+    ?.addEventListener(
+        "click",
+        function () {
+            if (currentPdfPkmPage <= 1) {
+                return;
+            }
+
+            currentPdfPkmPage -= 1;
+            renderPkmPdfTable();
+        }
+    );
+
+
+document
+    .getElementById(
+        "nextPdfPkmPage"
+    )
+    ?.addEventListener(
+        "click",
+        function () {
+            currentPdfPkmPage += 1;
+            renderPkmPdfTable();
+        }
+    );
 
 /*
 |--------------------------------------------------------------------------
@@ -8129,6 +8546,32 @@ document
     });
 
 document
+    .getElementById("statusFilter")
+    .addEventListener("change", function () {
+        currentPkmPage = 1;
+        renderPkmTable();
+    });
+
+
+/*
+|--------------------------------------------------------------------------
+| FILTER STEP APPROVAL
+|--------------------------------------------------------------------------
+*/
+
+document
+    .getElementById(
+        "approvalStepFilter"
+    )
+    .addEventListener(
+        "change",
+        function () {
+            currentPkmPage = 1;
+            renderPkmTable();
+        }
+    );
+
+document
     .getElementById("applyDashboardFilter")
     .addEventListener("click", function () {
         loadPkmData("dashboard");
@@ -8144,6 +8587,7 @@ document
 document
     .getElementById("resetPkmFilter")
     .addEventListener("click", function () {
+        setDefaultApprovalStepFilter();
         currentPkmPage = 1;
         const range = getCurrentMonthRange();
 
@@ -9724,12 +10168,10 @@ async function runDashboardPreload() {
     );
 
     try {
-        await loadSalesmanData();
-
         setDashboardPreloadItem(
             "preloadSalesman",
             "success",
-            "Data salesman siap"
+            "Salesman dimuat saat Pengajuan"
         );
     } catch (error) {
         setDashboardPreloadItem(
