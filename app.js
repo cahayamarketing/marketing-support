@@ -140,6 +140,11 @@ const emptyBudgetDetail =
         "emptyBudgetDetail"
     );
 
+const targetUeInput =
+    document.getElementById(
+        "targetUe"
+    );
+
 let budgetDetails = [];
 let editingBudgetId = null;
 
@@ -257,6 +262,14 @@ const defaultMapLocation = {
     zoom: 10
 };
 
+let mapSearchCenter = {
+    latitude:
+        defaultMapLocation.latitude,
+
+    longitude:
+        defaultMapLocation.longitude
+};
+
 const MASTER_NIKS = [
     "911117",
     "911120",
@@ -296,6 +309,7 @@ const MASTER_DATA_MENUS = [
 function initializeLocationMap() {
     if (locationMap) {
         locationMap.invalidateSize();
+
         return;
     }
 
@@ -308,22 +322,34 @@ function initializeLocationMap() {
         return;
     }
 
-    locationMap = L.map("locationMap").setView(
-        [
-            defaultMapLocation.latitude,
-            defaultMapLocation.longitude
-        ],
-        defaultMapLocation.zoom
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | TAMPILKAN PETA DENGAN DEFAULT SOLO
+    |--------------------------------------------------------------------------
+    */
+
+    locationMap =
+        L.map(
+            "locationMap"
+        ).setView(
+            [
+                defaultMapLocation.latitude,
+                defaultMapLocation.longitude
+            ],
+            defaultMapLocation.zoom
+        );
 
     L.tileLayer(
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
             maxZoom: 19,
+
             attribution:
                 '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }
-    ).addTo(locationMap);
+    ).addTo(
+        locationMap
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -331,15 +357,107 @@ function initializeLocationMap() {
     |--------------------------------------------------------------------------
     */
 
-    locationMap.on("click", async function (event) {
-        const latitude = event.latlng.lat;
-        const longitude = event.latlng.lng;
+    locationMap.on(
+        "click",
+        async function (event) {
+            const latitude =
+                event.latlng.lat;
 
-        await selectLocationFromCoordinates(
-            latitude,
-            longitude
+            const longitude =
+                event.latlng.lng;
+
+            await selectLocationFromCoordinates(
+                latitude,
+                longitude
+            );
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | ARAHKAN PETA KE POSISI PERANGKAT
+    |--------------------------------------------------------------------------
+    | Tidak langsung menaruh marker.
+    | Hanya menjadikan lokasi perangkat sebagai pusat pencarian.
+    |--------------------------------------------------------------------------
+    */
+
+    if (!navigator.geolocation) {
+        setMapStatus(
+            "Menggunakan area Solo sebagai titik awal."
         );
-    });
+
+        return;
+    }
+
+    setMapStatus(
+        "Mencari posisi perangkat...",
+        "loading"
+    );
+
+    navigator.geolocation.getCurrentPosition(
+        function (position) {
+            const latitude =
+                position.coords.latitude;
+
+            const longitude =
+                position.coords.longitude;
+
+            mapSearchCenter = {
+                latitude:
+                    latitude,
+
+                longitude:
+                    longitude
+            };
+
+            locationMap.setView(
+                [
+                    latitude,
+                    longitude
+                ],
+                13
+            );
+
+            setMapStatus(
+                "Peta diarahkan ke area sekitar perangkat.",
+                "success"
+            );
+        },
+
+        function (error) {
+            console.warn(
+                "Lokasi perangkat tidak tersedia:",
+                error
+            );
+
+            mapSearchCenter = {
+                latitude:
+                    defaultMapLocation.latitude,
+
+                longitude:
+                    defaultMapLocation.longitude
+            };
+
+            locationMap.setView(
+                [
+                    defaultMapLocation.latitude,
+                    defaultMapLocation.longitude
+                ],
+                defaultMapLocation.zoom
+            );
+
+            setMapStatus(
+                "Lokasi perangkat tidak tersedia. Menggunakan area Solo."
+            );
+        },
+
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+        }
+    );
 }
 
 
@@ -1776,6 +1894,7 @@ async function loadReferenceMasters() {
                 populateJenisPkmOptions();
                 populateJenisKegiatanOptions();
                 renderFocusTypeOptions();
+                refreshLeasingMasterOptions();
 
                 referenceMastersLoaded =
                     true;
@@ -1870,7 +1989,7 @@ async function initializeApplication() {
     |--------------------------------------------------------------------------
     */
 
-    void loadReferenceMasters();
+    await loadReferenceMasters();
 
     populateJenisPkmOptions();
     initializePkmFilters();
@@ -1926,29 +2045,11 @@ async function initializeApplication() {
 
     /*
     |--------------------------------------------------------------------------
-    | MUAT DATA SECARA PARALEL
+    | PRELOAD DATA APLIKASI
     |--------------------------------------------------------------------------
-    | Dashboard dan salesman berjalan bersamaan agar halaman
-    | tetap responsif ketika Google Apps Script sedang lambat.
     */
 
-    loadPkmData(
-        "dashboard"
-    ).catch(function (error) {
-        console.warn(
-            "Dashboard belum berhasil dimuat:",
-            error
-        );
-    });
-
-    loadSalesmanData().catch(
-        function (error) {
-            console.warn(
-                "Data salesman belum berhasil dimuat:",
-                error
-            );
-        }
-    );
+    await runDashboardPreload();
 
     /*
     |--------------------------------------------------------------------------
@@ -4001,6 +4102,60 @@ function addLeasingRow() {
         });
 }
 
+function refreshLeasingMasterOptions() {
+    document
+        .querySelectorAll(
+            ".leasing-name"
+        )
+        .forEach(function (select) {
+            const selectedValue =
+                select.value;
+
+            select.innerHTML = `
+                <option value="">
+                    Pilih leasing
+                </option>
+
+                ${leasingOptions
+                    .map(function (leasing) {
+                        return `
+                            <option
+                                value="${escapeHtml(
+                                    leasing.name
+                                )}"
+                                data-code="${escapeHtml(
+                                    leasing.code
+                                )}"
+                                data-init="${escapeHtml(
+                                    leasing.init
+                                )}"
+                            >
+                                ${escapeHtml(
+                                    leasing.name
+                                )}
+                            </option>
+                        `;
+                    })
+                    .join("")}
+            `;
+
+            const valueExists =
+                Array.from(
+                    select.options
+                ).some(function (option) {
+                    return (
+                        option.value ===
+                        selectedValue
+                    );
+                });
+
+            if (valueExists) {
+                select.value =
+                    selectedValue;
+            }
+        });
+}
+
 function collectLeasing() {
     return [
         ...document.querySelectorAll(".leasing-compact-row")
@@ -4154,13 +4309,66 @@ async function searchLocation() {
     `;
 
     try {
+        const center =
+            locationMap
+                ? locationMap.getCenter()
+                : {
+                    lat:
+                        mapSearchCenter.latitude,
+
+                    lng:
+                        mapSearchCenter.longitude
+                };
+
+        /*
+        |--------------------------------------------------------------------------
+        | BATAS PENCARIAN
+        |--------------------------------------------------------------------------
+        | Sekitar 1,25 derajat dari pusat map.
+        | Kurang lebih mencakup Solo Raya dan sekitarnya.
+        |--------------------------------------------------------------------------
+        */
+
+        const latitudeRange = 1.25;
+        const longitudeRange = 1.25;
+
+        const left =
+            center.lng -
+            longitudeRange;
+
+        const right =
+            center.lng +
+            longitudeRange;
+
+        const top =
+            center.lat +
+            latitudeRange;
+
+        const bottom =
+            center.lat -
+            latitudeRange;
+
+        const viewBox =
+            [
+                left,
+                top,
+                right,
+                bottom
+            ].join(",");
+
         const url =
             "https://nominatim.openstreetmap.org/search" +
             "?format=jsonv2" +
             "&addressdetails=1" +
-            "&limit=5" +
+            "&limit=8" +
             "&countrycodes=id" +
-            `&q=${encodeURIComponent(query)}`;
+            `&viewbox=${encodeURIComponent(
+                viewBox
+            )}` +
+            "&bounded=1" +
+            `&q=${encodeURIComponent(
+                query
+            )}`;
 
         const response = await fetch(url, {
             headers: {
@@ -5442,12 +5650,49 @@ function sourceBadge(source) {
 |--------------------------------------------------------------------------
 */
 
-const approvalStages = [
-    "CRM",
-    "KACAB",
-    "MSCM",
-    "MGR"
-];
+function getApprovalStages(item) {
+    const typePkm = String(
+        item.type ||
+        item.typePkm ||
+        ""
+    )
+        .replace(/\s+/g, "")
+        .toUpperCase();
+
+    const needsPicH23 =
+        typePkm === "H23" ||
+        typePkm === "H123";
+
+    if (needsPicH23) {
+        return [
+            "CRM",
+            "KACAB",
+            "MSCM",
+            "PIC_H23",
+            "MGR"
+        ];
+    }
+
+    return [
+        "CRM",
+        "KACAB",
+        "MSCM",
+        "MGR"
+    ];
+}
+
+
+function getApprovalStageLabel(stage) {
+    const labels = {
+        CRM: "CRM",
+        KACAB: "KACAB",
+        MSCM: "MSCM",
+        PIC_H23: "PIC H23",
+        MGR: "MANAGER"
+    };
+
+    return labels[stage] || stage;
+}
 
 let activeApprovalPkmId = null;
 let signatureHasDrawing = false;
@@ -5530,7 +5775,7 @@ function canCurrentUserProcess(item) {
     return (
         branchAllowed &&
         approvalStep === userRole &&
-        ["KACAB", "MSCM", "MGR"].includes(
+        ["KACAB", "MSCM", "MGR","PIC_H23"].includes(
             userRole
         )
     );
@@ -5570,9 +5815,12 @@ function renderApprovalFlow(item) {
     const currentStep =
         getApprovalStep(item);
 
+    const approvalStages =
+        getApprovalStages(item);
+
     return `
         <div
-            class="flex min-w-[410px] items-start"
+            class="flex min-w-max items-start"
         >
             ${approvalStages
                 .map(function (stage, index) {
@@ -5596,7 +5844,8 @@ function renderApprovalFlow(item) {
                         : index + 1;
 
                     const connector =
-                        index < approvalStages.length - 1
+                        index <
+                        approvalStages.length - 1
                             ? `
                                 <div
                                     class="approval-flow-line ${
@@ -5619,9 +5868,9 @@ function renderApprovalFlow(item) {
                             </div>
 
                             <span
-                                class="text-xs font-black text-slate-700"
+                                class="whitespace-nowrap text-xs font-black text-slate-700"
                             >
-                                ${stage}
+                                ${getApprovalStageLabel(stage)}
                             </span>
                         </div>
 
@@ -9256,6 +9505,220 @@ function renderSelectedFocusTypes() {
                 `;
             }
         ).join("");
+}
+
+function updateDashboardPreload(
+    percentage,
+    message
+) {
+    document.getElementById(
+        "dashboardPreloadPercent"
+    ).textContent =
+        `${percentage}%`;
+
+    document.getElementById(
+        "dashboardPreloadBar"
+    ).style.width =
+        `${percentage}%`;
+
+    document.getElementById(
+        "dashboardPreloadText"
+    ).textContent =
+        message;
+}
+
+
+function setDashboardPreloadItem(
+    id,
+    status,
+    label
+) {
+    const element =
+        document.getElementById(id);
+
+    const icon =
+        status === "loading"
+            ? "◌"
+            : status === "success"
+                ? "✓"
+                : "!";
+
+    element.textContent =
+        `${icon} ${label}`;
+
+    element.className =
+        status === "success"
+            ? "font-bold text-emerald-600"
+            : status === "error"
+                ? "font-bold text-red-600"
+                : "font-bold text-slate-600";
+}
+
+
+async function waitForKpiFrontend() {
+    const startedAt =
+        Date.now();
+
+    while (
+        typeof window.loadCrmKpiPage !==
+        "function"
+    ) {
+        if (
+            Date.now() - startedAt >
+            10000
+        ) {
+            throw new Error(
+                "Frontend KPI belum tersedia."
+            );
+        }
+
+        await new Promise(function (
+            resolve
+        ) {
+            window.setTimeout(
+                resolve,
+                100
+            );
+        });
+    }
+}
+
+
+async function runDashboardPreload() {
+    const panel =
+        document.getElementById(
+            "dashboardPreloadPanel"
+        );
+
+    panel.classList.remove(
+        "hidden"
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | SALESMAN
+    |--------------------------------------------------------------------------
+    */
+
+    updateDashboardPreload(
+        5,
+        "Memuat salesman..."
+    );
+
+    setDashboardPreloadItem(
+        "preloadSalesman",
+        "loading",
+        "Memuat data salesman"
+    );
+
+    try {
+        await loadSalesmanData();
+
+        setDashboardPreloadItem(
+            "preloadSalesman",
+            "success",
+            "Data salesman siap"
+        );
+    } catch (error) {
+        setDashboardPreloadItem(
+            "preloadSalesman",
+            "error",
+            "Data salesman gagal"
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | UTILITY PKM
+    |--------------------------------------------------------------------------
+    */
+
+    updateDashboardPreload(
+        35,
+        "Memuat utility PKM..."
+    );
+
+    setDashboardPreloadItem(
+        "preloadPkmUtility",
+        "loading",
+        "Memuat utility PKM"
+    );
+
+    try {
+        const masterResult =
+            await loadReferenceMasters();
+
+        if (!masterResult) {
+            throw new Error(
+                "Master PKM gagal dimuat."
+            );
+        }
+
+        await loadPkmData(
+            "dashboard"
+        );
+
+        setDashboardPreloadItem(
+            "preloadPkmUtility",
+            "success",
+            "Utility PKM siap"
+        );
+    } catch (error) {
+        setDashboardPreloadItem(
+            "preloadPkmUtility",
+            "error",
+            "Utility PKM gagal"
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | KPI
+    |--------------------------------------------------------------------------
+    */
+
+    updateDashboardPreload(
+        70,
+        "Memuat data KPI..."
+    );
+
+    setDashboardPreloadItem(
+        "preloadKpi",
+        "loading",
+        "Memuat data KPI"
+    );
+
+    try {
+        await waitForKpiFrontend();
+
+        await window.loadCrmKpiPage();
+
+        setDashboardPreloadItem(
+            "preloadKpi",
+            "success",
+            "Data KPI siap"
+        );
+    } catch (error) {
+        setDashboardPreloadItem(
+            "preloadKpi",
+            "error",
+            "Data KPI gagal"
+        );
+    }
+
+    updateDashboardPreload(
+        100,
+        "Aplikasi siap digunakan."
+    );
+
+    window.setTimeout(
+        function () {
+            panel.classList.add(
+                "hidden"
+            );
+        },
+        1500
+    );
 }
 
 document

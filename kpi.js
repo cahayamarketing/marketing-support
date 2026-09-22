@@ -427,7 +427,10 @@ async function executeCrmKpiLoad() {
                         period.month,
 
                     week:
-                        period.week
+                        period.week,
+
+                    snapshotType:
+                        period.snapshotType
                 }
             );
 
@@ -1929,6 +1932,9 @@ async function verifyCrmKpi() {
 
                 week:
                     period.week,
+
+                snapshotType:
+                    period.snapshotType,
 
                 metrics:
                     crmKpiRows
