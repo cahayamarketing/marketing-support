@@ -45,7 +45,7 @@ let activePkmFilters = {
     branches: []
 };
 let pkmDataLoading = false;
-const PKM_PAGE_SIZE = 15;
+const PKM_PAGE_SIZE = 7;
 
 let currentPkmPage = 1;
 

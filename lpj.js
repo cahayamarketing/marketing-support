@@ -1,6 +1,6 @@
 "use strict";
 
-const LPJ_PAGE_SIZE = 15;
+const LPJ_PAGE_SIZE = 7;
 
 let lpjCandidates = [];
 let lpjCurrentPage = 1;
