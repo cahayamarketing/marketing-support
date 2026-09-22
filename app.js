@@ -616,7 +616,8 @@ async function requestBackend(
         "updateMyProfile",
         "getCrmKpiData",
         "saveCrmKpi",
-        "verifyCrmKpi"
+        "verifyCrmKpi",
+        "getSalesmen"
     ];
 
     const kpiActions = [
@@ -625,14 +626,20 @@ async function requestBackend(
         "verifyCrmKpi"
     ];
 
+    const dataActions = [
+        "getSalesmen"
+    ];
+
     const timeoutDuration =
         kpiActions.includes(action)
             ? 90000
-            : longActions.includes(action)
-                ? 55000
-                : action === "getPkmData"
-                    ? 35000
-                    : 25000;
+            : dataActions.includes(action)
+                ? 60000
+                : longActions.includes(action)
+                    ? 55000
+                    : action === "getPkmData"
+                        ? 35000
+                        : 25000;
 
     const timeoutId =
         window.setTimeout(
@@ -1474,7 +1481,15 @@ function loadSalesmanData() {
     }
 
     salesmanLoadPromise =
-        loadSalesmanWithRetry();
+        loadSalesmanWithRetry()
+            .finally(function () {
+                /*
+                | Setelah selesai atau gagal, izinkan
+                | proses pemuatan dijalankan kembali.
+                */
+
+                salesmanLoadPromise = null;
+            });
 
     return salesmanLoadPromise;
 }
@@ -1484,6 +1499,8 @@ async function loadSalesmanWithRetry() {
     const maximumAttempts = 3;
 
     if (peopleSearch) {
+        peopleSearch.disabled = true;
+
         peopleSearch.placeholder =
             "Memuat data salesman...";
     }
@@ -1515,36 +1532,65 @@ async function loadSalesmanWithRetry() {
             );
 
             if (peopleSearch) {
+                peopleSearch.disabled = false;
+
                 peopleSearch.placeholder =
-                    "Ketik nama atau NIK...";
+                    salesmanData.length
+                        ? "Ketik nama atau NIK..."
+                        : "Salesman tidak ditemukan";
             }
 
             return salesmanData;
+
         } catch (error) {
             console.warn(
                 `Percobaan memuat salesman ${attempt}/${maximumAttempts} gagal:`,
                 error
             );
 
-            const emptyResponse =
+            const message =
                 String(
                     error.message || ""
-                ).includes(
-                    "Server tidak memberikan respons"
-                );
+                ).toLowerCase();
 
             /*
-            | Error validasi seperti session habis atau action tidak tersedia
-            | tidak perlu diulang.
+            |--------------------------------------------------------------------------
+            | ERROR YANG BOLEH DIULANG
+            |--------------------------------------------------------------------------
             */
 
+            const retryableError =
+                message.includes(
+                    "tidak memberikan respons"
+                ) ||
+                message.includes(
+                    "terlalu lama merespons"
+                ) ||
+                message.includes(
+                    "gagal menghubungi"
+                ) ||
+                message.includes(
+                    "http 500"
+                ) ||
+                message.includes(
+                    "http 502"
+                ) ||
+                message.includes(
+                    "http 503"
+                ) ||
+                message.includes(
+                    "http 504"
+                );
+
             if (
-                !emptyResponse ||
+                !retryableError ||
                 attempt === maximumAttempts
             ) {
                 salesmanData = [];
 
                 if (peopleSearch) {
+                    peopleSearch.disabled = false;
+
                     peopleSearch.placeholder =
                         "Data salesman gagal dimuat";
                 }
@@ -1557,13 +1603,18 @@ async function loadSalesmanWithRetry() {
                 throw error;
             }
 
+            if (peopleSearch) {
+                peopleSearch.placeholder =
+                    `Mencoba kembali (${attempt + 1}/${maximumAttempts})...`;
+            }
+
             /*
-            | Percobaan kedua: 700 ms
-            | Percobaan ketiga: 1.400 ms
+            | Percobaan kedua: 1 detik.
+            | Percobaan ketiga: 2 detik.
             */
 
             await waitForSalesmanRetry(
-                700 * attempt
+                1000 * attempt
             );
         }
     }
@@ -2304,11 +2355,24 @@ peopleSearch.addEventListener("input", function () {
     validateFormState();
 });
 
-peopleSearch.addEventListener("focus", function () {
-    renderPeopleSearchResults(
-        peopleSearch.value
-    );
-});
+peopleSearch.addEventListener(
+    "focus",
+    function () {
+        if (
+            !salesmanData.length &&
+            !salesmanLoadPromise
+        ) {
+            loadSalesmanData().catch(
+                function (error) {
+                    console.warn(
+                        "Salesman belum berhasil dimuat:",
+                        error
+                    );
+                }
+            );
+        }
+    }
+);
 
 document.addEventListener("click", function (event) {
     const peoplePicker =

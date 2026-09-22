@@ -933,6 +933,80 @@ function renderCrmKpiActual(
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| PEMBULATAN NILAI KPI
+|--------------------------------------------------------------------------
+*/
+
+function roundCrmKpiNumber(
+    value,
+    decimalPlaces = 2
+) {
+    const number =
+        Number(value);
+
+    if (!Number.isFinite(number)) {
+        return 0;
+    }
+
+    const multiplier =
+        Math.pow(
+            10,
+            decimalPlaces
+        );
+
+    return Math.round(
+        (
+            number +
+            Number.EPSILON
+        ) *
+        multiplier
+    ) / multiplier;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| UBAH TOTAL SKOR MENJADI PERSENTASE
+|--------------------------------------------------------------------------
+| Total bobot maksimal KPI CRM adalah 115.
+|
+| Contoh:
+| Skor 115 = 100%
+| Skor 57,5 = 50%
+|--------------------------------------------------------------------------
+*/
+
+function calculateCrmKpiPercentage(
+    totalScore
+) {
+    const score =
+        Number(totalScore);
+
+    if (
+        !Number.isFinite(score) ||
+        score <= 0
+    ) {
+        return 0;
+    }
+
+    const percentage =
+        (
+            score /
+            CRM_KPI_MAX_SCORE
+        ) *
+        100;
+
+    return roundCrmKpiNumber(
+        Math.min(
+            percentage,
+            100
+        ),
+        2
+    );
+}
+
 function hasKpiValue(value) {
     if (Array.isArray(value)) {
         return value.some(function (item) {
