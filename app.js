@@ -31,6 +31,8 @@ const MASTER_ACCOUNT_NIKS =
     ]);
 
 let sheetPkmData = [];
+let referenceMastersLoaded = false;
+let referenceMastersPromise = null;
 
 let sheetBranchOptions = [
     { code: "SLO", name: "SOLO YOS" },
@@ -659,7 +661,9 @@ async function requestBackend(
     ];
 
     const dataActions = [
-        "getSalesmen"
+        "getSalesmen",
+        "getReferenceMasters",
+        "getCrmKpiInputAvailability"    
     ];
 
     const timeoutDuration =
@@ -1724,51 +1728,78 @@ async function loadSalesmanWithRetry() {
 */
 
 async function loadReferenceMasters() {
-    try {
-        const result =
-            await requestBackend(
-                "getReferenceMasters",
-                {}
-            );
-
-        leasingOptions =
-            Array.isArray(result.leasing)
-                ? result.leasing
-                : [];
-
-        pkmTypeOptions =
-            Array.isArray(result.pkmTypes)
-                ? result.pkmTypes
-                : [];
-
-        eventOptions =
-            Array.isArray(result.events)
-                ? result.events
-                : [];
-
-        focusTypeOptions =
-            Array.isArray(result.focusTypes)
-                ? result.focusTypes
-                : [];
-
-        populateJenisPkmOptions();
-        populateJenisKegiatanOptions();
-        renderFocusTypeOptions();
-
-        return result;
-    } catch (error) {
-        console.error(
-            "Gagal memuat master:",
-            error
-        );
-
-        showToast(
-            "Master PKM gagal dimuat.",
-            "error"
-        );
-
-        return null;
+    if (referenceMastersLoaded) {
+        return true;
     }
+
+    if (referenceMastersPromise) {
+        return referenceMastersPromise;
+    }
+
+    referenceMastersPromise =
+        (async function () {
+            try {
+                const result =
+                    await requestBackend(
+                        "getReferenceMasters",
+                        {}
+                    );
+
+                leasingOptions =
+                    Array.isArray(
+                        result.leasing
+                    )
+                        ? result.leasing
+                        : [];
+
+                pkmTypeOptions =
+                    Array.isArray(
+                        result.pkmTypes
+                    )
+                        ? result.pkmTypes
+                        : [];
+
+                eventOptions =
+                    Array.isArray(
+                        result.events
+                    )
+                        ? result.events
+                        : [];
+
+                focusTypeOptions =
+                    Array.isArray(
+                        result.focusTypes
+                    )
+                        ? result.focusTypes
+                        : [];
+
+                populateJenisPkmOptions();
+                populateJenisKegiatanOptions();
+                renderFocusTypeOptions();
+
+                referenceMastersLoaded =
+                    true;
+
+                return true;
+            } catch (error) {
+                console.error(
+                    "Gagal memuat master:",
+                    error
+                );
+
+                showToast(
+                    "Master PKM gagal dimuat.",
+                    "error"
+                );
+
+                return false;
+            } finally {
+                referenceMastersPromise =
+                    null;
+            }
+        })();
+
+    return referenceMastersPromise;
 }
 
 async function initializeApplication() {
@@ -3040,6 +3071,7 @@ function showPage(pageId) {
     */
 
     if (pageId === "pengajuanPage") {
+        void loadReferenceMasters();
         window.setTimeout(function () {
             if (isBtlSelected()) {
                 initializeLocationMap();
