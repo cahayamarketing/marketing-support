@@ -167,6 +167,8 @@ let crmKpiEditing = false;
 let crmKpiVerifying = false;
 let crmKpiInitialized = false;
 
+let crmKpiLoadingTimer = null;
+let crmKpiLoadingValue = 0;
 
 /*
 |--------------------------------------------------------------------------
@@ -359,30 +361,53 @@ function createEmptyCrmKpiRows() {
 async function loadCrmKpiPage() {
     initializeCrmKpi();
 
-    const branch = crmKpiBranch.value;
-    const year = Number(crmKpiYear.value);
-    const month = Number(crmKpiMonth.value);
-    const week = crmKpiWeek.value;
+    const branch =
+        crmKpiBranch.value;
 
-    setCrmKpiLoading(true);
-
-    try {
-        const result = await requestBackend(
-            "getCrmKpiData",
-            {
-                branch: branch,
-                year: year,
-                month: month,
-                week: week
-                    ? Number(week)
-                    : null
-            }
+    const year =
+        Number(
+            crmKpiYear.value
         );
 
+    const month =
+        Number(
+            crmKpiMonth.value
+        );
+
+    const week =
+        crmKpiWeek.value;
+
+    setCrmKpiLoading(
+        true,
+        week
+            ? `Memuat KPI Week ${week}...`
+            : "Menghitung rata-rata MTD..."
+    );
+
+    try {
+        const result =
+            await requestBackend(
+                "getCrmKpiData",
+                {
+                    branch: branch,
+                    year: year,
+                    month: month,
+
+                    week:
+                        week
+                            ? Number(week)
+                            : null
+                }
+            );
+
         crmKpiRows =
-            Array.isArray(result.data) &&
+            Array.isArray(
+                result.data
+            ) &&
             result.data.length
-                ? mergeCrmKpiRows(result.data)
+                ? mergeCrmKpiRows(
+                    result.data
+                )
                 : createEmptyCrmKpiRows();
 
         crmKpiEditing = false;
@@ -393,14 +418,24 @@ async function loadCrmKpiPage() {
         );
 
         renderCrmKpiTable();
+
         updateCrmKpiButtons(
             result.status || ""
         );
     } catch (error) {
+        console.error(
+            "Gagal memuat KPI CRM:",
+            error
+        );
+
         crmKpiRows =
             createEmptyCrmKpiRows();
 
+        crmKpiEditing = false;
+        crmKpiVerifying = false;
+
         renderCrmKpiTable();
+        updateCrmKpiButtons("");
 
         showToast(
             error.message ||
@@ -1790,22 +1825,175 @@ function updateCrmKpiPeriodInformation(
         )} · Minggu sampai Sabtu`;
 }
 
-function setCrmKpiLoading(loading) {
-    document
-        .getElementById("crmKpiLoading")
-        .classList.toggle(
-            "hidden",
-            !loading
+function setCrmKpiLoading(
+    loading,
+    message = "Memuat data KPI..."
+) {
+    const loadingElement =
+        document.getElementById(
+            "crmKpiLoading"
         );
 
-    document
-        .getElementById(
+    const tableContainer =
+        document.getElementById(
             "crmKpiTableContainer"
-        )
-        .classList.toggle(
-            "hidden",
-            loading
         );
+
+    const emptyElement =
+        document.getElementById(
+            "emptyCrmKpi"
+        );
+
+    const percentageElement =
+        document.getElementById(
+            "crmKpiLoadingPercent"
+        );
+
+    const progressElement =
+        document.getElementById(
+            "crmKpiLoadingBar"
+        );
+
+    const textElement =
+        document.getElementById(
+            "crmKpiLoadingText"
+        );
+
+    window.clearInterval(
+        crmKpiLoadingTimer
+    );
+
+    crmKpiLoadingTimer = null;
+
+    if (loading) {
+        crmKpiLoadingValue = 8;
+
+        loadingElement.classList.remove(
+            "hidden"
+        );
+
+        tableContainer.classList.add(
+            "hidden"
+        );
+
+        if (emptyElement) {
+            emptyElement.classList.add(
+                "hidden"
+            );
+        }
+
+        if (textElement) {
+            textElement.textContent =
+                message;
+        }
+
+        updateCrmKpiLoadingProgress(
+            crmKpiLoadingValue
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | PROGRESS SEMU
+        |--------------------------------------------------------------------------
+        | Berjalan sampai 90%. Nilai 100% hanya diberikan
+        | setelah server benar-benar memberikan respons.
+        */
+
+        crmKpiLoadingTimer =
+            window.setInterval(
+                function () {
+                    if (
+                        crmKpiLoadingValue >=
+                        90
+                    ) {
+                        return;
+                    }
+
+                    const increment =
+                        crmKpiLoadingValue < 50
+                            ? 7
+                            : crmKpiLoadingValue < 75
+                                ? 4
+                                : 1;
+
+                    crmKpiLoadingValue =
+                        Math.min(
+                            crmKpiLoadingValue +
+                                increment,
+                            90
+                        );
+
+                    updateCrmKpiLoadingProgress(
+                        crmKpiLoadingValue
+                    );
+                },
+                280
+            );
+
+        return;
+    }
+
+    crmKpiLoadingValue = 100;
+
+    updateCrmKpiLoadingProgress(
+        100
+    );
+
+    if (textElement) {
+        textElement.textContent =
+            "Data KPI berhasil dimuat";
+    }
+
+    window.setTimeout(
+        function () {
+            loadingElement.classList.add(
+                "hidden"
+            );
+
+            tableContainer.classList.remove(
+                "hidden"
+            );
+
+            crmKpiLoadingValue = 0;
+        },
+        250
+    );
+}
+
+
+function updateCrmKpiLoadingProgress(
+    value
+) {
+    const safeValue =
+        Math.max(
+            0,
+            Math.min(
+                Number(value || 0),
+                100
+            )
+        );
+
+    const percentageElement =
+        document.getElementById(
+            "crmKpiLoadingPercent"
+        );
+
+    const progressElement =
+        document.getElementById(
+            "crmKpiLoadingBar"
+        );
+
+    if (percentageElement) {
+        percentageElement.textContent =
+            `${Math.round(
+                safeValue
+            )}%`;
+    }
+
+    if (progressElement) {
+        progressElement.style.width =
+            `${safeValue}%`;
+    }
 }
 
 function setKpiButtonLoading(

@@ -579,13 +579,55 @@
 
                         <div
                             id="crmKpiLoading"
-                            class="hidden p-12 text-center"
+                            class="hidden p-8"
                         >
-                            <span class="ui-spinner mx-auto"></span>
+                            <div class="mx-auto max-w-md text-center">
 
-                            <p class="mt-3 text-sm font-bold text-slate-500">
-                                Memuat KPI CRM...
-                            </p>
+                                <div class="relative mx-auto h-16 w-16">
+
+                                    <div class="absolute inset-0 rounded-full border-4 border-red-100"></div>
+
+                                    <div class="kpi-loading-spinner absolute inset-0 rounded-full border-4 border-transparent border-t-red-600"></div>
+
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <span
+                                            id="crmKpiLoadingPercent"
+                                            class="text-xs font-black text-red-600"
+                                        >
+                                            0%
+                                        </span>
+                                    </div>
+
+                                </div>
+
+                                <p
+                                    id="crmKpiLoadingText"
+                                    class="mt-4 text-sm font-black text-slate-700"
+                                >
+                                    Memuat data KPI...
+                                </p>
+
+                                <p class="mt-1 text-xs text-slate-400">
+                                    Mengambil data dari Google Spreadsheet
+                                </p>
+
+                                <div class="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+                                    <div
+                                        id="crmKpiLoadingBar"
+                                        class="h-full w-0 rounded-full bg-gradient-to-r from-red-700 to-red-500 transition-all duration-300"
+                                    ></div>
+                                </div>
+
+                            </div>
+
+                            <div class="mt-8 space-y-3">
+
+                                <div class="kpi-skeleton h-12 rounded-xl"></div>
+                                <div class="kpi-skeleton h-12 rounded-xl"></div>
+                                <div class="kpi-skeleton h-12 rounded-xl"></div>
+                                <div class="kpi-skeleton h-12 rounded-xl"></div>
+
+                            </div>
                         </div>
 
                         <div
