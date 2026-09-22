@@ -583,161 +583,162 @@ function saveStoredPkm(data) {
 |--------------------------------------------------------------------------
 */
 
-async function requestBackend(
-    action,
-    payload = {},
-    retryCount = 0
-) {
-    const response = await fetch("/api/gas", {
-        method: "POST",
+const activeBackendControllers =
+    new Set();
 
-        headers: {
-            "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-            action: action,
-            token: sessionToken,
-            payload: payload
-        })
-    });
-
-const responseText =
-    await response.text();
-
-/*
-|--------------------------------------------------------------------------
-| RETRY JIKA GAS MENGEMBALIKAN HTTP 200 TANPA BODY
-|--------------------------------------------------------------------------
-*/
-
-if (!responseText.trim()) {
-    const retryableActions = [
-        "getPkmPdfData",
-        "savePkmPdf",
-        "getPkmPdfFile",
-        "getPkmData",
-        "getSalesmen"
-    ];
-
-    if (
-        response.status === 200 &&
-        retryableActions.includes(action) &&
-        retryCount < 2
-    ) {
-        console.warn(
-            `Respons kosong untuk ${action}. Percobaan ulang ${retryCount + 1}.`
-        );
-
-        await new Promise(
-            function (resolve) {
-                window.setTimeout(
-                    resolve,
-                    800 *
-                    (
-                        retryCount + 1
-                    )
-                );
-            }
-        );
-
-        return requestBackend(
-            action,
-            payload,
-            retryCount + 1
-        );
-    }
-
-    throw new Error(
-        `Server tidak memberikan respons untuk action "${action}". HTTP ${response.status}.`
-    );
-}
-
-let data;
-
-try {
-    data = JSON.parse(
-        responseText
-    );
-} catch (error) {
-    console.error(
-        "Respons server bukan JSON:",
-        {
-            action: action,
-            status:
-                response.status,
-            response:
-                responseText
+function abortAllBackendRequests() {
+    activeBackendControllers.forEach(
+        function (controller) {
+            controller.abort();
         }
     );
 
-    throw new Error(
-        `Respons action "${action}" tidak valid. HTTP ${response.status}.`
-    );
+    activeBackendControllers.clear();
 }
 
-    /*
-    |--------------------------------------------------------------------------
-    | TANGANI ERROR DARI VERCEL ATAU APPS SCRIPT
-    |--------------------------------------------------------------------------
-    */
+async function requestBackend(
+    action,
+    payload = {}
+) {
+    const controller =
+        new AbortController();
 
-    if (
-        !response.ok ||
-        data.success === false
-    ) {
-        const serverMessage =
-            data.message ||
-            data.error?.message ||
-            (
-                typeof data.error === "string"
-                    ? data.error
-                    : ""
-            );
+    activeBackendControllers.add(
+        controller
+    );
 
-        console.error(
-            "BACKEND REQUEST GAGAL",
+    const longActions = [
+        "createPkm",
+        "approvePkm",
+        "savePkmPdf",
+        "getPkmPdfFile",
+        "updateMyProfile"
+    ];
+
+    const timeoutDuration =
+        longActions.includes(action)
+            ? 55000
+            : action === "getPkmData"
+                ? 35000
+                : 25000;
+
+    const timeoutId =
+        window.setTimeout(
+            function () {
+                controller.abort();
+            },
+            timeoutDuration
+        );
+
+    try {
+        const response = await fetch(
+            "/api/gas",
             {
-                action: action,
-                httpStatus:
-                    response.status,
-                message:
-                    serverMessage,
-                response:
-                    data,
-                payload:
-                    payload
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    action: action,
+                    token: sessionToken,
+                    payload: payload
+                }),
+
+                signal: controller.signal,
+                cache: "no-store"
             }
         );
 
-        throw new Error(
-            serverMessage ||
-            `Permintaan "${action}" gagal (HTTP ${response.status}).`
+        const responseText =
+            await response.text();
+
+        if (!responseText.trim()) {
+            throw new Error(
+                `Server tidak memberikan respons untuk "${action}".`
+            );
+        }
+
+        let data;
+
+        try {
+            data = JSON.parse(
+                responseText
+            );
+        } catch (error) {
+            console.error(
+                "Respons backend bukan JSON:",
+                {
+                    action: action,
+                    status: response.status,
+                    response:
+                        responseText.slice(
+                            0,
+                            500
+                        )
+                }
+            );
+
+            throw new Error(
+                "Respons backend tidak valid."
+            );
+        }
+
+        if (
+            !response.ok ||
+            data.success === false
+        ) {
+            const message =
+                data.message ||
+                data.error?.message ||
+                (
+                    typeof data.error ===
+                    "string"
+                        ? data.error
+                        : ""
+                );
+
+            throw new Error(
+                message ||
+                `Permintaan "${action}" gagal. HTTP ${response.status}.`
+            );
+        }
+
+        if (
+            data.success === true &&
+            Object.prototype.hasOwnProperty.call(
+                data,
+                "result"
+            )
+        ) {
+            return data.result;
+        }
+
+        return data;
+    } catch (error) {
+        if (
+            error.name ===
+            "AbortError"
+        ) {
+            throw new Error(
+                action === "getPkmData"
+                    ? "Pemuatan PKM terlalu lama. Silakan tekan Cari Data untuk mencoba lagi."
+                    : `Server terlalu lama merespons permintaan "${action}".`
+            );
+        }
+
+        throw error;
+    } finally {
+        window.clearTimeout(
+            timeoutId
+        );
+
+        activeBackendControllers.delete(
+            controller
         );
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | FORMAT RESPONSE
-    |--------------------------------------------------------------------------
-    | Apps Script biasanya:
-    | { success: true, result: {...} }
-    |
-    | Proxy Vercel juga dapat langsung mengembalikan:
-    | {...}
-    */
-
-    if (
-        data.success === true &&
-        Object.prototype.hasOwnProperty.call(
-            data,
-            "result"
-        )
-    ) {
-        return data.result;
-    }
-
-    return data;
 }
 
 function toDateInputValue(date) {
@@ -1587,14 +1588,6 @@ async function initializeApplication() {
     |--------------------------------------------------------------------------
     */
 
-    try {
-        await loadSalesmanData();
-    } catch (error) {
-        /*
-        | Aplikasi tetap dibuka.
-        | Hanya fitur People yang sementara tidak tersedia.
-        */
-    }
     selectedPeople = [];
 
     renderSelectedPeople();
@@ -1636,6 +1629,28 @@ async function initializeApplication() {
     }
 
     await loadPkmData("dashboard");
+
+    /*
+    |--------------------------------------------------------------------------
+    | MUAT SALESMAN SETELAH DATA UTAMA
+    |--------------------------------------------------------------------------
+    | Kegagalan salesman tidak boleh menghambat dashboard dan PKM.
+    */
+
+    loadSalesmanData().catch(
+        function (error) {
+            console.warn(
+                "Data salesman belum berhasil dimuat:",
+                error
+            );
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | HIDE / SHOW SECTION BTL
+    |--------------------------------------------------------------------------
+    */
 
     /*
     |--------------------------------------------------------------------------
@@ -1742,7 +1757,7 @@ document
     .getElementById("logoutButton")
     .addEventListener(
         "click",
-        async function () {
+        function () {
             const confirmed =
                 window.confirm(
                     "Apakah Anda yakin ingin keluar?"
@@ -1752,14 +1767,66 @@ document
                 return;
             }
 
-            try {
-                await requestBackend("logout");
-            } catch (error) {
-                // Session lokal tetap dibersihkan jika API logout gagal.
-            }
+            const tokenBeforeLogout =
+                sessionStorage.getItem(
+                    "sessionToken"
+                );
 
-            sessionStorage.removeItem("currentUser");
-            sessionStorage.removeItem("sessionToken");
+            /*
+            | Hentikan loading PKM, salesman, profil,
+            | atau request lainnya.
+            */
+
+            abortAllBackendRequests();
+
+            /*
+            | Session lokal langsung dihapus.
+            | Logout tidak perlu menunggu Google Apps Script.
+            */
+
+            sessionStorage.removeItem(
+                "currentUser"
+            );
+
+            sessionStorage.removeItem(
+                "sessionToken"
+            );
+
+            /*
+            | Beri tahu backend di belakang layar.
+            | keepalive memungkinkan request tetap berjalan
+            | walaupun halaman berpindah.
+            */
+
+            if (tokenBeforeLogout) {
+                fetch(
+                    "/api/gas",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            action: "logout",
+                            token:
+                                tokenBeforeLogout,
+                            payload: {}
+                        }),
+
+                        keepalive: true
+                    }
+                ).catch(
+                    function () {
+                        /*
+                        | Tidak masalah jika logout backend gagal.
+                        | Session lokal sudah dihapus.
+                        */
+                    }
+                );
+            }
 
             window.location.replace(
                 "login.html"

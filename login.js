@@ -368,3 +368,169 @@ function setLoginLoading(
         "opacity-90"
     );
 }
+
+/*
+|--------------------------------------------------------------------------
+| REQUEST KE BACKEND
+|--------------------------------------------------------------------------
+*/
+
+async function callApi(
+    action,
+    payload = {}
+) {
+    const controller =
+        new AbortController();
+
+    /*
+    | Hentikan request apabila backend tidak merespons
+    | dalam waktu 25 detik.
+    */
+
+    const timeoutId =
+        window.setTimeout(
+            function () {
+                controller.abort();
+            },
+            25000
+        );
+
+    try {
+        const response =
+            await fetch(
+                "/api/gas",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        action: action,
+                        payload: payload
+                    }),
+
+                    signal:
+                        controller.signal,
+
+                    cache: "no-store"
+                }
+            );
+
+        const responseText =
+            await response.text();
+
+        if (!responseText.trim()) {
+            throw new Error(
+                "Server tidak memberikan respons."
+            );
+        }
+
+        let data;
+
+        try {
+            data = JSON.parse(
+                responseText
+            );
+        } catch (error) {
+            console.error(
+                "Respons login bukan JSON:",
+                {
+                    status:
+                        response.status,
+
+                    response:
+                        responseText.slice(
+                            0,
+                            500
+                        )
+                }
+            );
+
+            throw new Error(
+                "Respons backend tidak valid."
+            );
+        }
+
+        if (
+            !response.ok ||
+            data.success === false
+        ) {
+            throw new Error(
+                data.message ||
+                data.error?.message ||
+                (
+                    typeof data.error ===
+                    "string"
+                        ? data.error
+                        : ""
+                ) ||
+                `Login gagal. HTTP ${response.status}.`
+            );
+        }
+
+        /*
+        | Format dari Apps Script:
+        | {
+        |     success: true,
+        |     result: {
+        |         token: "...",
+        |         user: {...}
+        |     }
+        | }
+        */
+
+        if (
+            data.success === true &&
+            Object.prototype.hasOwnProperty.call(
+                data,
+                "result"
+            )
+        ) {
+            return data.result;
+        }
+
+        return data;
+    } catch (error) {
+        if (
+            error.name ===
+            "AbortError"
+        ) {
+            throw new Error(
+                "Server terlalu lama merespons. Silakan coba masuk kembali."
+            );
+        }
+
+        throw error;
+    } finally {
+        window.clearTimeout(
+            timeoutId
+        );
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AMBIL PESAN ERROR
+|--------------------------------------------------------------------------
+*/
+
+function getApiErrorMessage(error) {
+    if (!error) {
+        return "Terjadi kesalahan saat login.";
+    }
+
+    if (
+        typeof error === "string"
+    ) {
+        return error;
+    }
+
+    return (
+        error.message ||
+        "Terjadi kesalahan saat login."
+    );
+}
