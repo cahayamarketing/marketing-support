@@ -182,6 +182,14 @@
                     type="button"
                     class="hidden w-full rounded-xl px-4 py-3 text-left text-sm font-black text-slate-700 transition hover:bg-slate-100"
                 >
+
+                <button
+                    id="masterDataButton"
+                    type="button"
+                    class="hidden w-full rounded-xl px-4 py-3 text-left text-sm font-black text-slate-700 transition hover:bg-slate-100"
+                >
+                    🗂 Master Data
+                </button>
                     ⚙ Manage Akun
                 </button>
 
@@ -503,6 +511,47 @@
                                     <option value="4">Week 4</option>
                                     <option value="5">Week 5</option>
                                 </select>
+
+                                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label
+                                            for="crmKpiSnapshotType"
+                                            class="form-label"
+                                        >
+                                            Jenis update
+                                        </label>
+
+                                        <select
+                                            id="crmKpiSnapshotType"
+                                            class="form-input"
+                                        >
+                                            <option value="WEEKLY">
+                                                Update Mingguan
+                                            </option>
+
+                                            <option value="CLOSING">
+                                                Closing Bulanan
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            for="crmKpiSnapshotNote"
+                                            class="form-label"
+                                        >
+                                            Catatan closing
+                                        </label>
+
+                                        <input
+                                            id="crmKpiSnapshotNote"
+                                            class="form-input"
+                                            type="text"
+                                            placeholder="Contoh: Closing September 2026"
+                                            disabled
+                                        >
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="flex items-end">

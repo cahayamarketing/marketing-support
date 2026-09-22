@@ -155,6 +155,32 @@ const CRM_KPI_METRICS = [
     }
 ];
 
+const crmKpiSnapshotType =
+    document.getElementById(
+        "crmKpiSnapshotType"
+    );
+
+const crmKpiSnapshotNote =
+    document.getElementById(
+        "crmKpiSnapshotNote"
+    );
+
+if (crmKpiSnapshotType) {
+    crmKpiSnapshotType.addEventListener(
+        "change",
+        function () {
+            const isClosing =
+                this.value === "CLOSING";
+
+            crmKpiSnapshotNote.disabled =
+                !isClosing;
+
+            if (!isClosing) {
+                crmKpiSnapshotNote.value = "";
+            }
+        }
+    );
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -1710,6 +1736,16 @@ async function saveCrmKpi() {
                     Number(
                         crmKpiWeek.value
                     ),
+
+                snapshotType:
+                    document.getElementById(
+                        "crmKpiSnapshotType"
+                    ).value,
+
+                snapshotNote:
+                    document.getElementById(
+                        "crmKpiSnapshotNote"
+                    ).value.trim(),
 
                 metrics:
                     crmKpiRows

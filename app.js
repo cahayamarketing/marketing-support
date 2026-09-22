@@ -252,6 +252,35 @@ const defaultMapLocation = {
     zoom: 10
 };
 
+const MASTER_NIKS = [
+    "911117",
+    "911120",
+    "911147"
+];
+
+const MASTER_DATA_MENUS = [
+    {
+        value: "LEASING",
+        label: "Master Leasing"
+    },
+    {
+        value: "PKM",
+        label: "Master Jenis PKM"
+    },
+    {
+        value: "EVENT",
+        label: "Master Event"
+    },
+    {
+        value: "KPI_CRM",
+        label: "Master CRM"
+    },
+    {
+        value: "KPI_SIPEDE",
+        label: "Master Sipede"
+    }
+];
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1570,6 +1599,12 @@ async function loadSalesmanWithRetry() {
                     "gagal menghubungi"
                 ) ||
                 message.includes(
+                    "respons apps script bukan json"
+                ) ||
+                message.includes(
+                    "respons backend tidak valid"
+                ) ||
+                message.includes(
                     "http 500"
                 ) ||
                 message.includes(
@@ -1644,10 +1679,22 @@ async function initializeApplication() {
         "sidebarUserName"
     ).textContent = currentUser.name;
 
-    manageAccountsButton.classList.toggle(
-        "hidden",
-        !isMasterAccount()
-    );
+    const userIsMaster =
+        isMasterAccount();
+
+    if (manageAccountsButton) {
+        manageAccountsButton.classList.toggle(
+            "hidden",
+            !userIsMaster
+        );
+    }
+
+    if (masterDataButton) {
+        masterDataButton.classList.toggle(
+            "hidden",
+            !userIsMaster
+        );
+    }
 
     document.getElementById(
         "sidebarBranch"
@@ -1786,12 +1833,6 @@ async function initializeApplication() {
 |--------------------------------------------------------------------------
 */
 
-const MASTER_ACCOUNT_NIKS = [
-    "911117",
-    "911120",
-    "911147"
-];
-
 function isMasterAccount() {
     return (
         currentUser.isMaster === true ||
@@ -1823,6 +1864,11 @@ const accountMenuArrow =
 const manageAccountsButton =
     document.getElementById(
         "manageAccountsButton"
+    );
+
+const masterDataButton =
+    document.getElementById(
+        "masterDataButton"
     );
 
 accountMenuButton.addEventListener(
