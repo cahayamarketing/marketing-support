@@ -45,6 +45,7 @@ let activePkmFilters = {
     branches: []
 };
 let pkmDataLoading = false;
+let currentPkmLoadPromise = null;
 const PKM_PAGE_SIZE = 7;
 
 let currentPkmPage = 1;
@@ -1170,10 +1171,44 @@ function setPkmLoading(isLoading) {
         );
 }
 
-async function loadPkmData(prefix = "dashboard") {
-    if (pkmDataLoading) {
-        return;
+function loadPkmData(
+    prefix = "dashboard"
+) {
+    /*
+    | List PKM menggunakan request dashboard
+    | apabila request awal masih berjalan.
+    */
+
+    if (currentPkmLoadPromise) {
+        return currentPkmLoadPromise;
     }
+
+    const loadPromise =
+        performPkmDataLoad(
+            prefix
+        );
+
+    currentPkmLoadPromise =
+        loadPromise;
+
+    loadPromise.finally(
+        function () {
+            if (
+                currentPkmLoadPromise ===
+                loadPromise
+            ) {
+                currentPkmLoadPromise =
+                    null;
+            }
+        }
+    );
+
+    return loadPromise;
+}
+
+async function performPkmDataLoad(
+    prefix = "dashboard"
+) {
 
     try {
         const filters = readPkmFilters(prefix);
@@ -1532,6 +1567,17 @@ async function loadSalesmanWithRetry() {
 */
 
 async function initializeApplication() {
+
+    /*
+    |--------------------------------------------------------------------------
+    | HAPUS CACHE PKM FRONTEND LAMA
+    |--------------------------------------------------------------------------
+    */
+
+    localStorage.removeItem(
+        "pkmData"
+    );
+
     document.getElementById(
         "sidebarUserName"
     ).textContent = currentUser.name;
@@ -4031,41 +4077,73 @@ function resetPkmForm() {
 */
 
 function getBranchPkm() {
-    const localData = getStoredPkm().filter(
-        matchesActivePkmFilters
-    );
-
-    const allData = [
-        ...localData,
-        ...sheetPkmData
-    ].filter(function (item, index, data) {
-        return data.findIndex(function (candidate) {
-            return candidate.id === item.id;
-        }) === index;
-    });
-
-    let filteredData = allData;
-
     /*
-    | Admin dengan cabang ALL dapat melihat seluruh cabang.
+    |--------------------------------------------------------------------------
+    | SUMBER UTAMA HANYA GOOGLE SPREADSHEET
+    |--------------------------------------------------------------------------
+    | localStorage tidak lagi digunakan karena dapat menyimpan status lama.
     */
 
-    if (currentUser.branch !== "ALL") {
-        filteredData = allData.filter(function (item) {
-            return item.branch === currentUser.branch;
-        });
+    let filteredData =
+        Array.isArray(sheetPkmData)
+            ? [...sheetPkmData]
+            : [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | FILTER CABANG
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        currentUser.branch !== "ALL"
+    ) {
+        const userBranch =
+            String(
+                currentUser.originalBranch ||
+                currentUser.branch ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+        filteredData =
+            filteredData.filter(
+                function (item) {
+                    return (
+                        String(
+                            item.branch || ""
+                        )
+                            .trim()
+                            .toUpperCase() ===
+                        userBranch
+                    );
+                }
+            );
     }
 
-    return filteredData.sort(function (a, b) {
-        return (
-            new Date(
-                b.startDate || b.createdAt || 0
-            ).getTime() -
-            new Date(
-                a.startDate || a.createdAt || 0
-            ).getTime()
-        );
-    });
+    /*
+    |--------------------------------------------------------------------------
+    | URUTKAN DATA TERBARU
+    |--------------------------------------------------------------------------
+    */
+
+    return filteredData.sort(
+        function (first, second) {
+            return (
+                new Date(
+                    second.startDate ||
+                    second.createdAt ||
+                    0
+                ).getTime() -
+                new Date(
+                    first.startDate ||
+                    first.createdAt ||
+                    0
+                ).getTime()
+            );
+        }
+    );
 }
 
 /*
@@ -4944,6 +5022,21 @@ let signatureIsDrawing = false;
 let approvalSignatureMode = "";
 let savedApprovalSignatureAvailable = false;
 
+/*
+|--------------------------------------------------------------------------
+| STATUS LOADING DAN SUBMIT APPROVAL
+|--------------------------------------------------------------------------
+*/
+
+let approvalSignatureUserSelected =
+    false;
+
+let approvalSignatureLoadVersion =
+    0;
+
+let approvalSubmitting =
+    false;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -5088,6 +5181,9 @@ function resetApprovalSignatureSelection() {
 }
 
 async function prepareApprovalSignature() {
+    const loadVersion =
+        ++approvalSignatureLoadVersion;
+
     const status =
         document.getElementById(
             "savedApprovalSignatureStatus"
@@ -5098,19 +5194,16 @@ async function prepareApprovalSignature() {
             "savedApprovalSignatureImage"
         );
 
+    approvalSignatureUserSelected =
+        false;
+
     approvalSignatureMode = "";
+
     savedApprovalSignatureAvailable =
         false;
 
-    approveWithSignatureButton.disabled =
-        true;
-
-    approveWithSignatureButton.innerHTML = `
-        <span class="flex items-center justify-center gap-2">
-            <span class="ui-spinner ui-spinner-small"></span>
-            Memuat TTD...
-        </span>
-    `;
+    resetApprovalSignatureSelection();
+    clearSignature();
 
     status.innerHTML = `
         <span class="inline-flex items-center gap-2 text-red-600">
@@ -5121,13 +5214,18 @@ async function prepareApprovalSignature() {
 
     image.removeAttribute("src");
 
-    clearSignature();
-
     try {
         const profile =
             await requestBackend(
                 "getMyProfile"
             );
+
+        if (
+            loadVersion !==
+            approvalSignatureLoadVersion
+        ) {
+            return;
+        }
 
         savedApprovalSignatureAvailable =
             Boolean(
@@ -5147,28 +5245,68 @@ async function prepareApprovalSignature() {
                     "-"
                 }`;
 
-            selectApprovalSignatureMode(
-                "SAVED"
-            );
+            /*
+            | Jangan mengganti pilihan apabila
+            | pengguna sudah mulai menggambar.
+            */
+
+            if (
+                !approvalSignatureUserSelected
+            ) {
+                selectApprovalSignatureMode(
+                    "SAVED"
+                );
+            }
         } else {
             status.textContent =
-                "Belum ada TTD tersimpan. Klik Gambar TTD untuk membuatnya.";
+                "Belum ada TTD tersimpan. Silakan gambar TTD.";
 
-            resetApprovalSignatureSelection();
+            if (
+                !approvalSignatureUserSelected
+            ) {
+                selectApprovalSignatureMode(
+                    "DRAWN"
+                );
+            }
         }
     } catch (error) {
-        status.textContent =
-            "TTD profil gagal dimuat. Anda tetap dapat menggambar TTD.";
+        if (
+            loadVersion !==
+            approvalSignatureLoadVersion
+        ) {
+            return;
+        }
 
-        resetApprovalSignatureSelection();
+        status.textContent =
+            "TTD tersimpan gagal dimuat. Anda tetap dapat menggambar TTD.";
+
+        if (
+            !approvalSignatureUserSelected
+        ) {
+            selectApprovalSignatureMode(
+                "DRAWN"
+            );
+        }
     } finally {
+        if (
+            loadVersion !==
+            approvalSignatureLoadVersion
+        ) {
+            return;
+        }
+
         approveWithSignatureButton.innerHTML =
-            "✓ Setujui Pengajuan";
+            approvalModalMode ===
+            "SUBMIT_CRM"
+                ? "✓ TTD & Ajukan PKM"
+                : "✓ Setujui Pengajuan";
 
         approveWithSignatureButton.disabled =
-            approvalSignatureMode === "SAVED"
+            approvalSignatureMode ===
+            "SAVED"
                 ? !savedApprovalSignatureAvailable
-                : approvalSignatureMode === "DRAWN"
+                : approvalSignatureMode ===
+                    "DRAWN"
                     ? !signatureHasDrawing
                     : true;
     }
@@ -5465,8 +5603,25 @@ function renderApprovalHistory(item) {
 |--------------------------------------------------------------------------
 */
 
-function closeApprovalModal() {
-    approvalModal.classList.add("hidden");
+function closeApprovalModal(
+    force = false
+) {
+    if (
+        approvalSubmitting &&
+        force !== true
+    ) {
+        showToast(
+            "Proses sedang berjalan. Mohon tunggu."
+        );
+
+        return;
+    }
+
+    approvalSignatureLoadVersion += 1;
+
+    approvalModal.classList.add(
+        "hidden"
+    );
 
     approvalModal.setAttribute(
         "aria-hidden",
@@ -5481,14 +5636,9 @@ function closeApprovalModal() {
 
     clearSignature();
 
-    /*
-    |--------------------------------------------------------------------------
-    | BATALKAN DRAFT YANG BELUM DISIMPAN
-    |--------------------------------------------------------------------------
-    */
-
     if (
-        approvalModalMode === "SUBMIT_CRM" &&
+        approvalModalMode ===
+            "SUBMIT_CRM" &&
         !pendingCrmSubmissionSaved
     ) {
         pendingCrmSubmission = null;
@@ -5531,6 +5681,8 @@ function getSignaturePosition(event) {
 
 function startSignature(event) {
     event.preventDefault();
+    approvalSignatureUserSelected =
+        true;
 
     /*
     | Pastikan mode gambar aktif.
@@ -5728,6 +5880,10 @@ signatureCanvas.addEventListener(
 */
 
 async function approvePkmWithSignature() {
+    if (approvalSubmitting) {
+        return;
+    }
+
     if (!approvalSignatureMode) {
         signatureError.classList.remove(
             "hidden"
@@ -5818,6 +5974,16 @@ async function approvePkmWithSignature() {
                 "image/png"
             );
     }
+
+    approvalSubmitting = true;
+
+    document.getElementById(
+        "closeApprovalModalButton"
+    ).disabled = true;
+
+    document.getElementById(
+        "cancelApprovalButton"
+    ).disabled = true;    
 
     try {
         approveWithSignatureButton.disabled =
@@ -5940,7 +6106,7 @@ async function approvePkmWithSignature() {
         pendingCrmSubmission = null;
         pendingCrmSubmissionSaved = false;
 
-        closeApprovalModal();
+        closeApprovalModal(true);
 
         /*
         | Tunggu database selesai dimuat agar
@@ -5986,6 +6152,17 @@ async function approvePkmWithSignature() {
             )
         );
     } finally {
+
+        approvalSubmitting = false;
+
+        document.getElementById(
+            "closeApprovalModalButton"
+        ).disabled = false;
+
+        document.getElementById(
+            "cancelApprovalButton"
+        ).disabled = false;
+
         approveWithSignatureButton.innerHTML =
             approvalModalMode ===
             "SUBMIT_CRM"
@@ -6031,7 +6208,16 @@ document
     )
     .addEventListener(
         "click",
-        closeApprovalModal
+        function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (approvalSubmitting) {
+                showToast(
+                    "Proses sedang berjalan. Mohon tunggu."
+                );
+            }
+        }
     );
 
 document
@@ -6055,6 +6241,15 @@ document
     .addEventListener(
         "click",
         function () {
+            /*
+            | Tandai bahwa user sudah memilih.
+            | Hasil loading tidak boleh mengganti
+            | pilihan ini.
+            */
+
+            approvalSignatureUserSelected =
+                true;
+
             selectApprovalSignatureMode(
                 "SAVED"
             );
@@ -6070,9 +6265,12 @@ document
         "click",
         function () {
             /*
-            | Jika sebelumnya belum memilih
-            | mode gambar, bersihkan canvas.
+            | Hasil loading TTD tersimpan
+            | tidak boleh menghilangkan canvas.
             */
+
+            approvalSignatureUserSelected =
+                true;
 
             const previouslyDrawing =
                 approvalSignatureMode ===
@@ -6085,11 +6283,6 @@ document
             if (!previouslyDrawing) {
                 clearSignature();
             }
-
-            /*
-            | Tunggu canvas tampil, kemudian
-            | geser modal seperlunya.
-            */
 
             window.requestAnimationFrame(
                 function () {
@@ -6968,6 +7161,18 @@ let profileSignatureHasDrawing = false;
 let uploadedSignatureData = "";
 let hasCurrentProfileSignature = false;
 
+/*
+|--------------------------------------------------------------------------
+| STATUS EDITOR DAN LOADING TTD PROFIL
+|--------------------------------------------------------------------------
+*/
+
+let profileSignatureUserEditing =
+    false;
+
+let profileSignatureLoadVersion =
+    0;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -6976,6 +7181,10 @@ let hasCurrentProfileSignature = false;
 */
 
 function showProfileSignatureEditor() {
+
+    profileSignatureUserEditing =
+        true;
+
     document
         .getElementById(
             "currentProfileSignature"
@@ -6999,6 +7208,9 @@ function showProfileSignatureEditor() {
 */
 
 async function loadCurrentProfileSignature() {
+    const loadVersion =
+        ++profileSignatureLoadVersion;
+
     const currentSection =
         document.getElementById(
             "currentProfileSignature"
@@ -7024,11 +7236,6 @@ async function loadCurrentProfileSignature() {
             "profileSignatureLoading"
         );
 
-    /*
-    | Tampilkan loading dan sembunyikan
-    | preview/editor sementara.
-    */
-
     loading.classList.remove(
         "hidden"
     );
@@ -7041,7 +7248,12 @@ async function loadCurrentProfileSignature() {
         "hidden"
     );
 
-    editor.classList.add(
+    /*
+    | Editor tetap aktif ketika data TTD
+    | tersimpan sedang dimuat.
+    */
+
+    editor.classList.remove(
         "hidden"
     );
 
@@ -7051,11 +7263,27 @@ async function loadCurrentProfileSignature() {
                 "getMyProfile"
             );
 
+        if (
+            loadVersion !==
+            profileSignatureLoadVersion
+        ) {
+            return;
+        }
+
         hasCurrentProfileSignature =
             Boolean(
                 result.hasSignature &&
                 result.signatureData
             );
+
+        /*
+        | Jika pengguna sudah menggambar/upload,
+        | jangan sembunyikan editor.
+        */
+
+        if (profileSignatureUserEditing) {
+            return;
+        }
 
         if (
             hasCurrentProfileSignature
@@ -7093,26 +7321,39 @@ async function loadCurrentProfileSignature() {
             .classList
             .remove("hidden");
     } catch (error) {
+        if (
+            loadVersion !==
+            profileSignatureLoadVersion
+        ) {
+            return;
+        }
+
         hasCurrentProfileSignature =
             false;
 
-        currentSection
-            .classList
-            .add("hidden");
+        if (
+            !profileSignatureUserEditing
+        ) {
+            currentSection
+                .classList
+                .add("hidden");
 
-        editor
-            .classList
-            .remove("hidden");
+            editor
+                .classList
+                .remove("hidden");
+        }
 
         showToast(
             error.message ||
             "TTD saat ini gagal dimuat."
         );
     } finally {
-        /*
-        | Selalu hilangkan loading,
-        | baik berhasil maupun gagal.
-        */
+        if (
+            loadVersion !==
+            profileSignatureLoadVersion
+        ) {
+            return;
+        }
 
         loading.classList.add(
             "hidden"
@@ -7147,6 +7388,9 @@ async function openProfileModal() {
         "profileConfirmPassword"
     ).value = "";
 
+    profileSignatureUserEditing =
+        false;
+
     clearProfileSignature();
 
     profileModal.classList.remove(
@@ -7158,13 +7402,31 @@ async function openProfileModal() {
         "false"
     );
 
-    await loadCurrentProfileSignature();
+    document.body.classList.add(
+        "modal-open"
+    );
 
-    accountMenu.classList.add("hidden");
+    accountMenu.classList.add(
+        "hidden"
+    );
+
+    /*
+    | Tidak memakai await agar modal dapat
+    | langsung digunakan untuk menggambar.
+    */
+
+    loadCurrentProfileSignature();
 }
 
 
 function closeProfileModal() {
+    /*
+    | Membatalkan perubahan UI dari request
+    | profil yang masih berjalan.
+    */
+
+    profileSignatureLoadVersion += 1;
+
     profileModal.classList.add(
         "hidden"
     );
@@ -7172,6 +7434,10 @@ function closeProfileModal() {
     profileModal.setAttribute(
         "aria-hidden",
         "true"
+    );
+
+    document.body.classList.remove(
+        "modal-open"
     );
 }
 
@@ -7211,6 +7477,9 @@ profileSignatureCanvas.addEventListener(
     "pointerdown",
     function (event) {
         event.preventDefault();
+
+        profileSignatureUserEditing =
+            true;
 
         profileSignatureDrawing = true;
 
@@ -7356,6 +7625,9 @@ document
 
             window.requestAnimationFrame(
                 function () {
+                    profileSignatureUserEditing =
+                        true;
+
                     document
                         .getElementById(
                             "profileSignatureCanvasContainer"
@@ -7409,8 +7681,8 @@ function compressSignatureImage(file) {
             };
 
             image.onload = function () {
-                const maximumWidth = 600;
-                const maximumHeight = 240;
+                const maximumWidth = 400;
+                const maximumHeight = 120;
 
                 const scale = Math.min(
                     1,
@@ -7488,8 +7760,8 @@ function compressSignatureImage(file) {
 }
 
 function compressDrawnSignature() {
-    const maximumWidth = 600;
-    const maximumHeight = 240;
+    const maximumWidth = 400;
+    const maximumHeight = 120;
 
     const scale = Math.min(
         1,
@@ -7559,6 +7831,9 @@ document
             if (!file) {
                 return;
             }
+
+            profileSignatureUserEditing =
+                true;
 
             if (
                 !file.type.startsWith(
@@ -7761,6 +8036,23 @@ document
 
             /*
             |--------------------------------------------------------------------------
+            | JANGAN KIRIM REQUEST KOSONG
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                !newPassword &&
+                !signatureData
+            ) {
+                showToast(
+                    "Tidak ada perubahan yang perlu disimpan."
+                );
+
+                return;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
             | CEK UKURAN HASIL BASE64
             |--------------------------------------------------------------------------
             */
@@ -7793,10 +8085,6 @@ document
                     }
                 );
 
-                showToast(
-                    "Profil berhasil diperbarui."
-                );
-
                 document.getElementById(
                     "profileNewPassword"
                 ).value = "";
@@ -7805,11 +8093,17 @@ document
                     "profileConfirmPassword"
                 ).value = "";
 
+                profileSignatureUserEditing =
+                    false;
+
                 clearProfileSignature();
 
-                await loadCurrentProfileSignature();
-
                 closeProfileModal();
+
+                showToast(
+                    "Profil berhasil diperbarui."
+                );
+
             } catch (error) {
                 showToast(
                     error.message ||
@@ -7822,6 +8116,8 @@ document
             }
         }
     );
+
+
 
 initializeApplication();
 

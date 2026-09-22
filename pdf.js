@@ -82,7 +82,9 @@ function generatePkmPdf(
         new jsPDF({
             orientation: "portrait",
             unit: "mm",
-            format: "a4"
+            format: "a4",
+            compress: true,
+            putOnlyUsedFonts: true
         });
 
     const pageWidth =
@@ -506,17 +508,23 @@ function generatePkmPdf(
         0
     );
 
+    /*
+    |--------------------------------------------------------------------------
+    | TOTAL DANA KELUAR
+    |--------------------------------------------------------------------------
+    */
+
     documentPdf.rect(
         94,
         y - 4,
-        56,
+        72,
         6,
         "F"
     );
 
     documentPdf.text(
         "Total Dana Keluar :",
-        95,
+        96,
         y
     );
 
@@ -524,7 +532,7 @@ function generatePkmPdf(
         rupiahPdf(
             pkm.totalFund
         ),
-        132,
+        163,
         y,
         {
             align: "right"
@@ -944,6 +952,147 @@ function formatPdfDate(value) {
         .replace(/\./g, ":");
 }
 
+/*
+|--------------------------------------------------------------------------
+| OPTIMASI GAMBAR TTD UNTUK PDF
+|--------------------------------------------------------------------------
+| TTD asli dari Drive bisa berukuran besar meskipun tampil kecil di PDF.
+*/
+
+function optimizePdfImage(
+    dataUrl,
+    maximumWidth = 320,
+    maximumHeight = 140
+) {
+    return new Promise(
+        function (resolve) {
+            if (
+                !dataUrl ||
+                !String(dataUrl)
+                    .startsWith("data:image/")
+            ) {
+                resolve(dataUrl || "");
+                return;
+            }
+
+            const image =
+                new Image();
+
+            image.onerror =
+                function () {
+                    resolve(dataUrl);
+                };
+
+            image.onload =
+                function () {
+                    const scale =
+                        Math.min(
+                            1,
+                            maximumWidth /
+                                image.width,
+                            maximumHeight /
+                                image.height
+                        );
+
+                    const width =
+                        Math.max(
+                            1,
+                            Math.round(
+                                image.width *
+                                scale
+                            )
+                        );
+
+                    const height =
+                        Math.max(
+                            1,
+                            Math.round(
+                                image.height *
+                                scale
+                            )
+                        );
+
+                    const canvas =
+                        document.createElement(
+                            "canvas"
+                        );
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const context =
+                        canvas.getContext("2d");
+
+                    context.fillStyle =
+                        "#ffffff";
+
+                    context.fillRect(
+                        0,
+                        0,
+                        width,
+                        height
+                    );
+
+                    context.drawImage(
+                        image,
+                        0,
+                        0,
+                        width,
+                        height
+                    );
+
+                    resolve(
+                        canvas.toDataURL(
+                            "image/png"
+                        )
+                    );
+                };
+
+            image.src = dataUrl;
+        }
+    );
+}
+
+
+async function optimizePkmPdfSignatures(
+    pkm
+) {
+    if (
+        !pkm ||
+        !pkm.signatures
+    ) {
+        return;
+    }
+
+    const signatureKeys = [
+        "crm",
+        "kacab",
+        "mscm",
+        "manager"
+    ];
+
+    await Promise.all(
+        signatureKeys.map(
+            async function (key) {
+                const signature =
+                    pkm.signatures[key];
+
+                if (
+                    !signature ||
+                    !signature.dataUrl
+                ) {
+                    return;
+                }
+
+                signature.dataUrl =
+                    await optimizePdfImage(
+                        signature.dataUrl
+                    );
+            }
+        )
+    );
+}
+
 async function createAndStorePkmPdf(
     pkmId
 ) {
@@ -1007,6 +1156,16 @@ async function createAndStorePkmPdf(
         );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | KECILKAN TTD SEBELUM DITANAM KE PDF
+    |--------------------------------------------------------------------------
+    */
+
+    await optimizePkmPdfSignatures(
+        pdfData.pkm
+    );
+
     const generated =
         generatePkmPdf(
             pdfData.pkm,
@@ -1033,6 +1192,20 @@ async function createAndStorePkmPdf(
     if (!pdfBase64) {
         throw new Error(
             "Hasil PDF tidak valid."
+        );
+    }
+
+    const estimatedPdfBytes =
+        Math.ceil(
+            pdfBase64.length * 3 / 4
+        );
+
+    if (
+        estimatedPdfBytes >
+        2.8 * 1024 * 1024
+    ) {
+        throw new Error(
+            "Ukuran PDF masih terlalu besar untuk disimpan. Periksa ukuran gambar TTD."
         );
     }
 

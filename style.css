@@ -1353,3 +1353,21 @@ body.modal-open {
         transform: translateX(100%);
     }
 }
+
+body.modal-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+#approvalModal,
+#profileModal {
+    overscroll-behavior: contain;
+}
+
+#signatureCanvas,
+#profileSignatureCanvas {
+    touch-action: none;
+    overscroll-behavior: contain;
+    user-select: none;
+    -webkit-user-select: none;
+}
