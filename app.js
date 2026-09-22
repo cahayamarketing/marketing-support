@@ -4369,75 +4369,413 @@ function getApprovalActionLabel(item) {
     return "-";
 }
 
-function renderPkmTable(items) {
-    pkmTableBody.innerHTML = items
-        .map(function (item) {
-            /*
-            | Kode pengolahan data lainnya
-            | seperti total dana, tanggal, status, dll.
-            */
+function renderPkmTable() {
+    const searchInput =
+        document.getElementById(
+            "searchPkm"
+        );
 
-            const managerApproved =
-                Boolean(
-                    item.approvals &&
-                    (
-                        item.approvals.managerH1 ||
-                        item.approvals.managerH23
-                    )
+    const statusInput =
+        document.getElementById(
+            "statusFilter"
+        );
+
+    if (
+        !searchInput ||
+        !statusInput ||
+        !pkmTableBody
+    ) {
+        return;
+    }
+
+    const search =
+        searchInput.value
+            .trim()
+            .toLowerCase();
+
+    const statusFilter =
+        String(statusInput.value || "ALL")
+            .trim()
+            .toUpperCase();
+
+    const branchPkmData =
+        getBranchPkm();
+
+    let data =
+        Array.isArray(branchPkmData)
+            ? branchPkmData
+            : [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | FILTER PENCARIAN DAN STATUS
+    |--------------------------------------------------------------------------
+    */
+
+    data = data.filter(function (item) {
+        const combinedText = [
+            item.id,
+            item.name,
+            item.branch,
+            item.branchName,
+            item.jenisPkm,
+            item.kegiatan,
+            item.location,
+            item.kabupaten,
+            item.kecamatan,
+            item.kelurahan,
+            item.konsep,
+            item.alasan,
+
+            Array.isArray(item.people)
+                ? item.people.join(" ")
+                : item.people,
+
+            Array.isArray(item.leasing)
+                ? item.leasing.join(" ")
+                : item.leasing,
+
+            item.status,
+            item.approvalStep
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        const matchesSearch =
+            combinedText.includes(search);
+
+        const normalizedStatus =
+            String(item.status || "")
+                .trim()
+                .toUpperCase();
+
+        let matchesStatus = false;
+
+        if (statusFilter === "ALL") {
+            matchesStatus = true;
+        } else if (
+            statusFilter === "MENUNGGU"
+        ) {
+            matchesStatus =
+                normalizedStatus.startsWith(
+                    "MENUNGGU"
                 );
+        } else if (
+            statusFilter === "ACC"
+        ) {
+            matchesStatus = [
+                "ACC",
+                "DISETUJUI"
+            ].includes(normalizedStatus);
+        } else {
+            matchesStatus =
+                normalizedStatus ===
+                statusFilter;
+        }
 
-            const pdfAvailable =
-                (
-                    item.status === "ACC" ||
-                    item.status === "DISETUJUI"
-                ) &&
-                managerApproved;
+        return (
+            matchesSearch &&
+            matchesStatus
+        );
+    });
 
-            let actionButton;
+    /*
+    |--------------------------------------------------------------------------
+    | DEFAULT: SEMBUNYIKAN DATA YANG SUDAH ACC
+    |--------------------------------------------------------------------------
+    */
 
-            if (canCurrentUserProcess(item)) {
-                actionButton = `
-                    <button
-                        type="button"
-                        data-process-pkm="${escapeHtml(item.id)}"
-                        class="whitespace-nowrap rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white shadow-md shadow-red-100 hover:bg-red-700"
-                    >
-                        Proses
-                    </button>
+    const isDefaultList =
+        search === "" &&
+        statusFilter === "ALL";
+
+    if (isDefaultList) {
+        data = data.filter(function (item) {
+            const normalizedStatus =
+                String(item.status || "")
+                    .trim()
+                    .toUpperCase();
+
+            return ![
+                "ACC",
+                "DISETUJUI"
+            ].includes(normalizedStatus);
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAGINATION
+    |--------------------------------------------------------------------------
+    */
+
+    const totalData = data.length;
+
+    const totalPages = Math.max(
+        1,
+        Math.ceil(
+            totalData /
+            PKM_PAGE_SIZE
+        )
+    );
+
+    if (currentPkmPage > totalPages) {
+        currentPkmPage = totalPages;
+    }
+
+    if (currentPkmPage < 1) {
+        currentPkmPage = 1;
+    }
+
+    const startIndex =
+        (
+            currentPkmPage - 1
+        ) * PKM_PAGE_SIZE;
+
+    const endIndex =
+        startIndex +
+        PKM_PAGE_SIZE;
+
+    const pageData =
+        data.slice(
+            startIndex,
+            endIndex
+        );
+
+    const resultCount =
+        document.getElementById(
+            "listResultCount"
+        );
+
+    if (resultCount) {
+        resultCount.textContent =
+            `${totalData} data ditemukan`;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RENDER TABEL
+    |--------------------------------------------------------------------------
+    */
+
+    pkmTableBody.innerHTML =
+        pageData
+            .map(function (item) {
+                const typeText =
+                    Array.isArray(item.type)
+                        ? item.type.join(", ")
+                        : item.type || "-";
+
+                const normalizedStatus =
+                    String(item.status || "")
+                        .trim()
+                        .toUpperCase();
+
+                const managerApproved =
+                    Boolean(
+                        item.approvals &&
+                        (
+                            item.approvals.managerH1 ||
+                            item.approvals.managerH23
+                        )
+                    );
+
+                const pdfAvailable =
+                    [
+                        "ACC",
+                        "DISETUJUI"
+                    ].includes(
+                        normalizedStatus
+                    ) &&
+                    managerApproved;
+
+                let actionButton;
+
+                if (
+                    canCurrentUserProcess(item)
+                ) {
+                    actionButton = `
+                        <button
+                            type="button"
+                            data-process-pkm="${escapeHtml(item.id)}"
+                            class="whitespace-nowrap rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white shadow-md shadow-red-100 transition hover:bg-red-700"
+                        >
+                            Proses
+                        </button>
+                    `;
+                } else if (pdfAvailable) {
+                    actionButton = `
+                        <button
+                            type="button"
+                            data-download-stored-pdf="${escapeHtml(item.id)}"
+                            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-md transition hover:bg-red-700"
+                        >
+                            ↓ Download PDF
+                        </button>
+                    `;
+                } else {
+                    actionButton = `
+                        <span
+                            class="whitespace-nowrap text-xs font-bold text-slate-400"
+                        >
+                            ${getApprovalActionLabel(item)}
+                        </span>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td>
+                            <span class="font-bold text-slate-900">
+                                ${escapeHtml(item.id || "-")}
+                            </span>
+                        </td>
+
+                        <td>
+                            <p class="font-black text-slate-900">
+                                ${escapeHtml(item.name || "-")}
+                            </p>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                ${escapeHtml(item.kegiatan || "-")}
+                            </p>
+                        </td>
+
+                        <td>
+                            <p class="font-bold text-slate-800">
+                                ${escapeHtml(item.branch || "-")}
+                            </p>
+
+                            <p class="text-xs text-slate-500">
+                                ${escapeHtml(item.branchName || "")}
+                            </p>
+                        </td>
+
+                        <td>
+                            ${escapeHtml(typeText)}
+                        </td>
+
+                        <td>
+                            ${formatDateTime(item.startDate)}
+                        </td>
+
+                        <td class="font-black text-slate-900">
+                            ${rupiah(item.totalFund)}
+                        </td>
+
+                        <td>
+                            ${statusBadge(item.status)}
+                        </td>
+
+                        <td>
+                            ${sourceBadge(item.source)}
+                        </td>
+
+                        <td class="text-center">
+                            ${actionButton}
+                        </td>
+                    </tr>
                 `;
-            } else if (pdfAvailable) {
-                actionButton = `
-                    <button
-                        type="button"
-                        data-download-stored-pdf="${escapeHtml(item.id)}"
-                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-md transition hover:bg-red-700"
-                    >
-                        ↓ Download PDF
-                    </button>
-                `;
-            } else {
-                actionButton = `
-                    <span class="whitespace-nowrap text-xs font-bold text-slate-400">
-                        ${getApprovalActionLabel(item)}
-                    </span>
-                `;
-            }
+            })
+            .join("");
 
-            return `
-                <tr>
-                    <td>${escapeHtml(item.id || "-")}</td>
-                    <td>${escapeHtml(item.name || "-")}</td>
-                    <td>${escapeHtml(item.branch || "-")}</td>
-                    <td>${escapeHtml(item.type || "-")}</td>
-                    <td>${escapeHtml(item.status || "-")}</td>
+    /*
+    |--------------------------------------------------------------------------
+    | EMPTY STATE
+    |--------------------------------------------------------------------------
+    */
 
-                    <td class="text-right">
-                        ${actionButton}
-                    </td>
-                </tr>
-            `;
-        })
-        .join("");
+    if (emptyPkm) {
+        emptyPkm.classList.toggle(
+            "hidden",
+            totalData > 0
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | INFORMASI PAGINATION
+    |--------------------------------------------------------------------------
+    */
+
+    const paginationContainer =
+        document.getElementById(
+            "pkmPagination"
+        );
+
+    const paginationInfo =
+        document.getElementById(
+            "pkmPaginationInfo"
+        );
+
+    const currentPageElement =
+        document.getElementById(
+            "currentPkmPage"
+        );
+
+    const previousButton =
+        document.getElementById(
+            "previousPkmPage"
+        );
+
+    const nextButton =
+        document.getElementById(
+            "nextPkmPage"
+        );
+
+    if (paginationContainer) {
+        paginationContainer.classList.toggle(
+            "hidden",
+            totalData === 0
+        );
+    }
+
+    if (paginationInfo) {
+        paginationInfo.textContent =
+            totalData === 0
+                ? "Tidak ada data"
+                : `Menampilkan ${startIndex + 1}–${Math.min(
+                    endIndex,
+                    totalData
+                )} dari ${totalData} data`;
+    }
+
+    if (currentPageElement) {
+        currentPageElement.textContent =
+            currentPkmPage;
+    }
+
+    if (previousButton) {
+        previousButton.disabled =
+            currentPkmPage <= 1;
+    }
+
+    if (nextButton) {
+        nextButton.disabled =
+            currentPkmPage >= totalPages;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | EVENT TOMBOL PROSES
+    |--------------------------------------------------------------------------
+    */
+
+    pkmTableBody
+        .querySelectorAll(
+            "[data-process-pkm]"
+        )
+        .forEach(function (button) {
+            button.addEventListener(
+                "click",
+                function () {
+                    openApprovalModal(
+                        button.dataset
+                            .processPkm
+                    );
+                }
+            );
+        });
 }
 
 /*
@@ -5508,15 +5846,6 @@ async function approvePkmWithSignature() {
                 )
             );
         }
-
-        showToast(
-            result.message ||
-            (
-                isCrmSubmission
-                    ? "PKM berhasil diajukan dan menunggu ACC KACAB."
-                    : "Pengajuan berhasil disetujui."
-            )
-        );
     } catch (error) {
         showToast(
             error.message ||

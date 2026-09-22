@@ -39,9 +39,14 @@ async function downloadPkmPdf(
                 "data/header-pkm.png"
             );
 
-        generatePkmPdf(
-            result.pkm,
-            headerImage
+        const generated =
+            generatePkmPdf(
+                result.pkm,
+                headerImage
+            );
+
+        generated.doc.save(
+            generated.fileName
         );
     } catch (error) {
         showToast(
@@ -605,6 +610,22 @@ function generatePkmPdf(
         pageWidth
     );
 
+const safeActivity =
+    String(
+        pkm.kegiatan ||
+        pkm.jenisKegiatan ||
+        ""
+    )
+        .replace(
+            /[\\/:*?"<>|]+/g,
+            " "
+        )
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .trim();
+
     const safeName =
         String(
             pkm.name || "PKM"
@@ -619,9 +640,23 @@ function generatePkmPdf(
             )
             .trim();
 
-    documentPdf.save(
-        `${pkm.id} PKM ${safeName}.pdf`
-    );
+    const fileName = [
+        pkm.id,
+        "PKM",
+        safeActivity,
+        safeName
+    ]
+        .filter(function (value) {
+            return String(value || "").trim() !== "";
+        })
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim() + ".pdf";
+
+    return {
+        doc: documentPdf,
+        fileName: fileName
+    };
 }
 
 
@@ -911,36 +946,73 @@ function formatPdfDate(value) {
 
 async function createAndStorePkmPdf(pkmId) {
     if (!pkmId) {
-        throw new Error("ID PKM tidak tersedia.");
+        throw new Error(
+            "ID PKM tidak tersedia."
+        );
     }
 
-    const pdfData = await requestBackend(
-        "getPkmPdfData",
-        {
-            pkmId: pkmId
-        }
-    );
+    const pdfData =
+        await requestBackend(
+            "getPkmPdfData",
+            {
+                pkmId: pkmId
+            }
+        );
 
-    const headerDataUrl = await loadImageAsDataUrl(
-        "data/header-pkm.png"
-    );
+    if (
+        !pdfData ||
+        !pdfData.pkm
+    ) {
+        throw new Error(
+            "Data PKM untuk PDF tidak tersedia."
+        );
+    }
 
-    const generated = generatePkmPdf(
-        pdfData,
-        headerDataUrl
-    );
+    const headerDataUrl =
+        await loadImageAsDataUrl(
+            "data/header-pkm.png"
+        );
 
-    const pdfDataUrl = generated.doc.output("datauristring");
+    const generated =
+        generatePkmPdf(
+            pdfData.pkm,
+            headerDataUrl
+        );
 
-    const pdfBase64 = pdfDataUrl.split(",")[1];
+    if (
+        !generated ||
+        !generated.doc
+    ) {
+        throw new Error(
+            "Dokumen PDF gagal dibuat."
+        );
+    }
 
-    const saveResult = await requestBackend(
-        "savePkmPdf",
-        {
-            pkmId: pkmId,
-            pdfBase64: pdfBase64
-        }
-    );
+    const pdfDataUrl =
+        generated.doc.output(
+            "datauristring"
+        );
+
+    const pdfBase64 =
+        pdfDataUrl.split(",")[1];
+
+    if (!pdfBase64) {
+        throw new Error(
+            "Data hasil PDF tidak valid."
+        );
+    }
+
+    const saveResult =
+        await requestBackend(
+            "savePkmPdf",
+            {
+                pkmId: pkmId,
+                fileName:
+                    generated.fileName,
+                pdfBase64:
+                    pdfBase64
+            }
+        );
 
     return saveResult;
 }
