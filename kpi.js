@@ -169,6 +169,7 @@ let crmKpiInitialized = false;
 
 let crmKpiLoadingTimer = null;
 let crmKpiLoadingValue = 0;
+let crmKpiLoadPromise = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -359,6 +360,28 @@ function createEmptyCrmKpiRows() {
 */
 
 async function loadCrmKpiPage() {
+    /*
+    |--------------------------------------------------------------------------
+    | CEGAH REQUEST GANDA
+    |--------------------------------------------------------------------------
+    */
+
+    if (crmKpiLoadPromise) {
+        return crmKpiLoadPromise;
+    }
+
+    crmKpiLoadPromise =
+        executeCrmKpiLoad();
+
+    try {
+        return await crmKpiLoadPromise;
+    } finally {
+        crmKpiLoadPromise = null;
+    }
+}
+
+
+async function executeCrmKpiLoad() {
     initializeCrmKpi();
 
     const branch =
@@ -432,11 +455,6 @@ async function loadCrmKpiPage() {
 
         crmKpiEditing = false;
         crmKpiVerifying = false;
-
-        /*
-        | Setelah fungsi yang hilang diperbaiki,
-        | bagian ini tidak akan menghasilkan error kedua.
-        */
 
         renderCrmKpiTable();
         updateCrmKpiButtons("");
@@ -614,201 +632,6 @@ function mergeCrmKpiRows(data) {
             };
         }
     );
-}
-
-
-function renderCrmKpiTable() {
-    const showHoColumns =
-        canViewCrmKpiHo();
-
-    if (
-        !Array.isArray(crmKpiRows) ||
-        !crmKpiRows.length
-    ) {
-        crmKpiRows =
-            createEmptyCrmKpiRows();
-    }
-
-    crmKpiTableBody.innerHTML =
-        CRM_KPI_METRICS
-            .map(function (
-                metric,
-                index
-            ) {
-                const row =
-                    crmKpiRows.find(
-                        function (item) {
-                            return (
-                                item.code ===
-                                metric.code
-                            );
-                        }
-                    ) || {
-                        code: metric.code,
-                        target:
-                            Array.isArray(
-                                metric.target
-                            )
-                                ? [
-                                    ...metric.target
-                                ]
-                                : metric.target,
-                        actualCrm:
-                            metric.unit ===
-                            "KPB"
-                                ? [
-                                    "",
-                                    "",
-                                    "",
-                                    ""
-                                ]
-                                : "",
-                        actualHo:
-                            metric.unit ===
-                            "KPB"
-                                ? [
-                                    "",
-                                    "",
-                                    "",
-                                    ""
-                                ]
-                                : "",
-                        scoreCrm: "",
-                        scoreHo: "",
-                        status: ""
-                    };
-
-                const score =
-                    calculateCrmKpiScore(
-                        metric,
-                        row
-                    );
-
-                const hoColumns =
-                    showHoColumns
-                        ? `
-                            <td data-kpi-ho-only>
-                                ${renderCrmKpiActual(
-                                    metric,
-                                    row.actualHo,
-                                    "ho",
-                                    crmKpiVerifying
-                                )}
-                            </td>
-
-                            <td
-                                data-kpi-ho-only
-                                class="font-black ${getDifferenceClass(
-                                    metric,
-                                    row
-                                )}"
-                            >
-                                ${formatCrmKpiDifference(
-                                    metric,
-                                    row
-                                )}
-                            </td>
-                        `
-                        : "";
-
-                return `
-                    <tr>
-                        <td class="font-black text-slate-400">
-                            ${index + 1}
-                        </td>
-
-                        <td>
-                            <p class="font-black text-slate-900">
-                                ${escapeHtml(
-                                    metric.name
-                                )}
-                            </p>
-
-                            <p class="mt-1 text-xs text-slate-500">
-                                ${escapeHtml(
-                                    getMetricInformation(
-                                        metric
-                                    )
-                                )}
-                            </p>
-                        </td>
-
-                        <td>
-                            ${renderCrmKpiTarget(
-                                metric,
-                                row
-                            )}
-                        </td>
-
-                        <td>
-                            ${renderCrmKpiActual(
-                                metric,
-                                row.actualCrm,
-                                "crm",
-                                crmKpiEditing
-                            )}
-                        </td>
-
-                        ${hoColumns}
-
-                        <td class="font-black text-slate-900">
-                            ${formatKpiNumber(
-                                metric.weight
-                            )}
-                        </td>
-
-                        <td class="font-black text-red-600">
-                            ${formatKpiNumber(
-                                score
-                            )}
-                        </td>
-                    </tr>
-                `;
-            })
-            .join("");
-
-    const totalScore =
-        calculateTotalCrmKpi();
-
-    const totalPercentage =
-        calculateCrmKpiPercentage(
-            totalScore
-        );
-
-    const percentageText =
-        `${formatKpiNumber(
-            totalPercentage
-        )}%`;
-
-    document.getElementById(
-        "crmKpiTableTotal"
-    ).textContent =
-        percentageText;
-
-    document.getElementById(
-        "crmKpiTotal"
-    ).textContent =
-        percentageText;
-
-    const totalLabel =
-        document.getElementById(
-            "crmKpiTotalLabel"
-        );
-
-    if (totalLabel) {
-        /*
-        | Ada 8 kolom jika Actual HO tampil.
-        | Ada 6 kolom jika Actual HO disembunyikan.
-        | Kolom terakhir dipakai untuk nilai total.
-        */
-
-        totalLabel.colSpan =
-            showHoColumns
-                ? 7
-                : 5;
-    }
-
-    updateCrmKpiHoVisibility();
 }
 
 /*
