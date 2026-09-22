@@ -433,10 +433,11 @@
                         </div>
                     </div>
 
-                    <!-- FILTER -->
+                    <!-- FILTER KPI CRM -->
                     <div class="rounded-3xl bg-white p-5 shadow-sm">
 
-                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                        <!-- FILTER UTAMA -->
+                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 
                             <div>
                                 <label
@@ -504,55 +505,51 @@
                                 <select
                                     id="crmKpiWeek"
                                     class="form-input"
+                                ></select>
+                            </div>
+
+                        </div>
+
+                        <!-- UPDATE DAN TOMBOL -->
+                        <div class="mt-4 grid gap-4 border-t border-slate-200 pt-4 md:grid-cols-3">
+
+                            <div>
+                                <label
+                                    for="crmKpiSnapshotType"
+                                    class="form-label"
                                 >
-                                    <option value="">Rata-rata MTD</option>
-                                    <option value="1">Week 1</option>
-                                    <option value="2">Week 2</option>
-                                    <option value="3">Week 3</option>
-                                    <option value="4">Week 4</option>
-                                    <option value="5">Week 5</option>
+                                    Jenis update
+                                </label>
+
+                                <select
+                                    id="crmKpiSnapshotType"
+                                    class="form-input"
+                                >
+                                    <option value="WEEKLY">
+                                        Update Mingguan
+                                    </option>
+
+                                    <option value="CLOSING">
+                                        Closing Bulanan
+                                    </option>
                                 </select>
+                            </div>
 
-                                <div class="mt-4 grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label
-                                            for="crmKpiSnapshotType"
-                                            class="form-label"
-                                        >
-                                            Jenis update
-                                        </label>
+                            <div>
+                                <label
+                                    for="crmKpiSnapshotNote"
+                                    class="form-label"
+                                >
+                                    Catatan
+                                </label>
 
-                                        <select
-                                            id="crmKpiSnapshotType"
-                                            class="form-input"
-                                        >
-                                            <option value="WEEKLY">
-                                                Update Mingguan
-                                            </option>
-
-                                            <option value="CLOSING">
-                                                Closing Bulanan
-                                            </option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            for="crmKpiSnapshotNote"
-                                            class="form-label"
-                                        >
-                                            Catatan closing
-                                        </label>
-
-                                        <input
-                                            id="crmKpiSnapshotNote"
-                                            class="form-input"
-                                            type="text"
-                                            placeholder="Contoh: Closing September 2026"
-                                            disabled
-                                        >
-                                    </div>
-                                </div>
+                                <input
+                                    id="crmKpiSnapshotNote"
+                                    class="form-input"
+                                    type="text"
+                                    placeholder="Tambahkan catatan update"
+                                    disabled
+                                >
                             </div>
 
                             <div class="flex items-end">
@@ -566,6 +563,7 @@
                             </div>
 
                         </div>
+
                     </div>
 
                     <!-- ACTION -->
