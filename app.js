@@ -1736,14 +1736,22 @@ async function initializeApplication() {
         );
     }
 
-    await loadPkmData("dashboard");
-
     /*
     |--------------------------------------------------------------------------
-    | MUAT SALESMAN SETELAH DATA UTAMA
+    | MUAT DATA SECARA PARALEL
     |--------------------------------------------------------------------------
-    | Kegagalan salesman tidak boleh menghambat dashboard dan PKM.
+    | Dashboard dan salesman berjalan bersamaan agar halaman
+    | tetap responsif ketika Google Apps Script sedang lambat.
     */
+
+    loadPkmData(
+        "dashboard"
+    ).catch(function (error) {
+        console.warn(
+            "Dashboard belum berhasil dimuat:",
+            error
+        );
+    });
 
     loadSalesmanData().catch(
         function (error) {
@@ -2246,7 +2254,19 @@ function showPage(pageId) {
         typeof window.loadCrmKpiPage ===
             "function"
     ) {
-        window.loadCrmKpiPage();
+        window
+            .loadCrmKpiPage()
+            .catch(function (error) {
+                console.error(
+                    "KPI CRM gagal dibuka:",
+                    error
+                );
+
+                showToast(
+                    error.message ||
+                    "KPI CRM gagal dimuat."
+                );
+            });
     }
 
     window.scrollTo({
@@ -8241,5 +8261,17 @@ document
 
 
 
-initializeApplication();
+initializeApplication().catch(
+    function (error) {
+        console.error(
+            "Inisialisasi aplikasi gagal:",
+            error
+        );
+
+        showToast(
+            error.message ||
+            "Aplikasi gagal disiapkan."
+        );
+    }
+);
 

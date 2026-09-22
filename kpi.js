@@ -38,8 +38,8 @@ const CRM_KPI_METRICS = [
         code: "REGISTER_USER",
         name: "Register User MotorkuX/Brompit",
         target: 0,
-        targetLabel: "Target MD",
-        unit: "NUMBER",
+        targetLabel: "Target MD (%)",
+        unit: "PERCENT",
         targetEditable: true,
         weight: 3
     },
@@ -47,8 +47,8 @@ const CRM_KPI_METRICS = [
         code: "REGISTER_MOTOR",
         name: "Register Motor MotorkuX/Brompit",
         target: 0,
-        targetLabel: "Target MD",
-        unit: "NUMBER",
+        targetLabel: "Target MD (%)",
+        unit: "PERCENT",
         targetEditable: true,
         weight: 3
     },
@@ -56,8 +56,8 @@ const CRM_KPI_METRICS = [
         code: "TOTAL_BOOKING",
         name: "Total Booking MotorkuX/Brompit",
         target: 0,
-        targetLabel: "Target MD",
-        unit: "NUMBER",
+        targetLabel: "Target MD (%)",
+        unit: "PERCENT",
         targetEditable: true,
         weight: 3
     },
@@ -65,8 +65,8 @@ const CRM_KPI_METRICS = [
         code: "KPB_DIGITAL",
         name: "KPB Digital",
         target: 0,
-        targetLabel: "Target MD",
-        unit: "NUMBER",
+        targetLabel: "Target MD (%)",
+        unit: "PERCENT",
         targetEditable: true,
         weight: 3
     },
@@ -834,28 +834,60 @@ function renderCrmKpiTable() {
     updateCrmKpiHoVisibility();
 }
 
-function renderCrmKpiTarget(metric, row) {
+function renderCrmKpiTarget(
+    metric,
+    row
+) {
     if (
         metric.targetEditable &&
         crmKpiEditing
     ) {
+        const isPercentage =
+            metric.unit ===
+            "PERCENT";
+
         return `
-            <input
-                class="form-input min-w-[130px]"
-                type="number"
-                min="0"
-                step="0.01"
-                data-kpi-target="${metric.code}"
-                value="${escapeHtml(row.target || "")}"
-                placeholder="Target MD"
-            >
+            <div class="relative min-w-[130px]">
+                <input
+                    class="form-input ${
+                        isPercentage
+                            ? "pr-10"
+                            : ""
+                    }"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    data-kpi-target="${metric.code}"
+                    value="${escapeHtml(
+                        row.target || ""
+                    )}"
+                    placeholder="${
+                        isPercentage
+                            ? "Target %"
+                            : "Target MD"
+                    }"
+                >
+
+                ${
+                    isPercentage
+                        ? `
+                            <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                                %
+                            </span>
+                        `
+                        : ""
+                }
+            </div>
         `;
     }
 
     return `
         <span class="font-bold text-slate-700">
             ${escapeHtml(
-                formatCrmKpiTarget(metric, row.target)
+                formatCrmKpiTarget(
+                    metric,
+                    row.target
+                )
             )}
         </span>
     `;
