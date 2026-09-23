@@ -1,5 +1,65 @@
 "use strict";
 
+function blockOperaMini() {
+    const userAgent =
+        navigator.userAgent || "";
+
+    const isOperaMini =
+        /Opera Mini|OPiOS/i.test(
+            userAgent
+        );
+
+    if (!isOperaMini) {
+        return;
+    }
+
+    function showUnsupportedPage() {
+        document.body.innerHTML = `
+            <main class="unsupported-browser-page">
+                <section class="unsupported-browser-card">
+                    <div class="unsupported-browser-icon">
+                        ⚠️
+                    </div>
+
+                    <h1>
+                        Browser tidak didukung
+                    </h1>
+
+                    <p>
+                        Opera Mini belum mendukung seluruh fitur
+                        CSM Marketing System, terutama tanda tangan,
+                        kamera, lokasi, dan PDF.
+                    </p>
+
+                    <strong>
+                        Silakan buka menggunakan Chrome,
+                        Microsoft Edge, Safari, Firefox,
+                        atau Opera biasa.
+                    </strong>
+                </section>
+            </main>
+        `;
+    }
+
+    if (document.body) {
+        showUnsupportedPage();
+    } else {
+        document.addEventListener(
+            "DOMContentLoaded",
+            showUnsupportedPage,
+            {
+                once: true
+            }
+        );
+    }
+
+    throw new Error(
+        "Opera Mini tidak didukung."
+    );
+}
+
+blockOperaMini();
+
 const APP_ICONS = {
     dashboard: `
         <path d="M3 3h7v7H3V3Z"/>
@@ -112,6 +172,8 @@ const APP_ICONS = {
 };
 
 
+
+
 function renderApplicationIcons() {
     document
         .querySelectorAll("[data-app-icon]")
@@ -142,6 +204,56 @@ function renderApplicationIcons() {
         });
 }
 
+
+function checkBrowserSupport() {
+    const requiredFeatures = [
+        {
+            supported: typeof fetch === "function",
+            name: "permintaan ke server"
+        },
+        {
+            supported: typeof Promise !== "undefined",
+            name: "proses asynchronous"
+        },
+        {
+            supported: typeof sessionStorage !== "undefined",
+            name: "penyimpanan sesi"
+        },
+        {
+            supported: typeof AbortController !== "undefined",
+            name: "pengaturan timeout"
+        },
+        {
+            supported: Boolean(
+                document.createElement("canvas").getContext
+            ),
+            name: "tanda tangan digital"
+        }
+    ];
+
+    const unsupportedFeatures =
+        requiredFeatures
+            .filter(function (feature) {
+                return !feature.supported;
+            })
+            .map(function (feature) {
+                return feature.name;
+            });
+
+    if (unsupportedFeatures.length === 0) {
+        return true;
+    }
+
+    alert(
+        "Browser ini belum mendukung beberapa fitur: " +
+        unsupportedFeatures.join(", ") +
+        ". Silakan gunakan Chrome, Edge, Firefox, atau Safari terbaru."
+    );
+
+    return false;
+}
+
+checkBrowserSupport();
 
 function initializeApplicationIcons() {
     renderApplicationIcons();
