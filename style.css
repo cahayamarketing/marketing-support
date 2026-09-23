@@ -2033,3 +2033,38 @@ body.modal-open {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.13);
 }
+
+#dashboardPreloadPanel {
+    pointer-events: none;
+}
+
+#pkmMenuButton,
+#kpiMenuButton {
+    position: relative;
+    z-index: 5;
+    pointer-events: auto;
+}
+
+.sidebar-scroll-area {
+    height: calc(100vh - 80px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-bottom: 250px;
+    scrollbar-width: thin;
+    scrollbar-color:
+        rgba(255, 255, 255, 0.25)
+        transparent;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.25);
+}

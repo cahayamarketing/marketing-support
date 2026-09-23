@@ -3239,43 +3239,44 @@ function toggleSidebarSubmenu(
 }
 
 
-document.addEventListener(
-    "click",
-    function (event) {
-        const menuButton =
-            event.target.closest(
-                "#pkmMenuButton, #kpiMenuButton"
-            );
+function bindSidebarSubmenuButton(
+    buttonId,
+    submenuId
+) {
+    const button =
+        document.getElementById(buttonId);
 
-        if (!menuButton) {
-            return;
-        }
+    if (!button) {
+        console.warn(
+            `Tombol sidebar "${buttonId}" tidak ditemukan.`
+        );
 
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (
-            menuButton.id ===
-            "pkmMenuButton"
-        ) {
-            toggleSidebarSubmenu(
-                "pkmMenuButton",
-                "pkmSubmenu"
-            );
-
-            return;
-        }
-
-        if (
-            menuButton.id ===
-            "kpiMenuButton"
-        ) {
-            toggleSidebarSubmenu(
-                "kpiMenuButton",
-                "kpiSubmenu"
-            );
-        }
+        return;
     }
+
+    button.addEventListener(
+        "click",
+        function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            toggleSidebarSubmenu(
+                buttonId,
+                submenuId
+            );
+        }
+    );
+}
+
+
+bindSidebarSubmenuButton(
+    "pkmMenuButton",
+    "pkmSubmenu"
+);
+
+bindSidebarSubmenuButton(
+    "kpiMenuButton",
+    "kpiSubmenu"
 );
 
 /*
