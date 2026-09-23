@@ -6568,12 +6568,12 @@ function renderPkmTable() {
                     ) &&
                     managerApproved;
 
-                let actionButton;
+                let primaryAction;
 
                 if (
                     canCurrentUserProcess(item)
                 ) {
-                    actionButton = `
+                    primaryAction = `
                         <button
                             type="button"
                             data-process-pkm="${escapeHtml(item.id)}"
@@ -6583,7 +6583,7 @@ function renderPkmTable() {
                         </button>
                     `;
                 } else {
-                    actionButton = `
+                    primaryAction = `
                         <span
                             class="whitespace-nowrap text-xs font-bold text-slate-400"
                         >
@@ -6591,6 +6591,30 @@ function renderPkmTable() {
                         </span>
                     `;
                 }
+
+                const discordHelperButton =
+                    canShowDiscordHelper(item)
+                        ? `
+                            <button
+                                type="button"
+                                data-push-discord="${escapeHtml(item.id)}"
+                                class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-wait disabled:opacity-60"
+                                title="Kirim ulang reminder ke Discord"
+                            >
+                                <span>🔔</span>
+                                <span>Push Discord</span>
+                            </button>
+                        `
+                        : "";
+
+                const actionButton = `
+                    <div
+                        class="flex items-center justify-end gap-2"
+                    >
+                        ${primaryAction}
+                        ${discordHelperButton}
+                    </div>
+                `;
 
                 return `
                     <tr>
@@ -6745,7 +6769,68 @@ function renderPkmTable() {
                 }
             );
         });
-}
+
+    pkmTableBody
+        .querySelectorAll(
+            "[data-push-discord]"
+        )
+        .forEach(function (button) {
+            button.addEventListener(
+                "click",
+                async function () {
+                    const pkmId =
+                        button.dataset
+                            .pushDiscord;
+
+                    const originalContent =
+                        button.innerHTML;
+
+                    const confirmed =
+                        window.confirm(
+                            "Kirim reminder PKM " +
+                            pkmId +
+                            " ke Discord?"
+                        );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    try {
+                        button.disabled = true;
+
+                        button.innerHTML = `
+                            <span class="ui-spinner ui-spinner-small"></span>
+                            <span>Mengirim...</span>
+                        `;
+
+                        const result =
+                            await requestBackend(
+                                "pushPkmDiscordReminder",
+                                {
+                                    pkmId: pkmId
+                                }
+                            );
+
+                        showToast(
+                            result.message ||
+                            "Reminder Discord berhasil dikirim.",
+                            "success"
+                        );
+                    } catch (error) {
+                        showToast(
+                            getApiErrorMessage(error),
+                            "error"
+                        );
+                    } finally {
+                        button.disabled = false;
+                        button.innerHTML =
+                            originalContent;
+                    }
+                }
+            );
+        });
+    }
 
 function setDefaultApprovalStepFilter() {
     const filter =
@@ -6772,6 +6857,45 @@ function setDefaultApprovalStepFilter() {
             ? "MY_QUEUE"
             : "ALL";
 }
+
+const DISCORD_HELPER_NIKS = [
+    "911117",
+    "911120",
+    "911147"
+];
+
+
+function canShowDiscordHelper(item) {
+    const currentNik =
+        String(
+            currentUser.nik ||
+            currentUser.id ||
+            currentUser.username ||
+            ""
+        ).trim();
+
+    if (
+        !DISCORD_HELPER_NIKS.includes(
+            currentNik
+        )
+    ) {
+        return false;
+    }
+
+    const approvalStep =
+        String(
+            getApprovalStep(item) || ""
+        )
+            .trim()
+            .toUpperCase();
+
+    return [
+        "MSCM",
+        "MGR"
+    ].includes(approvalStep);
+}
+
+
 
 /*
 |--------------------------------------------------------------------------
