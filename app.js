@@ -769,7 +769,8 @@ async function requestBackend(
         "getCrmKpiData",
         "saveCrmKpi",
         "verifyCrmKpi",
-        "getSalesmen"
+        "getSalesmen",
+        "saveLpj"
     ];
 
     const kpiActions = [
@@ -863,6 +864,19 @@ async function requestBackend(
             !response.ok ||
             data.success === false
         ) {
+            console.error(
+                "Backend gagal:",
+                {
+                    action: action,
+                    status: response.status,
+                    message:
+                        data.message ||
+                        data.error?.message ||
+                        "",
+                    response: data
+                }
+            );
+        
             const message =
                 data.message ||
                 data.error?.message ||
