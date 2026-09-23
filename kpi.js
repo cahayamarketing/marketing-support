@@ -2846,28 +2846,6 @@ document.addEventListener(
 */
 
 document
-    .getElementById("kpiMenuButton")
-    .addEventListener("click", function () {
-        const submenu =
-            document.getElementById(
-                "kpiSubmenu"
-            );
-
-        submenu.classList.toggle(
-            "hidden"
-        );
-
-        document.getElementById(
-            "kpiArrow"
-        ).textContent =
-            submenu.classList.contains(
-                "hidden"
-            )
-                ? "⌄"
-                : "⌃";
-    });
-
-document
     .getElementById("loadCrmKpiButton")
     .addEventListener(
         "click",
