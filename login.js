@@ -455,7 +455,7 @@ async function callApi(
             function () {
                 controller.abort();
             },
-            25000
+            45000
         );
 
     try {
