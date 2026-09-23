@@ -3239,24 +3239,44 @@ function toggleSidebarSubmenu(
 }
 
 
-document
-    .getElementById("pkmMenuButton")
-    .addEventListener("click", function () {
-        toggleSidebarSubmenu(
-            "pkmMenuButton",
-            "pkmSubmenu"
-        );
-    });
+document.addEventListener(
+    "click",
+    function (event) {
+        const menuButton =
+            event.target.closest(
+                "#pkmMenuButton, #kpiMenuButton"
+            );
 
+        if (!menuButton) {
+            return;
+        }
 
-document
-    .getElementById("kpiMenuButton")
-    .addEventListener("click", function () {
-        toggleSidebarSubmenu(
-            "kpiMenuButton",
-            "kpiSubmenu"
-        );
-    });
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (
+            menuButton.id ===
+            "pkmMenuButton"
+        ) {
+            toggleSidebarSubmenu(
+                "pkmMenuButton",
+                "pkmSubmenu"
+            );
+
+            return;
+        }
+
+        if (
+            menuButton.id ===
+            "kpiMenuButton"
+        ) {
+            toggleSidebarSubmenu(
+                "kpiMenuButton",
+                "kpiSubmenu"
+            );
+        }
+    }
+);
 
 /*
 |--------------------------------------------------------------------------
