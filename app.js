@@ -1,5 +1,110 @@
 "use strict";
 
+const APP_ICONS = {
+    dashboard: `
+        <path d="M3 3h7v7H3V3Z"/>
+        <path d="M14 3h7v7h-7V3Z"/>
+        <path d="M3 14h7v7H3v-7Z"/>
+        <path d="M14 14h7v7h-7v-7Z"/>
+    `,
+
+    clipboard: `
+        <path d="M9 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3"/>
+        <rect x="9" y="3" width="6" height="4" rx="2"/>
+        <path d="M9 12h6M9 16h6"/>
+    `,
+
+    chart: `
+        <path d="M4 19V9"/>
+        <path d="M10 19V5"/>
+        <path d="M16 19v-7"/>
+        <path d="M22 19H2"/>
+    `,
+
+    user: `
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21a8 8 0 0 1 16 0"/>
+    `,
+
+    accounts: `
+        <circle cx="9" cy="8" r="4"/>
+        <path d="M2 21a7 7 0 0 1 14 0"/>
+        <path d="M19 8v6M16 11h6"/>
+    `,
+
+    database: `
+        <ellipse cx="12" cy="5" rx="8" ry="3"/>
+        <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/>
+        <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>
+    `,
+
+    profile: `
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21a8 8 0 0 1 16 0"/>
+        <path d="m17 3 1 1"/>
+    `,
+
+    logout: `
+        <path d="M10 17l5-5-5-5"/>
+        <path d="M15 12H3"/>
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+    `,
+
+    search: `
+        <circle cx="11" cy="11" r="7"/>
+        <path d="m20 20-4-4"/>
+    `,
+
+    filter: `
+        <path d="M4 5h16"/>
+        <path d="M7 12h10"/>
+        <path d="M10 19h4"/>
+    `,
+
+    chevron: `
+        <path d="m6 9 6 6 6-6"/>
+    `,
+
+    close: `
+        <path d="M18 6 6 18"/>
+        <path d="m6 6 12 12"/>
+    `
+};
+
+
+function renderApplicationIcons() {
+    document
+        .querySelectorAll("[data-app-icon]")
+        .forEach(function (element) {
+            const iconName =
+                element.dataset.appIcon;
+
+            const paths =
+                APP_ICONS[iconName];
+
+            if (!paths) {
+                return;
+            }
+
+            element.innerHTML = `
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    ${paths}
+                </svg>
+            `;
+        });
+}
+
+
+renderApplicationIcons();
+
 /*
 |--------------------------------------------------------------------------
 | PEMERIKSAAN SESSION LOGIN
@@ -2807,35 +2912,52 @@ accountMenuButton.addEventListener(
     function (event) {
         event.stopPropagation();
 
-        accountMenu.classList.toggle(
-            "hidden"
-        );
-
-        accountMenuArrow.textContent =
+        const willOpen =
             accountMenu.classList.contains(
                 "hidden"
-            )
-                ? "⌃"
-                : "⌄";
+            );
+
+        accountMenu.classList.toggle(
+            "hidden",
+            !willOpen
+        );
+
+        accountMenuButton.classList.toggle(
+            "submenu-open",
+            willOpen
+        );
+
+        accountMenuButton.setAttribute(
+            "aria-expanded",
+            String(willOpen)
+        );
     }
 );
 
 document.addEventListener(
     "click",
     function (event) {
+        const wrapper =
+            document.getElementById(
+                "accountMenuWrapper"
+            );
+
         if (
-            !document
-                .getElementById(
-                    "accountMenuWrapper"
-                )
-                .contains(event.target)
+            wrapper &&
+            !wrapper.contains(event.target)
         ) {
             accountMenu.classList.add(
                 "hidden"
             );
 
-            accountMenuArrow.textContent =
-                "⌃";
+            accountMenuButton.classList.remove(
+                "submenu-open"
+            );
+
+            accountMenuButton.setAttribute(
+                "aria-expanded",
+                "false"
+            );
         }
     }
 );
@@ -3015,15 +3137,74 @@ function closeSidebar() {
     sidebarOverlay.classList.add("hidden");
 }
 
+function setSidebarSubmenu(
+    buttonId,
+    submenuId,
+    open
+) {
+    const button =
+        document.getElementById(buttonId);
+
+    const submenu =
+        document.getElementById(submenuId);
+
+    if (!button || !submenu) {
+        return;
+    }
+
+    submenu.classList.toggle(
+        "hidden",
+        !open
+    );
+
+    button.classList.toggle(
+        "submenu-open",
+        open
+    );
+
+    button.setAttribute(
+        "aria-expanded",
+        String(open)
+    );
+}
+
+
+function toggleSidebarSubmenu(
+    buttonId,
+    submenuId
+) {
+    const submenu =
+        document.getElementById(submenuId);
+
+    if (!submenu) {
+        return;
+    }
+
+    setSidebarSubmenu(
+        buttonId,
+        submenuId,
+        submenu.classList.contains("hidden")
+    );
+}
+
+
 document
     .getElementById("pkmMenuButton")
     .addEventListener("click", function () {
-        pkmSubmenu.classList.toggle("hidden");
+        toggleSidebarSubmenu(
+            "pkmMenuButton",
+            "pkmSubmenu"
+        );
+    });
 
-        document.getElementById("pkmArrow").textContent =
-            pkmSubmenu.classList.contains("hidden")
-                ? "⌄"
-                : "⌃";
+
+document
+    .getElementById("kpiMenuButton")
+    .addEventListener("click", function () {
+        toggleSidebarSubmenu(
+            "kpiMenuButton",
+            "kpiSubmenu"
+        );
     });
 
 /*
@@ -3170,13 +3351,11 @@ function showPage(pageId) {
         pageId === "pdfPkmPage" ||
         pageId === "lpjPage"
     ) {
-        pkmSubmenu.classList.remove(
-            "hidden"
+        setSidebarSubmenu(
+            "pkmMenuButton",
+            "pkmSubmenu",
+            true
         );
-
-        document.getElementById(
-            "pkmArrow"
-        ).textContent = "⌃";
     }
 
     /*
@@ -3246,13 +3425,11 @@ function showPage(pageId) {
         pageId === "crmKpiPage" ||
         pageId === "sipedeKpiPage"
     ) {
-        document
-            .getElementById("kpiSubmenu")
-            .classList.remove("hidden");
-
-        document
-            .getElementById("kpiArrow")
-            .textContent = "⌃";
+        setSidebarSubmenu(
+            "kpiMenuButton",
+            "kpiSubmenu",
+            true
+        );
     }
 
 
@@ -5612,67 +5789,67 @@ function renderRecentPkm(data) {
 */
 
 function statusBadge(status) {
-    const normalizedStatus = String(status || "")
-        .trim()
-        .toUpperCase()
-        .replaceAll(" ", "_");
+    const originalStatus =
+        String(status || "-").trim();
 
-    const statusInformation = {
-        MENUNGGU_KACAB: {
-            label: "Menunggu KACAB",
-            className:
-                "bg-amber-100 text-amber-700"
-        },
+    const normalizedStatus =
+        originalStatus
+            .toUpperCase()
+            .replaceAll(" ", "_");
 
-        MENUNGGU_MSCM: {
-            label: "Menunggu MSCM",
-            className:
-                "bg-blue-100 text-blue-700"
-        },
+    let label = originalStatus;
+    let tone = "neutral";
 
-        MENUNGGU_MGR: {
-            label: "Menunggu MGR",
-            className:
-                "bg-purple-100 text-purple-700"
-        },
-
-        DISETUJUI: {
-            label: "Disetujui",
-            className:
-                "bg-green-100 text-green-700"
-        },
-
-        ACC: {
-            label: "ACC",
-            className:
-                "bg-green-100 text-green-700"
-        },
-
-        DITOLAK: {
-            label: "Ditolak",
-            className:
-                "bg-red-100 text-red-700"
-        },
-
-        MENUNGGU: {
-            label: "Menunggu",
-            className:
-                "bg-amber-100 text-amber-700"
-        }
-    };
-
-    const information =
-        statusInformation[normalizedStatus] || {
-            label: status || "-",
-            className:
-                "bg-slate-100 text-slate-600"
-        };
+    if (
+        normalizedStatus === "ACC" ||
+        normalizedStatus === "DISETUJUI"
+    ) {
+        label = "Disetujui";
+        tone = "approved";
+    } else if (
+        normalizedStatus.includes("DITOLAK") ||
+        normalizedStatus.includes("REJECT")
+    ) {
+        label = "Ditolak";
+        tone = "rejected";
+    } else if (
+        normalizedStatus.includes("CRM")
+    ) {
+        label = "Menunggu CRM";
+        tone = "crm";
+    } else if (
+        normalizedStatus.includes("KACAB")
+    ) {
+        label = "Menunggu KACAB";
+        tone = "kacab";
+    } else if (
+        normalizedStatus.includes("MSCM")
+    ) {
+        label = "Menunggu MSCM";
+        tone = "mscm";
+    } else if (
+        normalizedStatus.includes("PIC_H23") ||
+        normalizedStatus.includes("PIC H23")
+    ) {
+        label = "Menunggu PIC H23";
+        tone = "pic-h23";
+    } else if (
+        normalizedStatus.includes("MGR") ||
+        normalizedStatus.includes("MANAGER")
+    ) {
+        label = "Menunggu Manager";
+        tone = "manager";
+    } else if (
+        normalizedStatus.includes("MENUNGGU")
+    ) {
+        label = "Menunggu";
+        tone = "waiting";
+    }
 
     return `
-        <span
-            class="inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-black ${information.className}"
-        >
-            ${escapeHtml(information.label)}
+        <span class="status-pill status-${tone}">
+            <span class="status-dot"></span>
+            ${escapeHtml(label)}
         </span>
     `;
 }
