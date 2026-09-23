@@ -68,6 +68,46 @@ const APP_ICONS = {
     close: `
         <path d="M18 6 6 18"/>
         <path d="m6 6 12 12"/>
+    `,
+
+    submission: `
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>
+        <path d="m15 5 3 3"/>
+    `,
+
+    list: `
+        <path d="M8 6h13"/>
+        <path d="M8 12h13"/>
+        <path d="M8 18h13"/>
+        <path d="M3 6h.01"/>
+        <path d="M3 12h.01"/>
+        <path d="M3 18h.01"/>
+    `,
+
+    pdf: `
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+        <path d="M14 2v6h6"/>
+        <path d="M8 15h2"/>
+        <path d="M8 18h5"/>
+    `,
+
+    lpj: `
+        <path d="M9 11l3 3L22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    `,
+
+    crm: `
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    `,
+
+    sipede: `
+        <path d="M3 3v18h18"/>
+        <path d="m7 16 4-5 4 3 5-7"/>
+        <path d="M17 7h3v3"/>
     `
 };
 
@@ -103,7 +143,18 @@ function renderApplicationIcons() {
 }
 
 
-renderApplicationIcons();
+function initializeApplicationIcons() {
+    renderApplicationIcons();
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeApplicationIcons
+    );
+} else {
+    initializeApplicationIcons();
+}
 
 /*
 |--------------------------------------------------------------------------

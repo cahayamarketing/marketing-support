@@ -1988,3 +1988,48 @@ body.modal-open {
         z-index: 110;
     }
 }
+
+.nav-subitem {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.nav-subitem-icon {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    color: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.08);
+    transition:
+        color 160ms ease,
+        background-color 160ms ease,
+        transform 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.nav-subitem-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.nav-subitem:hover .nav-subitem-icon {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.06);
+}
+
+.nav-subitem.active .nav-subitem-icon {
+    color: #b20f18;
+    background: #ffffff;
+    box-shadow: 0 6px 14px rgba(59, 0, 0, 0.18);
+}
+
+.nav-subitem.active {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.13);
+}
