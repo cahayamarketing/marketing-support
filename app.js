@@ -770,7 +770,8 @@ async function requestBackend(
         "saveCrmKpi",
         "verifyCrmKpi",
         "getSalesmen",
-        "saveLpj"
+        "saveLpj",
+        "createLpj"
     ];
 
     const kpiActions = [
