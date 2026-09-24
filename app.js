@@ -188,6 +188,223 @@ const isDiscordApprovalMode =
         discordApprovalToken
     );
 
+function ensureDiscordLoadingStyle() {
+    if (
+        document.getElementById(
+            "discordApprovalLoadingStyle"
+        )
+    ) {
+        return;
+    }
+
+    const style =
+        document.createElement(
+            "style"
+        );
+
+    style.id =
+        "discordApprovalLoadingStyle";
+
+    style.textContent = `
+        @keyframes discordApprovalSpin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        #discordApprovalLoadingOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                rgba(15, 23, 42, 0.42);
+
+            backdrop-filter:
+                blur(10px);
+
+            -webkit-backdrop-filter:
+                blur(10px);
+        }
+
+        #discordApprovalLoadingOverlay.hidden {
+            display: none;
+        }
+
+        .discord-approval-loading-card {
+            width: min(
+                calc(100% - 40px),
+                360px
+            );
+
+            padding: 30px 24px;
+            border-radius: 24px;
+
+            background:
+                rgba(255,255,255,0.96);
+
+            box-shadow:
+                0 25px 70px
+                rgba(15,23,42,0.28);
+
+            text-align: center;
+        }
+
+        .discord-approval-loading-spinner {
+            width: 48px;
+            height: 48px;
+
+            margin:
+                0 auto 18px;
+
+            border: 5px solid
+                #e5e7eb;
+
+            border-top-color:
+                #dc2626;
+
+            border-radius:
+                9999px;
+
+            animation:
+                discordApprovalSpin
+                0.75s
+                linear
+                infinite;
+        }
+
+        .discord-approval-loading-title {
+            margin: 0;
+
+            font-size: 17px;
+            font-weight: 800;
+
+            color: #111827;
+        }
+
+        .discord-approval-loading-message {
+            margin-top: 8px;
+
+            font-size: 13px;
+            line-height: 1.6;
+
+            color: #64748b;
+        }
+    `;
+
+    document.head.appendChild(
+        style
+    );
+}
+
+
+function showDiscordApprovalLoading(
+    message =
+        "Memuat data pengajuan..."
+) {
+    ensureDiscordLoadingStyle();
+
+    let overlay =
+        document.getElementById(
+            "discordApprovalLoadingOverlay"
+        );
+
+    if (!overlay) {
+        overlay =
+            document.createElement(
+                "div"
+            );
+
+        overlay.id =
+            "discordApprovalLoadingOverlay";
+
+        overlay.innerHTML = `
+            <div
+                class="discord-approval-loading-card"
+            >
+                <div
+                    class="discord-approval-loading-spinner"
+                ></div>
+
+                <p
+                    class="discord-approval-loading-title"
+                >
+                    Menyiapkan Approval PKM
+                </p>
+
+                <p
+                    id="discordApprovalLoadingMessage"
+                    class="discord-approval-loading-message"
+                >
+                    ${escapeHtml(message)}
+                </p>
+            </div>
+        `;
+
+        document.body.appendChild(
+            overlay
+        );
+
+    } else {
+        overlay.classList.remove(
+            "hidden"
+        );
+
+        const messageElement =
+            document.getElementById(
+                "discordApprovalLoadingMessage"
+            );
+
+        if (messageElement) {
+            messageElement.textContent =
+                message;
+        }
+    }
+
+    document.body.style.overflow =
+        "hidden";
+}
+
+
+function updateDiscordApprovalLoading(
+    message
+) {
+    const element =
+        document.getElementById(
+            "discordApprovalLoadingMessage"
+        );
+
+    if (element) {
+        element.textContent =
+            String(
+                message || ""
+            );
+    }
+}
+
+
+function hideDiscordApprovalLoading() {
+    const overlay =
+        document.getElementById(
+            "discordApprovalLoadingOverlay"
+        );
+
+    if (overlay) {
+        overlay.classList.add(
+            "hidden"
+        );
+    }
+
+    document.body.style.overflow =
+        "";
+}
+
 
 const savedSession =
     sessionStorage.getItem(
@@ -6656,10 +6873,7 @@ function renderPkmTable() {
                 const managerApproved =
                     Boolean(
                         item.approvals &&
-                        (
-                            item.approvals.managerH1 ||
-                            item.approvals.managerH23
-                        )
+                        item.approvals.managerH1
                     );
 
                 const pdfAvailable =
@@ -11210,90 +11424,118 @@ document
     );
 
 
-    async function initializeDiscordApproval() {
-    const result =
-        await requestBackend(
-            "getDiscordApproval",
-            {
-                pkmId:
-                    discordApprovalPkmId,
+async function initializeDiscordApproval() {
 
-                approvalToken:
-                    discordApprovalToken
+    showDiscordApprovalLoading(
+        "Memeriksa link approval..."
+    );
+
+    try {
+
+        const result =
+            await requestBackend(
+                "getDiscordApproval",
+                {
+                    pkmId:
+                        discordApprovalPkmId,
+
+                    approvalToken:
+                        discordApprovalToken
+                }
+            );
+
+        if (
+            !result ||
+            !result.pkm
+        ) {
+            throw new Error(
+                "Data approval Discord tidak ditemukan."
+            );
+        }
+
+        updateDiscordApprovalLoading(
+            "Menyiapkan data PKM..."
+        );
+
+        const role =
+            String(
+                result.role || ""
+            )
+                .trim()
+                .toUpperCase();
+
+        currentUser = {
+            id:
+                "DISCORD_" +
+                role,
+
+            nik:
+                "DISCORD_" +
+                role,
+
+            username:
+                "DISCORD_" +
+                role,
+
+            name:
+                role === "MSMC"
+                    ? "MSMC via Discord"
+                    : "Manager via Discord",
+
+            jabatan:
+                role,
+
+            role:
+                role,
+
+            branch:
+                "ALL",
+
+            originalBranch:
+                "HO",
+
+            branchName:
+                "HEAD OFFICE",
+
+            status:
+                "AKTIF",
+
+            isMaster:
+                false
+        };
+
+        sheetPkmData = [
+            result.pkm
+        ];
+
+        approvalModalMode =
+            "APPROVAL";
+
+        updateDiscordApprovalLoading(
+            "Menyiapkan form tanda tangan..."
+        );
+
+        await openApprovalModal(
+            result.pkm.id
+        );
+
+        /*
+        | Beri sedikit jeda agar modal
+        | benar-benar selesai dirender.
+        */
+        await new Promise(
+            function (resolve) {
+                window.setTimeout(
+                    resolve,
+                    300
+                );
             }
         );
 
-    if (
-        !result ||
-        !result.pkm
-    ) {
-        throw new Error(
-            "Data approval Discord tidak ditemukan."
-        );
+    } finally {
+
+        hideDiscordApprovalLoading();
     }
-
-    const role =
-        String(
-            result.role || ""
-        )
-            .trim()
-            .toUpperCase();
-
-    currentUser = {
-        id:
-            "DISCORD_" +
-            role,
-
-        nik:
-            "DISCORD_" +
-            role,
-
-        username:
-            "DISCORD_" +
-            role,
-
-        name:
-            role === "MSMC"
-                ? "MSMC via Discord"
-                : "Manager via Discord",
-
-        jabatan:
-            role,
-
-        role:
-            role,
-
-        branch:
-            "ALL",
-
-        originalBranch:
-            "HO",
-
-        branchName:
-            "HEAD OFFICE",
-
-        status:
-            "AKTIF",
-
-        isMaster:
-            false
-    };
-
-    sheetPkmData = [
-        result.pkm
-    ];
-
-    approvalModalMode =
-        "APPROVAL";
-
-    /*
-    | Jangan menjalankan seluruh dashboard.
-    | Langsung buka modal approval.
-    */
-
-    await openApprovalModal(
-        result.pkm.id
-    );
 }
 
 
