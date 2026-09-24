@@ -411,7 +411,7 @@ const savedSession =
         "currentUser"
     );
 
-const sessionToken =
+let sessionToken =
     sessionStorage.getItem(
         "sessionToken"
     ) || "";
@@ -8591,6 +8591,199 @@ async function approvePkmWithSignature() {
         if (
             isDiscordApprovalMode
         ) {
+            const isFinalDiscordManager =
+                String(
+                    result.approvalRole || ""
+                )
+                    .trim()
+                    .toUpperCase() ===
+                    "MGR" &&
+                String(
+                    result.nextRole || ""
+                )
+                    .trim()
+                    .toUpperCase() ===
+                    "SELESAI";
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | BUKAN MANAGER FINAL
+            |--------------------------------------------------------------------------
+            | Contoh MSMC → cukup selesai seperti sebelumnya.
+            */
+
+            if (
+                !isFinalDiscordManager
+            ) {
+                approvalModalMode =
+                    "APPROVAL";
+
+                pendingCrmSubmission =
+                    null;
+
+                pendingCrmSubmissionSaved =
+                    false;
+
+                closeApprovalModal(
+                    true
+                );
+
+                showToast(
+                    result.message ||
+                    "Pengajuan berhasil disetujui.",
+                    "success"
+                );
+
+                return;
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | MANAGER DISCORD FINAL
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                !result.pdfSessionToken
+            ) {
+                throw new Error(
+                    "Approval Manager berhasil, tetapi session PDF tidak tersedia."
+                );
+            }
+
+
+            showDiscordApprovalLoading(
+                "Membuat PDF final..."
+            );
+
+
+            const previousSessionToken =
+                sessionToken;
+
+            const previousStoredToken =
+                sessionStorage.getItem(
+                    "sessionToken"
+                );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | PAKAI SESSION PDF SEMENTARA
+            |--------------------------------------------------------------------------
+            */
+
+            sessionToken =
+                result.pdfSessionToken;
+
+            sessionStorage.setItem(
+                "sessionToken",
+                sessionToken
+            );
+
+
+            let pdfSaved =
+                false;
+
+            let pdfError =
+                null;
+
+
+            try {
+
+                updateDiscordApprovalLoading(
+                    "Mengambil data PDF final..."
+                );
+
+
+                /*
+                | Fungsi yang SAMA dengan
+                | approval Manager normal.
+                */
+                await window
+                    .createAndStorePkmPdf(
+                        item.id
+                    );
+
+
+                pdfSaved =
+                    true;
+
+
+                updateDiscordApprovalLoading(
+                    "PDF final berhasil disimpan."
+                );
+
+
+                /*
+                | Hapus session sementara
+                | dari backend.
+                */
+                try {
+                    await requestBackend(
+                        "logout",
+                        {}
+                    );
+                } catch (
+                    logoutError
+                ) {
+                    console.warn(
+                        "Session PDF Discord gagal dibersihkan:",
+                        logoutError
+                    );
+                }
+
+            } catch (
+                error
+            ) {
+
+                pdfError =
+                    error;
+
+                console.error(
+                    "PDF final Discord gagal:",
+                    error
+                );
+
+            } finally {
+
+                /*
+                |--------------------------------------------------------------------------
+                | KEMBALIKAN SESSION ASLI
+                |--------------------------------------------------------------------------
+                */
+
+                sessionToken =
+                    previousSessionToken;
+
+
+                if (
+                    previousStoredToken
+                ) {
+                    sessionStorage.setItem(
+                        "sessionToken",
+                        previousStoredToken
+                    );
+
+                } else {
+
+                    sessionStorage.removeItem(
+                        "sessionToken"
+                    );
+                }
+
+
+                hideDiscordApprovalLoading();
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | TUTUP MODAL SETELAH PROSES PDF
+            |--------------------------------------------------------------------------
+            */
+
             approvalModalMode =
                 "APPROVAL";
 
@@ -8600,13 +8793,33 @@ async function approvePkmWithSignature() {
             pendingCrmSubmissionSaved =
                 false;
 
-            closeApprovalModal(true);
-
-            showToast(
-                result.message ||
-                "Pengajuan berhasil disetujui.",
-                "success"
+            closeApprovalModal(
+                true
             );
+
+
+            if (
+                pdfSaved
+            ) {
+                showToast(
+                    "Approval Manager selesai dan PDF final berhasil dibuat.",
+                    "success"
+                );
+
+            } else {
+
+                showToast(
+                    "Approval Manager berhasil, tetapi PDF gagal dibuat: " +
+                    (
+                        pdfError &&
+                        pdfError.message
+                            ? pdfError.message
+                            : "Unknown error"
+                    ),
+                    "error"
+                );
+            }
+
 
             return;
         }
