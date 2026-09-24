@@ -163,21 +163,66 @@ if (document.readyState === "loading") {
 | Login dan index menggunakan halaman terpisah.
 */
 
+const urlParameters =
+    new URLSearchParams(
+        window.location.search
+    );
+
+const discordApprovalPkmId =
+    String(
+        urlParameters.get(
+            "approvalPkm"
+        ) || ""
+    ).trim();
+
+const discordApprovalToken =
+    String(
+        urlParameters.get(
+            "approvalToken"
+        ) || ""
+    ).trim();
+
+const isDiscordApprovalMode =
+    Boolean(
+        discordApprovalPkmId &&
+        discordApprovalToken
+    );
+
+
 const savedSession =
-    sessionStorage.getItem("currentUser");
+    sessionStorage.getItem(
+        "currentUser"
+    );
 
 const sessionToken =
-    sessionStorage.getItem("sessionToken");
+    sessionStorage.getItem(
+        "sessionToken"
+    ) || "";
 
-if (!savedSession || !sessionToken) {
-    window.location.replace("login.html");
+
+/*
+|--------------------------------------------------------------------------
+| LOGIN NORMAL
+|--------------------------------------------------------------------------
+*/
+
+if (
+    !isDiscordApprovalMode &&
+    (
+        !savedSession ||
+        !sessionToken
+    )
+) {
+    window.location.replace(
+        "login.html"
+    );
 
     throw new Error(
         "User belum login."
     );
 }
 
-let currentUser;
+
 let activePageId = "";
 const MASTER_ACCOUNT_NIKS =
     Object.freeze([
@@ -214,28 +259,84 @@ const PKM_PAGE_SIZE = 7;
 
 let currentPkmPage = 1;
 
-try {
-    currentUser =
-        JSON.parse(savedSession);
-} catch (error) {
-    sessionStorage.removeItem(
-        "currentUser"
-    );
+let currentUser;
 
-    window.location.replace(
-        "login.html"
-    );
 
-    throw new Error(
-        "Session login tidak valid."
-    );
+/*
+|--------------------------------------------------------------------------
+| USER SEMENTARA UNTUK DISCORD
+|--------------------------------------------------------------------------
+*/
+
+if (
+    isDiscordApprovalMode
+) {
+    currentUser = {
+        id:
+            "DISCORD",
+
+        nik:
+            "DISCORD",
+
+        username:
+            "DISCORD",
+
+        name:
+            "Discord Approval",
+
+        jabatan:
+            "Discord Approval",
+
+        role:
+            "",
+
+        branch:
+            "ALL",
+
+        originalBranch:
+            "HO",
+
+        branchName:
+            "HEAD OFFICE",
+
+        status:
+            "AKTIF",
+
+        isMaster:
+            false
+    };
+
+} else {
+
+    try {
+        currentUser =
+            JSON.parse(
+                savedSession
+            );
+    } catch (error) {
+        sessionStorage.removeItem(
+            "currentUser"
+        );
+
+        window.location.replace(
+            "login.html"
+        );
+
+        throw new Error(
+            "Session login tidak valid."
+        );
+    }
 }
 
 if (
-    !currentUser ||
-    !currentUser.username ||
-    !currentUser.role ||
-    currentUser.status !== "AKTIF"
+    !isDiscordApprovalMode &&
+    (
+        !currentUser ||
+        !currentUser.username ||
+        !currentUser.role ||
+        currentUser.status !==
+            "AKTIF"
+    )
 ) {
     sessionStorage.removeItem(
         "currentUser"
@@ -919,6 +1020,8 @@ async function requestBackend(
     const longActions = [
         "createPkm",
         "approvePkm",
+        "approvePkmFromDiscord",
+        "getDiscordApproval",
         "savePkmPdf",
         "getPkmPdfFile",
         "updateMyProfile",
@@ -5895,10 +5998,10 @@ function statusBadge(status) {
         label = "Menunggu KACAB";
         tone = "kacab";
     } else if (
-        normalizedStatus.includes("MSCM")
+        normalizedStatus.includes("MSMC")
     ) {
-        label = "Menunggu MSCM";
-        tone = "mscm";
+        label = "Menunggu MSMC";
+        tone = "msmc";
     } else if (
         normalizedStatus.includes("PIC_H23") ||
         normalizedStatus.includes("PIC H23")
@@ -5968,7 +6071,7 @@ function getApprovalStages(item) {
         return [
             "CRM",
             "KACAB",
-            "MSCM",
+            "MSMC",
             "PIC_H23",
             "MGR"
         ];
@@ -5977,7 +6080,7 @@ function getApprovalStages(item) {
     return [
         "CRM",
         "KACAB",
-        "MSCM",
+        "MSMC",
         "MGR"
     ];
 }
@@ -5987,7 +6090,7 @@ function getApprovalStageLabel(stage) {
     const labels = {
         CRM: "CRM",
         KACAB: "KACAB",
-        MSCM: "MSCM",
+        MSMC: "MSMC",
         PIC_H23: "PIC H23",
         MGR: "MANAGER"
     };
@@ -6065,7 +6168,7 @@ function canCurrentUserProcess(item) {
 
     /*
     | KACAB hanya dapat memproses cabangnya.
-    | MSCM dan MGR dari HO dapat memproses semua cabang.
+    | MSMC dan MGR dari HO dapat memproses semua cabang.
     */
 
     const branchAllowed =
@@ -6076,7 +6179,7 @@ function canCurrentUserProcess(item) {
     return (
         branchAllowed &&
         approvalStep === userRole &&
-        ["KACAB", "MSCM", "MGR","PIC_H23"].includes(
+        ["KACAB", "MSMC", "MGR","PIC_H23"].includes(
             userRole
         )
     );
@@ -6356,7 +6459,7 @@ function renderPkmTable() {
 
     const approvalQueueRoles = [
         "KACAB",
-        "MSCM",
+        "MSMC",
         "PIC_H23",
         "MGR"
     ];
@@ -6847,7 +6950,7 @@ function setDefaultApprovalStepFilter() {
 
     const approvalRoles = [
         "KACAB",
-        "MSCM",
+        "MSMC",
         "PIC_H23",
         "MGR"
     ];
@@ -6890,7 +6993,7 @@ function canShowDiscordHelper(item) {
             .toUpperCase();
 
     return [
-        "MSCM",
+        "MSMC",
         "MGR"
     ].includes(approvalStep);
 }
@@ -7450,6 +7553,62 @@ async function prepareApprovalSignature() {
     }
 }
 
+function prepareDiscordApprovalSignature() {
+    approvalSignatureLoadVersion +=
+        1;
+
+    approvalSignatureUserSelected =
+        true;
+
+    savedApprovalSignatureAvailable =
+        false;
+
+    /*
+    | Discord tidak memakai TTD profil.
+    */
+    const savedButton =
+        document.getElementById(
+            "useSavedApprovalSignature"
+        );
+
+    const savedPanel =
+        document.getElementById(
+            "savedApprovalSignaturePanel"
+        );
+
+    const savedStatus =
+        document.getElementById(
+            "savedApprovalSignatureStatus"
+        );
+
+    if (savedButton) {
+        savedButton.classList.add(
+            "hidden"
+        );
+    }
+
+    if (savedPanel) {
+        savedPanel.classList.add(
+            "hidden"
+        );
+    }
+
+    if (savedStatus) {
+        savedStatus.textContent =
+            "Approval melalui Discord. Silakan gambar tanda tangan.";
+    }
+
+    clearSignature();
+
+    selectApprovalSignatureMode(
+        "DRAWN"
+    );
+
+    approveWithSignatureButton
+        .innerHTML =
+        "✓ Setujui Pengajuan";
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -7574,9 +7733,14 @@ async function openApprovalModal(itemId) {
     renderApprovalHistory(item);
 
     const canProcess =
-        isCrmSubmission
-            ? getCurrentUserRole() === "CRM"
-            : canCurrentUserProcess(item);
+        isDiscordApprovalMode
+            ? true
+            : isCrmSubmission
+                ? getCurrentUserRole() ===
+                    "CRM"
+                : canCurrentUserProcess(
+                    item
+                );
 
     signatureSection.classList.toggle(
         "hidden",
@@ -7621,7 +7785,15 @@ async function openApprovalModal(itemId) {
     );
 
     if (canProcess) {
-        await prepareApprovalSignature();
+
+        if (
+            isDiscordApprovalMode
+        ) {
+            prepareDiscordApprovalSignature();
+        } else {
+            await prepareApprovalSignature();
+        }
+
     } else {
         clearSignature();
     }
@@ -8083,6 +8255,7 @@ async function approvePkmWithSignature() {
     }
 
     if (
+        !isDiscordApprovalMode &&
         !isCrmSubmission &&
         !canCurrentUserProcess(item)
     ) {
@@ -8167,19 +8340,62 @@ async function approvePkmWithSignature() {
         |--------------------------------------------------------------------------
         */
 
+        const approvalAction =
+            isDiscordApprovalMode
+                ? "approvePkmFromDiscord"
+                : "approvePkm";
+
+
+        const approvalPayload = {
+            pkmId:
+                item.id,
+
+            signatureMode:
+                isDiscordApprovalMode
+                    ? "DRAWN"
+                    : approvalSignatureMode,
+
+            signatureData:
+                signatureData
+        };
+
+
+        if (
+            isDiscordApprovalMode
+        ) {
+            approvalPayload.approvalToken =
+                discordApprovalToken;
+        }
+
+
         const result =
             await requestBackend(
-                "approvePkm",
-                {
-                    pkmId: item.id,
-
-                    signatureMode:
-                        approvalSignatureMode,
-
-                    signatureData:
-                        signatureData
-                }
+                approvalAction,
+                approvalPayload
             );
+
+        if (
+            isDiscordApprovalMode
+        ) {
+            approvalModalMode =
+                "APPROVAL";
+
+            pendingCrmSubmission =
+                null;
+
+            pendingCrmSubmissionSaved =
+                false;
+
+            closeApprovalModal(true);
+
+            showToast(
+                result.message ||
+                "Pengajuan berhasil disetujui.",
+                "success"
+            );
+
+            return;
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -8272,7 +8488,10 @@ async function approvePkmWithSignature() {
         let pdfSaved = false;
         let pdfErrorMessage = "";
 
-        if (isFinalManagerApproval) {
+        if (
+            isFinalManagerApproval &&
+            !isDiscordApprovalMode
+        ) {
             approveWithSignatureButton.innerHTML = `
                 <span class="flex items-center justify-center gap-2">
                     <span class="ui-spinner"></span>
@@ -10991,20 +11210,127 @@ document
     );
 
 
+    async function initializeDiscordApproval() {
+    const result =
+        await requestBackend(
+            "getDiscordApproval",
+            {
+                pkmId:
+                    discordApprovalPkmId,
 
-
-
-initializeApplication().catch(
-    function (error) {
-        console.error(
-            "Inisialisasi aplikasi gagal:",
-            error
+                approvalToken:
+                    discordApprovalToken
+            }
         );
 
-        showToast(
-            error.message ||
-            "Aplikasi gagal disiapkan."
+    if (
+        !result ||
+        !result.pkm
+    ) {
+        throw new Error(
+            "Data approval Discord tidak ditemukan."
         );
     }
-);
 
+    const role =
+        String(
+            result.role || ""
+        )
+            .trim()
+            .toUpperCase();
+
+    currentUser = {
+        id:
+            "DISCORD_" +
+            role,
+
+        nik:
+            "DISCORD_" +
+            role,
+
+        username:
+            "DISCORD_" +
+            role,
+
+        name:
+            role === "MSMC"
+                ? "MSMC via Discord"
+                : "Manager via Discord",
+
+        jabatan:
+            role,
+
+        role:
+            role,
+
+        branch:
+            "ALL",
+
+        originalBranch:
+            "HO",
+
+        branchName:
+            "HEAD OFFICE",
+
+        status:
+            "AKTIF",
+
+        isMaster:
+            false
+    };
+
+    sheetPkmData = [
+        result.pkm
+    ];
+
+    approvalModalMode =
+        "APPROVAL";
+
+    /*
+    | Jangan menjalankan seluruh dashboard.
+    | Langsung buka modal approval.
+    */
+
+    await openApprovalModal(
+        result.pkm.id
+    );
+}
+
+
+
+if (
+    isDiscordApprovalMode
+) {
+
+    initializeDiscordApproval()
+        .catch(
+            function (error) {
+                console.error(
+                    "Inisialisasi Discord approval gagal:",
+                    error
+                );
+
+                showToast(
+                    error.message ||
+                    "Link approval tidak dapat dibuka."
+                );
+            }
+        );
+
+} else {
+
+    initializeApplication()
+        .catch(
+            function (error) {
+                console.error(
+                    "Inisialisasi aplikasi gagal:",
+                    error
+                );
+
+                showToast(
+                    error.message ||
+                    "Aplikasi gagal disiapkan."
+                );
+            }
+        );
+}
