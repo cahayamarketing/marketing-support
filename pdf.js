@@ -805,8 +805,9 @@ function drawPdfSignatures(
             role: "KEPALA CABANG"
         },
 
-        signatures?.mscm || {
-            role: "MSCM"
+        signatures?.MSMC ||
+        signatures?.msmc || {
+            role: "MSMC"
         },
 
         signatures?.manager || {
@@ -1102,7 +1103,8 @@ async function optimizePkmPdfSignatures(
     const signatureKeys = [
         "crm",
         "kacab",
-        "mscm",
+        "MSMC",
+        "msmc",
         "manager"
     ];
 

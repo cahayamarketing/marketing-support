@@ -6272,33 +6272,43 @@ function sourceBadge(source) {
 */
 
 function getApprovalStages(item) {
-    const typePkm = String(
-        item.type ||
-        item.typePkm ||
-        ""
-    )
-        .replace(/\s+/g, "")
-        .toUpperCase();
+    const typePkm =
+        String(
+            item.type ||
+            item.typePkm ||
+            ""
+        )
+            .replace(/\s+/g, "")
+            .toUpperCase();
 
-    const needsPicH23 =
-        typePkm === "H23" ||
-        typePkm === "H123";
 
-    if (needsPicH23) {
+    if (typePkm === "H23") {
         return [
             "CRM",
             "KACAB",
             "MSMC",
             "PIC_H23",
-            "MGR"
+            "MGR_H23"
         ];
     }
+
+
+    if (typePkm === "H123") {
+        return [
+            "CRM",
+            "KACAB",
+            "MSMC",
+            "PIC_H23",
+            "MGR_H1"
+        ];
+    }
+
 
     return [
         "CRM",
         "KACAB",
         "MSMC",
-        "MGR"
+        "MGR_H1"
     ];
 }
 
@@ -6309,7 +6319,8 @@ function getApprovalStageLabel(stage) {
         KACAB: "KACAB",
         MSMC: "MSMC",
         PIC_H23: "PIC H23",
-        MGR: "MANAGER"
+        MGR_H1: "MANAGER H1",
+        MGR_H23: "MANAGER H23"
     };
 
     return labels[stage] || stage;
@@ -6396,7 +6407,7 @@ function canCurrentUserProcess(item) {
     return (
         branchAllowed &&
         approvalStep === userRole &&
-        ["KACAB", "MSMC", "MGR","PIC_H23"].includes(
+        ["KACAB", "MSMC","PIC_H23","MGR_H1","MGR_H23"].includes(
             userRole
         )
     );
@@ -6678,7 +6689,8 @@ function renderPkmTable() {
         "KACAB",
         "MSMC",
         "PIC_H23",
-        "MGR"
+        "MGR_H1",
+        "MGR_H23"
     ];
 
     const approvalStepFilter =
@@ -7166,7 +7178,8 @@ function setDefaultApprovalStepFilter() {
         "KACAB",
         "MSMC",
         "PIC_H23",
-        "MGR"
+        "MGR_H1",
+        "MGR_H23"
     ];
 
     filter.value =
@@ -7208,7 +7221,7 @@ function canShowDiscordHelper(item) {
 
     return [
         "MSMC",
-        "MGR"
+        "MGR_H1"
     ].includes(approvalStep);
 }
 
@@ -8597,7 +8610,7 @@ async function approvePkmWithSignature() {
                 )
                     .trim()
                     .toUpperCase() ===
-                    "MGR" &&
+                    "MGR_H1" &&
                 String(
                     result.nextRole || ""
                 )
@@ -8907,9 +8920,10 @@ async function approvePkmWithSignature() {
             .toUpperCase();
 
         const isFinalManagerApproval = [
-            "MGR",
-            "MANAGER",
+            "MGR H1",
+            "MGR H23",
             "MANAGER H1",
+            "MANAGER H23"
         ].includes(approvalRole);
 
         let pdfSaved = false;
@@ -8925,7 +8939,7 @@ async function approvePkmWithSignature() {
                     <span>Membuat dan menyimpan PDF...</span>
                 </span>
             `;
-
+            
             try {
                 await window.createAndStorePkmPdf(
                     item.id
