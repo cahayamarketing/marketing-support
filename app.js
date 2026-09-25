@@ -2347,69 +2347,97 @@ async function loadReferenceMasters() {
 
     referenceMastersPromise =
         (async function () {
-            try {
-                const result =
-                    await requestBackend(
-                        "getReferenceMasters",
-                        {}
+            const maximumAttempts = 3;
+
+            for (
+                let attempt = 1;
+                attempt <= maximumAttempts;
+                attempt++
+            ) {
+                try {
+                    const result =
+                        await requestBackend(
+                            "getReferenceMasters",
+                            {}
+                        );
+
+                    leasingOptions =
+                        Array.isArray(
+                            result.leasing
+                        )
+                            ? result.leasing
+                            : [];
+
+                    pkmTypeOptions =
+                        Array.isArray(
+                            result.pkmTypes
+                        )
+                            ? result.pkmTypes
+                            : [];
+
+                    eventOptions =
+                        Array.isArray(
+                            result.events
+                        )
+                            ? result.events
+                            : [];
+
+                    focusTypeOptions =
+                        Array.isArray(
+                            result.focusTypes
+                        )
+                            ? result.focusTypes
+                            : [];
+
+                    populateJenisPkmOptions();
+                    populateJenisKegiatanOptions();
+                    renderFocusTypeOptions();
+                    refreshLeasingMasterOptions();
+
+                    referenceMastersLoaded =
+                        true;
+
+                    return true;
+
+                } catch (error) {
+
+                    console.error(
+                        `Master attempt ${attempt} gagal:`,
+                        error
                     );
 
-                leasingOptions =
-                    Array.isArray(
-                        result.leasing
-                    )
-                        ? result.leasing
-                        : [];
+                    if (
+                        attempt ===
+                        maximumAttempts
+                    ) {
+                        showToast(
+                            "Master PKM gagal dimuat. Silakan coba kembali.",
+                            "error"
+                        );
 
-                pkmTypeOptions =
-                    Array.isArray(
-                        result.pkmTypes
-                    )
-                        ? result.pkmTypes
-                        : [];
+                        return false;
+                    }
 
-                eventOptions =
-                    Array.isArray(
-                        result.events
-                    )
-                        ? result.events
-                        : [];
-
-                focusTypeOptions =
-                    Array.isArray(
-                        result.focusTypes
-                    )
-                        ? result.focusTypes
-                        : [];
-
-                populateJenisPkmOptions();
-                populateJenisKegiatanOptions();
-                renderFocusTypeOptions();
-                refreshLeasingMasterOptions();
-
-                referenceMastersLoaded =
-                    true;
-
-                return true;
-            } catch (error) {
-                console.error(
-                    "Gagal memuat master:",
-                    error
-                );
-
-                showToast(
-                    "Master PKM gagal dimuat.",
-                    "error"
-                );
-
-                return false;
-            } finally {
-                referenceMastersPromise =
-                    null;
+                    await new Promise(
+                        function (resolve) {
+                            setTimeout(
+                                resolve,
+                                attempt * 1500
+                            );
+                        }
+                    );
+                }
             }
+
+            return false;
         })();
 
-    return referenceMastersPromise;
+    try {
+        return await referenceMastersPromise;
+    } finally {
+        referenceMastersPromise =
+            null;
+    }
 }
 
 async function initializeApplication() {
@@ -2482,7 +2510,14 @@ async function initializeApplication() {
     |--------------------------------------------------------------------------
     */
 
-    await loadReferenceMasters();
+    const masterLoaded =
+        await loadReferenceMasters();
+
+    if (!masterLoaded) {
+        console.warn(
+            "Aplikasi tetap dilanjutkan tanpa master PKM."
+        );
+    }
 
     populateJenisPkmOptions();
     initializePkmFilters();
