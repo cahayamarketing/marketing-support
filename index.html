@@ -2498,35 +2498,39 @@
                                 <div>
                                     <label
                                         for="lpjJenisPkm"
-                                        class="form-label"
+                                        class="mb-2 block text-sm font-bold text-slate-700"
                                     >
                                         Jenis PKM
                                     </label>
 
-                                    <select
-                                        id="lpjJenisPkm"
-                                        class="form-input"
-                                    >
-                                        <option value="ALL">
-                                            Semua Jenis
-                                        </option>
+                                    <div class="relative">
+                                        <select
+                                            id="lpjJenisPkm"
+                                            class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-11 text-sm font-semibold text-slate-700 shadow-sm outline-none transition-all duration-200 hover:border-red-300 hover:shadow-md focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                                        >
+                                            <option value="ALL">Semua Jenis</option>
+                                            <option value="ATL BIASA">ATL BIASA</option>
+                                            <option value="ATL DEALER">ATL DEALER</option>
+                                            <option value="BTL BIASA">BTL BIASA</option>
+                                            <option value="BTL DEALER">BTL DEALER</option>
+                                        </select>
 
-                                        <option value="ATL BIASA">
-                                            ATL BIASA
-                                        </option>
-
-                                        <option value="ATL DEALER">
-                                            ATL DEALER
-                                        </option>
-
-                                        <option value="BTL BIASA">
-                                            BTL BIASA
-                                        </option>
-
-                                        <option value="BTL DEALER">
-                                            BTL DEALER
-                                        </option>
-                                    </select>
+                                        <div
+                                            class="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400"
+                                        >
+                                            <svg
+                                                class="h-4 w-4"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2.5"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path d="m6 9 6 6 6-6"/>
+                                            </svg>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- TYPE PKM -->
