@@ -8639,18 +8639,28 @@ async function approvePkmWithSignature() {
         if (
             isDiscordApprovalMode
         ) {
-            const isFinalDiscordManager =
+            const approvalRole =
                 String(
                     result.approvalRole || ""
                 )
                     .trim()
-                    .toUpperCase() ===
-                    "MGR_H1" &&
+                    .toUpperCase();
+
+            const nextRole =
                 String(
                     result.nextRole || ""
                 )
                     .trim()
-                    .toUpperCase() ===
+                    .toUpperCase();
+
+            const isFinalDiscordManager =
+                [
+                    "MGR_H1",
+                    "MGR_H23"
+                ].includes(
+                    approvalRole
+                ) &&
+                nextRole ===
                     "SELESAI";
 
 
