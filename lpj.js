@@ -7,6 +7,7 @@ let lpjCurrentPage = 1;
 let lpjTotalPages = 1;
 let activeLpjItem = null;
 let lpjBudgetItems = [];
+let lpjReviewConfirmed = false;
 
 function initializeLpjFrontend() {
     window.renderBranchFilter(
@@ -134,8 +135,123 @@ function initializeLpjFrontend() {
         .getElementById("finalizeLpjButton")
         .addEventListener(
             "click",
-            finalizeLpj
+            function () {
+
+                if (!lpjReviewConfirmed) {
+                    openLpjReview();
+                    return;
+                }
+
+                finalizeLpj();
+            }
         );
+
+    document
+        .getElementById(
+            "lpjBackToEditButton"
+        )
+        .addEventListener(
+            "click",
+            function () {
+
+                lpjReviewConfirmed = false;
+
+                const panel =
+                    document.getElementById(
+                        "lpjReviewPanel"
+                    );
+
+                if (panel) {
+                    panel.classList.add("hidden");
+                }
+
+                const button =
+                    document.getElementById(
+                        "finalizeLpjButton"
+                    );
+
+                if (button) {
+                    button.textContent =
+                        "Review & Finalisasi LPJ";
+                }
+            }
+        );
+
+    document
+        .getElementById(
+            "lpjConfirmFinalizeButton"
+        )
+        .addEventListener(
+            "click",
+            function () {
+
+                lpjReviewConfirmed = true;
+
+                const panel =
+                    document.getElementById(
+                        "lpjReviewPanel"
+                    );
+
+                if (panel) {
+                    panel.classList.add("hidden");
+                }
+
+                const button =
+                    document.getElementById(
+                        "finalizeLpjButton"
+                    );
+
+                if (button) {
+                    button.textContent =
+                        "Finalisasi LPJ";
+                }
+
+                finalizeLpj();
+            }
+        );
+
+    const evaluationInput =
+        document.getElementById(
+            "lpjEvaluation"
+        );
+
+    if (evaluationInput) {
+        evaluationInput.addEventListener(
+            "input",
+            function () {
+
+                const count =
+                    evaluationInput.value.length;
+
+                const countElement =
+                    document.getElementById(
+                        "lpjEvaluationCount"
+                    );
+
+                const statusElement =
+                    document.getElementById(
+                        "lpjEvaluationStatus"
+                    );
+
+                if (countElement) {
+                    countElement.textContent =
+                        `${count} karakter`;
+                }
+
+                if (statusElement) {
+                    statusElement.textContent =
+                        count > 0
+                            ? "Siap difinalisasi"
+                            : "Belum diisi";
+
+                    statusElement.className =
+                        count > 0
+                            ? "text-[11px] font-bold text-emerald-600"
+                            : "text-[11px] font-bold text-slate-400";
+                }
+            }
+        );
+    }
 
     [
         ["lpjTentPhoto", "lpjTentPhotoPreview"],
@@ -810,6 +926,27 @@ function openLpjModal(pkmId) {
                 })
             : [];
 
+    lpjReviewConfirmed = false;
+
+    const reviewPanel =
+        document.getElementById(
+            "lpjReviewPanel"
+        );
+
+    if (reviewPanel) {
+        reviewPanel.classList.add("hidden");
+    }
+
+    const finalizeButton =
+        document.getElementById(
+            "finalizeLpjButton"
+        );
+
+    if (finalizeButton) {
+        finalizeButton.textContent =
+            "Review & Finalisasi LPJ";
+    }
+
     document.getElementById(
         "lpjModalPkmId"
     ).textContent =
@@ -886,6 +1023,29 @@ function openLpjModal(pkmId) {
     document.getElementById(
         "lpjEvaluation"
     ).value = "";
+
+    const evaluationCount =
+        document.getElementById(
+            "lpjEvaluationCount"
+        );
+
+    if (evaluationCount) {
+        evaluationCount.textContent =
+            "0 karakter";
+    }
+
+    const evaluationStatus =
+        document.getElementById(
+            "lpjEvaluationStatus"
+        );
+
+    if (evaluationStatus) {
+        evaluationStatus.textContent =
+            "Belum diisi";
+
+        evaluationStatus.className =
+            "text-[11px] font-bold text-slate-400";
+    }
 
     document.getElementById(
         "lpjTentPhoto"
@@ -1193,6 +1353,157 @@ function closeLpjModal() {
 
     activeLpjItem = null;
     lpjBudgetItems = [];
+}
+
+function openLpjReview() {
+    const panel =
+        document.getElementById(
+            "lpjReviewPanel"
+        );
+
+    const content =
+        document.getElementById(
+            "lpjReviewContent"
+        );
+
+    if (!panel || !content) {
+        return;
+    }
+
+    const actualDb =
+        Number(
+            document.getElementById(
+                "lpjActualDb"
+            ).value
+        ) || 0;
+
+    const actualDeal =
+        Number(
+            document.getElementById(
+                "lpjActualDeal"
+            ).value
+        ) || 0;
+
+    const actualUe =
+        Number(
+            document.getElementById(
+                "lpjActualUe"
+            ).value
+        ) || 0;
+
+    const evaluation =
+        document.getElementById(
+            "lpjEvaluation"
+        ).value.trim();
+
+    const budgetRows =
+        window.innerWidth < 768
+            ? [
+                  ...document.querySelectorAll(
+                      "#lpjBudgetMobileList > div"
+                  )
+              ]
+            : [
+                  ...document.querySelectorAll(
+                      "[data-lpj-budget-row]"
+                  )
+              ];
+
+    const filledBudget =
+        budgetRows.filter(function (row) {
+            const input =
+                row.querySelector(
+                    ".lpj-actual-price"
+                );
+
+            return (
+                input &&
+                input.value.replace(/\D/g, "")
+                    .length > 0
+            );
+        }).length;
+
+    const photos = [
+        "lpjTentPhoto",
+        "lpjActivityPhoto1",
+        "lpjActivityPhoto2"
+    ].filter(function (id) {
+        const input =
+            document.getElementById(id);
+
+        return (
+            input &&
+            input.files &&
+            input.files.length > 0
+        );
+    }).length;
+
+    content.innerHTML = `
+        <div class="rounded-xl border border-slate-200 bg-white p-3">
+            <p class="text-[11px] font-bold uppercase text-slate-400">
+                Database
+            </p>
+            <p class="mt-1 font-black text-slate-900">
+                ${actualDb}
+            </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-3">
+            <p class="text-[11px] font-bold uppercase text-slate-400">
+                Deal
+            </p>
+            <p class="mt-1 font-black text-slate-900">
+                ${actualDeal}
+            </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-3">
+            <p class="text-[11px] font-bold uppercase text-slate-400">
+                Unit Entry
+            </p>
+            <p class="mt-1 font-black text-slate-900">
+                ${actualUe}
+            </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-3">
+            <p class="text-[11px] font-bold uppercase text-slate-400">
+                Budget
+            </p>
+            <p class="mt-1 font-black text-slate-900">
+                ${filledBudget} / ${budgetRows.length} item terisi
+            </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-3">
+            <p class="text-[11px] font-bold uppercase text-slate-400">
+                Dokumentasi
+            </p>
+            <p class="mt-1 font-black text-slate-900">
+                ${photos} / 3 foto dipilih
+            </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-3">
+            <p class="text-[11px] font-bold uppercase text-slate-400">
+                Evaluasi
+            </p>
+            <p class="mt-1 font-black text-slate-900">
+                ${
+                    evaluation
+                        ? "Sudah diisi"
+                        : "Belum diisi"
+                }
+            </p>
+        </div>
+    `;
+
+    panel.classList.remove("hidden");
+
+    panel.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
 }
 
 async function finalizeLpj() {

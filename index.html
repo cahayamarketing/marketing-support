@@ -7589,15 +7589,101 @@
                 </div>
 
                 <div>
-                    <label for="lpjEvaluation" class="form-label">
-                        Evaluasi dan tindak lanjut
-                    </label>
+
+                    <div class="flex items-end justify-between gap-3">
+                        <div>
+                            <label
+                                for="lpjEvaluation"
+                                class="form-label"
+                            >
+                                Evaluasi dan tindak lanjut
+                            </label>
+
+                            <p class="mt-1 text-xs leading-5 text-slate-500">
+                                Tuliskan ringkasan hasil kegiatan, kendala yang ditemukan,
+                                dan tindak lanjut yang perlu dilakukan.
+                            </p>
+                        </div>
+
+                        <span
+                            id="lpjEvaluationCount"
+                            class="shrink-0 text-xs font-bold text-slate-400"
+                        >
+                            0 karakter
+                        </span>
+                    </div>
 
                     <textarea
                         id="lpjEvaluation"
-                        class="form-input min-h-32"
-                        placeholder="Tuliskan hasil kegiatan, kendala dan tindak lanjut..."
+                        class="form-input mt-3 min-h-36 resize-y"
+                        maxlength="1000"
+                        placeholder="Tuliskan evaluasi dan tindak lanjut kegiatan..."
                     ></textarea>
+
+                    <div class="mt-2 flex items-center justify-between gap-3">
+                        <span class="text-[11px] font-semibold text-slate-400">
+                            Maksimal 1000 karakter
+                        </span>
+
+                        <span
+                            id="lpjEvaluationStatus"
+                            class="text-[11px] font-bold text-slate-400"
+                        >
+                            Belum diisi
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div
+                id="lpjReviewPanel"
+                class="mx-6 mb-5 hidden rounded-2xl border border-amber-200 bg-amber-50 p-4"
+            >
+
+                <div class="flex items-start gap-3">
+
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                        ⚠
+                    </div>
+
+                    <div class="min-w-0">
+                        <h4 class="font-black text-slate-900">
+                            Periksa LPJ sebelum finalisasi
+                        </h4>
+
+                        <p class="mt-1 text-xs leading-5 text-slate-600">
+                            Pastikan data kegiatan, realisasi budget, dokumentasi,
+                            dan evaluasi sudah sesuai.
+                        </p>
+                    </div>
+
+                </div>
+
+                <div
+                    id="lpjReviewContent"
+                    class="mt-4 grid gap-3 sm:grid-cols-2"
+                ></div>
+
+                <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+
+                    <button
+                        id="lpjBackToEditButton"
+                        type="button"
+                        class="btn-secondary"
+                    >
+                        Kembali Edit
+                    </button>
+
+                    <button
+                        id="lpjConfirmFinalizeButton"
+                        type="button"
+                        class="btn-primary"
+                    >
+                        Konfirmasi & Finalisasi
+                    </button>
+
                 </div>
 
             </div>
