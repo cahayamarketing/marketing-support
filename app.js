@@ -12577,10 +12577,87 @@ function renderSelectedFocusTypes() {
         ).join("");
 }
 
+function updateAppBootstrapLoader(
+    percentage,
+    message
+) {
+    const loader =
+        document.getElementById(
+            "appBootstrapLoader"
+        );
+
+    const bar =
+        document.getElementById(
+            "appBootstrapBar"
+        );
+
+    const percent =
+        document.getElementById(
+            "appBootstrapPercent"
+        );
+
+    const messageElement =
+        document.getElementById(
+            "appBootstrapMessage"
+        );
+
+    if (
+        bar
+    ) {
+        bar.style.width =
+            `${percentage}%`;
+    }
+
+    if (
+        percent
+    ) {
+        percent.textContent =
+            `${percentage}%`;
+    }
+
+    if (
+        messageElement
+    ) {
+        messageElement.textContent =
+            message;
+    }
+
+    return loader;
+}
+
+
+function hideAppBootstrapLoader() {
+    const loader =
+        document.getElementById(
+            "appBootstrapLoader"
+        );
+
+    if (!loader) {
+        return;
+    }
+
+    loader.classList.add(
+        "is-hidden"
+    );
+
+    window.setTimeout(
+        function () {
+            loader.style.display =
+                "none";
+        },
+        500
+    );
+}
+
 function updateDashboardPreload(
     percentage,
     message
 ) {
+    updateAppBootstrapLoader(
+        percentage,
+        message
+    );
+
     document.getElementById(
         "dashboardPreloadPercent"
     ).textContent =
@@ -12672,13 +12749,13 @@ async function runDashboardPreload() {
 
     updateDashboardPreload(
         5,
-        "Memuat salesman..."
+        "Menyiapkan modul salesman..."
     );
 
     setDashboardPreloadItem(
         "preloadSalesman",
         "loading",
-        "Memuat data salesman"
+        "Menyiapkan modul salesman"
     );
 
     try {
@@ -12782,6 +12859,17 @@ async function runDashboardPreload() {
     updateDashboardPreload(
         100,
         "Aplikasi siap digunakan."
+    );
+
+    window.setTimeout(
+        function () {
+            hideAppBootstrapLoader();
+
+            panel.classList.add(
+                "hidden"
+            );
+        },
+        500
     );
 
     window.setTimeout(
