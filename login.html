@@ -80,6 +80,7 @@
                                 name="username"
                                 type="text"
                                 inputmode="numeric"
+                                pattern="[0-9]*"
                                 class="form-input"
                                 placeholder="Masukkan NIK"
                                 autocomplete="username"
@@ -112,6 +113,14 @@
                                     Lihat
                                 </button>
                             </div>
+
+                            <p
+                                id="capsLockHint"
+                                class="mt-2 hidden text-xs font-bold text-amber-600"
+                                aria-live="polite"
+                            >
+                                Caps Lock sedang aktif
+                            </p>
                         </div>
 
                         <div

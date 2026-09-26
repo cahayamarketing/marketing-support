@@ -18,6 +18,11 @@ const usernameInput =
 const passwordInput =
     document.getElementById("password");
 
+const capsLockHint =
+    document.getElementById(
+        "capsLockHint"
+    );
+
 const togglePasswordButton =
     document.getElementById(
         "togglePassword"
@@ -174,6 +179,46 @@ if (togglePasswordButton) {
         }
     );
 }
+
+usernameInput.addEventListener(
+    "input",
+    function () {
+        this.value =
+            this.value.replace(
+                /\D/g,
+                ""
+            );
+    }
+);
+
+function updateCapsLockHint(
+    event
+) {
+    if (!capsLockHint) {
+        return;
+    }
+
+    const capsLockActive =
+        event.getModifierState &&
+        event.getModifierState(
+            "CapsLock"
+        );
+
+    capsLockHint.classList.toggle(
+        "hidden",
+        !capsLockActive
+    );
+}
+
+passwordInput.addEventListener(
+    "keydown",
+    updateCapsLockHint
+);
+
+passwordInput.addEventListener(
+    "keyup",
+    updateCapsLockHint
+);
 
 
 function waitLoginRetry(milliseconds) {
