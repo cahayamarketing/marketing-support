@@ -8058,6 +8058,13 @@ function renderPkmTable() {
     |--------------------------------------------------------------------------
     | EVENT TOMBOL MOBILE
     |--------------------------------------------------------------------------
+    | Menggunakan event delegation agar aman untuk:
+    | - Android
+    | - DOM hasil innerHTML
+    | - filter
+    | - pagination
+    | - render ulang data
+    |--------------------------------------------------------------------------
     */
 
     const mobilePkmContainer =
@@ -8066,115 +8073,197 @@ function renderPkmTable() {
         );
 
 
-    if (mobilePkmContainer) {
+    if (
+        mobilePkmContainer &&
+        mobilePkmContainer.dataset.eventsBound !== "1"
+    ) {
 
-        /*
-        | PROSES
-        */
+        mobilePkmContainer.dataset.eventsBound = "1";
 
-        mobilePkmContainer
-            .querySelectorAll(
-                "[data-process-pkm]"
-            )
-            .forEach(function (button) {
 
-                button.addEventListener(
-                    "click",
-                    function () {
+        mobilePkmContainer.addEventListener(
+            "click",
+            async function (event) {
 
-                        openApprovalModal(
-                            button.dataset.processPkm
+                /*
+                |--------------------------------------------------------------
+                | PROSES PKM
+                |--------------------------------------------------------------
+                */
+
+                const processButton =
+                    event.target.closest(
+                        "[data-process-pkm]"
+                    );
+
+
+                if (
+                    processButton &&
+                    mobilePkmContainer.contains(
+                        processButton
+                    )
+                ) {
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+
+                    const pkmId =
+                        processButton.dataset
+                            .processPkm;
+
+
+                    if (!pkmId) {
+                        return;
+                    }
+
+
+                    /*
+                    | Cegah double tap pada Android
+                    */
+
+                    if (
+                        processButton.dataset.processing ===
+                        "1"
+                    ) {
+                        return;
+                    }
+
+
+                    processButton.dataset.processing =
+                        "1";
+
+
+                    try {
+
+                        await openApprovalModal(
+                            pkmId
                         );
 
-                    }
-                );
+                    } catch (error) {
 
-            });
+                        console.error(
+                            "Gagal membuka approval PKM:",
+                            error
+                        );
 
+                        showToast(
+                            error.message ||
+                            "Form approval gagal dibuka.",
+                            "error"
+                        );
 
-        /*
-        | PUSH DISCORD
-        */
+                    } finally {
 
-        mobilePkmContainer
-            .querySelectorAll(
-                "[data-push-discord]"
-            )
-            .forEach(function (button) {
-
-                button.addEventListener(
-                    "click",
-                    async function () {
-
-                        const pkmId =
-                            button.dataset
-                                .pushDiscord;
-
-                        const originalContent =
-                            button.innerHTML;
-
-
-                        const confirmed =
-                            window.confirm(
-                                "Kirim reminder PKM " +
-                                pkmId +
-                                " ke Discord?"
-                            );
-
-
-                        if (!confirmed) {
-                            return;
-                        }
-
-
-                        try {
-
-                            button.disabled = true;
-
-                            button.innerHTML = `
-                                <span class="ui-spinner ui-spinner-small"></span>
-                            `;
-
-
-                            const result =
-                                await requestBackend(
-                                    "pushPkmDiscordReminder",
-                                    {
-                                        pkmId: pkmId
-                                    }
-                                );
-
-
-                            showToast(
-                                result.message ||
-                                "Reminder Discord berhasil dikirim.",
-                                "success"
-                            );
-
-
-                        } catch (error) {
-
-                            showToast(
-                                getApiErrorMessage(
-                                    error
-                                ),
-                                "error"
-                            );
-
-
-                        } finally {
-
-                            button.disabled = false;
-
-                            button.innerHTML =
-                                originalContent;
-
-                        }
+                        processButton.dataset.processing =
+                            "0";
 
                     }
-                );
 
-            });
+                    return;
+                }
+
+
+                /*
+                |--------------------------------------------------------------
+                | PUSH DISCORD
+                |--------------------------------------------------------------
+                */
+
+                const discordButton =
+                    event.target.closest(
+                        "[data-push-discord]"
+                    );
+
+
+                if (
+                    discordButton &&
+                    mobilePkmContainer.contains(
+                        discordButton
+                    )
+                ) {
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+
+                    const pkmId =
+                        discordButton.dataset
+                            .pushDiscord;
+
+
+                    if (!pkmId) {
+                        return;
+                    }
+
+
+                    const originalContent =
+                        discordButton.innerHTML;
+
+
+                    const confirmed =
+                        window.confirm(
+                            "Kirim reminder PKM " +
+                            pkmId +
+                            " ke Discord?"
+                        );
+
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+
+                    try {
+
+                        discordButton.disabled =
+                            true;
+
+
+                        discordButton.innerHTML = `
+                            <span class="ui-spinner ui-spinner-small"></span>
+                        `;
+
+
+                        const result =
+                            await requestBackend(
+                                "pushPkmDiscordReminder",
+                                {
+                                    pkmId:
+                                        pkmId
+                                }
+                            );
+
+
+                        showToast(
+                            result.message ||
+                            "Reminder Discord berhasil dikirim.",
+                            "success"
+                        );
+
+                    } catch (error) {
+
+                        showToast(
+                            getApiErrorMessage(
+                                error
+                            ),
+                            "error"
+                        );
+
+                    } finally {
+
+                        discordButton.disabled =
+                            false;
+
+                        discordButton.innerHTML =
+                            originalContent;
+
+                    }
+
+                }
+
+            }
+        );
 
     }
 
