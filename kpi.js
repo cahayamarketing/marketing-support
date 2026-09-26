@@ -2122,11 +2122,11 @@ async function startCrmKpiInput(
     crmKpiVerifying = false;
 
     updateCrmKpiPeriodInformation(
-        ""
+        "DRAFT"
     );
 
     updateCrmKpiButtons(
-        ""
+        "DRAFT"
     );
 
     renderCrmKpiTable();
@@ -2135,7 +2135,7 @@ async function startCrmKpiInput(
 function startCrmKpiVerification() {
     if (!crmKpiWeek.value) {
         showToast(
-            "Pilih Week yang akan diverifikasi."
+            "Pilih periode KPI yang akan diverifikasi."
         );
 
         return;
@@ -2143,6 +2143,10 @@ function startCrmKpiVerification() {
 
     crmKpiEditing = false;
     crmKpiVerifying = true;
+
+    updateCrmKpiPeriodInformation(
+        "MENUNGGU VERIFIKASI MSCM"
+    );
 
     updateCrmKpiButtons(
         "MENUNGGU VERIFIKASI MSCM"
@@ -2347,7 +2351,17 @@ function collectCrmKpiTableValues(owner) {
 */
 
 async function saveCrmKpi() {
+    if (!crmKpiDirty) {
+        showToast(
+            "Belum ada perubahan yang perlu disimpan.",
+            "error"
+        );
+
+        return;
+    }
+
     collectCrmKpiTableValues("crm");
+
     const period =
         getSelectedCrmKpiPeriod();
 
@@ -2494,13 +2508,24 @@ async function verifyCrmKpi() {
 */
 
 function updateCrmKpiButtons(status) {
-    const weekSelected =
+    const periodSelected =
         Boolean(crmKpiWeek.value);
+    const dirtyBadge =
+        document.getElementById(
+            "crmKpiDirtyBadge"
+        );
+
+    if (dirtyBadge) {
+        dirtyBadge.classList.toggle(
+            "hidden",
+            !crmKpiDirty
+        );
+    }    
 
     newCrmKpiButton.classList.toggle(
         "hidden",
         !canInputCrmKpi() ||
-        !weekSelected ||
+        !periodSelected ||
         crmKpiEditing
     );
 
@@ -2509,10 +2534,23 @@ function updateCrmKpiButtons(status) {
         !crmKpiEditing
     );
 
+    saveCrmKpiButton.disabled =
+        !crmKpiDirty;
+
+    saveCrmKpiButton.classList.toggle(
+        "opacity-50",
+        !crmKpiDirty
+    );
+
+    saveCrmKpiButton.classList.toggle(
+        "cursor-not-allowed",
+        !crmKpiDirty
+    );
+
     verifyCrmKpiButton.classList.toggle(
         "hidden",
         !canVerifyCrmKpi() ||
-        !weekSelected ||
+        !periodSelected ||
         crmKpiVerifying ||
         status === "TERVERIFIKASI"
     );
@@ -2626,9 +2664,33 @@ function updateCrmKpiPeriodInformation(
                 .trim()
                 .toUpperCase();
 
-        statusElement.textContent =
+        let statusLabel =
             status ||
             "Belum ada data";
+
+        if (
+            currentStatus ===
+            "TERVERIFIKASI"
+        ) {
+            statusLabel =
+                "Terverifikasi";
+        } else if (
+            currentStatus.includes(
+                "MENUNGGU"
+            )
+        ) {
+            statusLabel =
+                "Menunggu Verifikasi";
+        } else if (
+            currentStatus ===
+            "DRAFT"
+        ) {
+            statusLabel =
+                "Draft";
+        }
+
+        statusElement.textContent =
+            statusLabel;
 
         let statusClass =
             "mt-2 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-xs font-black text-white";
@@ -3547,6 +3609,7 @@ function markCrmKpiDirty() {
         crmKpiVerifying
     ) {
         crmKpiDirty = true;
+        updateCrmKpiButtons("");
     }
 }
 

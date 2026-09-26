@@ -23,34 +23,19 @@ const togglePasswordButton =
         "togglePassword"
     );
 
-const forgotModal =
-    document.getElementById(
-        "forgotPasswordModal"
-    );
-
-const forgotMessage =
-    document.getElementById(
-        "forgotMessage"
-    );
-
-const forgotPasswordButton =
-    document.getElementById(
-        "forgotPasswordButton"
-    );
-
-const closeForgotModalButton =
-    document.getElementById(
-        "closeForgotModal"
-    );
-
-const forgotPasswordForm =
-    document.getElementById(
-        "forgotPasswordForm"
-    );
-
 const loginSubmitButton =
     document.getElementById(
         "loginSubmitButton"
+    );
+
+const loginTransition =
+    document.getElementById(
+        "loginTransition"
+    );
+
+const loginTransitionMessage =
+    document.getElementById(
+        "loginTransitionMessage"
     );
 
 
@@ -120,8 +105,8 @@ loginForm.addEventListener(
 
             setLoginLoading(
                 true,
-                "Menyiapkan dashboard..."
-            );    
+                "Login berhasil..."
+            );
 
             sessionStorage.setItem(
                 "sessionToken",
@@ -135,9 +120,23 @@ loginForm.addEventListener(
                 )
             );
 
+            showLoginTransition(
+                "Menyiapkan dashboard..."
+            );
+
+            await new Promise(
+                function (resolve) {
+                    window.setTimeout(
+                        resolve,
+                        900
+                    );
+                }
+            );
+
             window.location.replace(
                 "index.html"
             );
+            
         } catch (error) {
             showLoginMessage(
                 getApiErrorMessage(error)
@@ -176,58 +175,6 @@ if (togglePasswordButton) {
     );
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| MODAL LUPA PASSWORD
-|--------------------------------------------------------------------------
-*/
-
-if (
-    forgotPasswordButton &&
-    forgotModal
-) {
-    forgotPasswordButton.addEventListener(
-        "click",
-        function () {
-            forgotModal.classList.remove(
-                "hidden"
-            );
-
-            const forgotUsername =
-                document.getElementById(
-                    "forgotUsername"
-                );
-
-            if (forgotUsername) {
-                forgotUsername.focus();
-            }
-        }
-    );
-}
-
-
-if (closeForgotModalButton) {
-    closeForgotModalButton.addEventListener(
-        "click",
-        closeForgotModal
-    );
-}
-
-
-if (forgotModal) {
-    forgotModal.addEventListener(
-        "click",
-        function (event) {
-            if (
-                event.target ===
-                forgotModal
-            ) {
-                closeForgotModal();
-            }
-        }
-    );
-}
 
 function waitLoginRetry(milliseconds) {
     return new Promise(function (resolve) {
@@ -378,27 +325,6 @@ function hideLoginMessage() {
 }
 
 
-function closeForgotModal() {
-    if (!forgotModal) {
-        return;
-    }
-
-    forgotModal.classList.add(
-        "hidden"
-    );
-
-    if (forgotPasswordForm) {
-        forgotPasswordForm.reset();
-    }
-
-    if (forgotMessage) {
-        forgotMessage.textContent = "";
-
-        forgotMessage.classList.add(
-            "hidden"
-        );
-    }
-}
 
 function setLoginLoading(
     isLoading,
@@ -430,6 +356,30 @@ function setLoginLoading(
         "cursor-wait",
         "opacity-90"
     );
+}
+
+function showLoginTransition(
+    message = "Menyiapkan dashboard..."
+) {
+    if (
+        !loginTransition
+    ) {
+        return;
+    }
+
+    if (
+        loginTransitionMessage
+    ) {
+        loginTransitionMessage.textContent =
+            message;
+    }
+
+    loginTransition.classList.remove(
+        "hidden"
+    );
+
+    document.body.style.overflow =
+        "hidden";
 }
 
 /*
