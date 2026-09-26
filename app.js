@@ -3386,18 +3386,7 @@ document.addEventListener(
             wrapper &&
             !wrapper.contains(event.target)
         ) {
-            accountMenu.classList.add(
-                "hidden"
-            );
-
-            accountMenuButton.classList.remove(
-                "submenu-open"
-            );
-
-            accountMenuButton.setAttribute(
-                "aria-expanded",
-                "false"
-            );
+            setAccountMenuOpen(false);
         }
     }
 );
@@ -4075,10 +4064,10 @@ document.addEventListener("click", function (event) {
         document.querySelector(".people-picker");
 
     if (
-        wrapper &&
-        !wrapper.contains(event.target)
+        peoplePicker &&
+        !peoplePicker.contains(event.target)
     ) {
-        setAccountMenuOpen(false);
+        peopleSearchResults.classList.add("hidden");
     }
 });
 
