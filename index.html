@@ -492,23 +492,27 @@
                         from-red-700
                         via-red-600
                         to-red-800
-                        p-7
-                        shadow-[0_20px_50px_rgba(185,28,28,0.20)]
-                        md:p-8
+                        px-5
+                        py-6
+                        shadow-[0_18px_45px_rgba(185,28,28,0.18)]
+                        md:px-8
+                        md:py-8
                     "
                 >
-
-                    <!-- DECORATIVE ELEMENT -->
+                    <!-- DECORATION -->
                     <div
                         class="
                             pointer-events-none
                             absolute
-                            -right-20
-                            -top-24
-                            h-72 w-72
+                            -right-16
+                            -top-16
+                            h-40
+                            w-40
                             rounded-full
                             bg-white/10
                             blur-2xl
+                            md:h-56
+                            md:w-56
                         "
                     ></div>
 
@@ -516,83 +520,57 @@
                         class="
                             pointer-events-none
                             absolute
-                            -bottom-24
-                            right-20
-                            h-56 w-56
+                            bottom-[-70px]
+                            right-16
+                            hidden
+                            h-32
+                            w-32
                             rounded-full
-                            bg-red-300/10
-                            blur-3xl
-                        "
-                    ></div>
-
-                    <div
-                        class="
-                            pointer-events-none
-                            absolute
-                            right-10
-                            top-10
-                            h-20 w-20
-                            rounded-3xl
                             border
                             border-white/10
-                            bg-white/5
-                            rotate-12
+                            md:block
                         "
                     ></div>
 
+                    <div class="relative z-10 max-w-2xl">
 
-                    <!-- CONTENT -->
-                    <div class="relative z-10 max-w-3xl">
-
-                        <div
+                        <p
                             class="
-                                inline-flex
-                                items-center
-                                gap-2
-                                rounded-full
-                                bg-white/10
-                                px-3 py-1.5
-                                text-[11px]
+                                text-[10px]
                                 font-black
                                 uppercase
-                                tracking-[0.18em]
+                                tracking-[0.22em]
                                 text-red-100
-                                ring-1 ring-white/10
-                                backdrop-blur-sm
+                                md:text-xs
                             "
                         >
-                            <span
-                                class="h-1.5 w-1.5 rounded-full bg-emerald-300"
-                            ></span>
-
                             Marketing Activity
-                        </div>
-
+                        </p>
 
                         <h2
                             class="
-                                mt-4
-                                text-3xl
+                                mt-2
+                                text-2xl
                                 font-black
                                 leading-tight
-                                tracking-tight
                                 text-white
-                                md:text-4xl
+                                md:text-3xl
                             "
                         >
                             Selamat datang,
                             <span id="dashboardUserName"></span>
                         </h2>
 
-
                         <p
                             class="
-                                mt-3
-                                max-w-2xl
-                                text-sm
-                                leading-6
+                                mt-2
+                                max-w-xl
+                                text-xs
+                                leading-5
                                 text-red-100
-                                md:text-base
+                                md:mt-3
+                                md:text-sm
+                                md:leading-6
                             "
                         >
                             Pantau pengajuan dan status aktivitas pemasaran
@@ -600,39 +578,49 @@
                         </p>
 
                     </div>
-
                 </div>
 
                 <!-- DASHBOARD FILTER -->
                 <div
                     class="
-                        relative
-                        mt-6 overflow-visible
+                        mt-5
+                        overflow-hidden
                         rounded-3xl
-                        border border-slate-200
+                        border
+                        border-slate-200
                         bg-white
-                        shadow-[0_10px_35px_rgba(15,23,42,0.06)]
+                        shadow-sm
+                        md:mt-6
                     "
                 >
 
-                    <!-- FILTER HEADER -->
-                    <div
+                    <!-- MOBILE FILTER HEADER -->
+                    <button
+                        id="dashboardFilterToggle"
+                        type="button"
+                        aria-expanded="false"
                         class="
-                            flex flex-col gap-3
-                            border-b border-slate-100
-                            bg-gradient-to-r from-slate-50 via-white to-white
-                            px-5 py-4
-                            sm:flex-row sm:items-center sm:justify-between
+                            flex
+                            w-full
+                            items-center
+                            justify-between
+                            gap-4
+                            px-4
+                            py-4
+                            text-left
+                            md:hidden
                         "
                     >
+                        <div class="flex min-w-0 items-center gap-3">
 
-                        <div class="flex items-center gap-3">
-
-                            <!-- ICON -->
                             <div
                                 class="
-                                    flex h-11 w-11 shrink-0
-                                    items-center justify-center
+                                    flex
+                                    h-10
+                                    w-10
+                                    shrink-0
+                                    items-center
+                                    justify-center
                                     rounded-xl
                                     bg-red-50
                                     text-red-600
@@ -646,7 +634,6 @@
                                     stroke-width="2"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
-                                    aria-hidden="true"
                                 >
                                     <path d="M4 6h16"/>
                                     <path d="M7 12h10"/>
@@ -654,178 +641,120 @@
                                 </svg>
                             </div>
 
-                            <div>
-                                <h3 class="text-sm font-black text-slate-900">
-                                    Filter Data
-                                </h3>
+                            <div class="min-w-0">
+                                <p class="text-sm font-black text-slate-900">
+                                    Filter Dashboard
+                                </p>
 
-                                <p class="mt-0.5 text-xs font-medium text-slate-500">
-                                    Atur parameter untuk menampilkan data dashboard
+                                <p class="truncate text-[11px] font-medium text-slate-500">
+                                    Periode, jenis PKM, dan cabang
                                 </p>
                             </div>
 
                         </div>
 
-                        <div
+                        <svg
+                            id="dashboardFilterChevron"
                             class="
-                                inline-flex w-fit
-                                items-center gap-2
-                                rounded-full
-                                bg-slate-100
-                                px-3 py-1.5
-                                text-[11px] font-bold
+                                h-5
+                                w-5
+                                shrink-0
                                 text-slate-500
+                                transition-transform
+                                duration-200
                             "
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                         >
-                            <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                            Filter dashboard
-                        </div>
-
-                    </div>
+                            <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                    </button>
 
 
-                    <!-- FILTER BODY -->
-                    <div class="p-5">
+                    <!-- FILTER CONTENT -->
+                    <div
+                        id="dashboardFilterContent"
+                        class="
+                            hidden
+                            border-t
+                            border-slate-100
+                            p-4
+                            md:block
+                            md:border-t-0
+                            md:p-5
+                        "
+                    >
 
                         <div
                             class="
-                                grid gap-4
-                                sm:grid-cols-2
-                                xl:grid-cols-4
+                                flex
+                                flex-col
+                                gap-4
+                                xl:flex-row
+                                xl:items-end
                             "
                         >
 
-                            <!-- TANGGAL AWAL -->
-                            <div>
+                            <div
+                                class="
+                                    grid
+                                    flex-1
+                                    gap-4
+                                    sm:grid-cols-2
+                                    xl:grid-cols-4
+                                "
+                            >
 
-                                <label
-                                    for="dashboardStartDate"
-                                    class="
-                                        mb-2 block
-                                        text-xs
-                                        font-black
-                                        uppercase
-                                        tracking-wide
-                                        text-slate-500
-                                    "
-                                >
-                                    Tanggal pelaksanaan awal
-                                </label>
-
-                                <div class="relative">
+                                <!-- TANGGAL AWAL -->
+                                <div>
+                                    <label
+                                        for="dashboardStartDate"
+                                        class="form-label"
+                                    >
+                                        Tanggal pelaksanaan awal
+                                    </label>
 
                                     <input
                                         id="dashboardStartDate"
                                         type="date"
-                                        class="
-                                            h-12 w-full
-                                            rounded-xl
-                                            border border-slate-200
-                                            bg-white
-                                            px-4
-                                            text-sm font-semibold
-                                            text-slate-700
-                                            shadow-sm
-                                            outline-none
-                                            transition-all duration-200
-                                            hover:border-slate-300
-                                            hover:shadow-md
-                                            focus:border-red-500
-                                            focus:ring-4
-                                            focus:ring-red-500/10
-                                        "
+                                        class="form-input"
                                     >
-
                                 </div>
 
-                            </div>
 
-
-                            <!-- TANGGAL AKHIR -->
-                            <div>
-
-                                <label
-                                    for="dashboardEndDate"
-                                    class="
-                                        mb-2 block
-                                        text-xs
-                                        font-black
-                                        uppercase
-                                        tracking-wide
-                                        text-slate-500
-                                    "
-                                >
-                                    Tanggal pelaksanaan akhir
-                                </label>
-
-                                <div class="relative">
+                                <!-- TANGGAL AKHIR -->
+                                <div>
+                                    <label
+                                        for="dashboardEndDate"
+                                        class="form-label"
+                                    >
+                                        Tanggal pelaksanaan akhir
+                                    </label>
 
                                     <input
                                         id="dashboardEndDate"
                                         type="date"
-                                        class="
-                                            h-12 w-full
-                                            rounded-xl
-                                            border border-slate-200
-                                            bg-white
-                                            px-4
-                                            text-sm font-semibold
-                                            text-slate-700
-                                            shadow-sm
-                                            outline-none
-                                            transition-all duration-200
-                                            hover:border-slate-300
-                                            hover:shadow-md
-                                            focus:border-red-500
-                                            focus:ring-4
-                                            focus:ring-red-500/10
-                                        "
+                                        class="form-input"
                                     >
-
                                 </div>
 
-                            </div>
 
-
-                            <!-- JENIS PKM -->
-                            <div>
-
-                                <label
-                                    for="dashboardJenisPkm"
-                                    class="
-                                        mb-2 block
-                                        text-xs
-                                        font-black
-                                        uppercase
-                                        tracking-wide
-                                        text-slate-500
-                                    "
-                                >
-                                    Jenis PKM
-                                </label>
-
-                                <div class="relative">
+                                <!-- JENIS PKM -->
+                                <div>
+                                    <label
+                                        for="dashboardJenisPkm"
+                                        class="form-label"
+                                    >
+                                        Jenis PKM
+                                    </label>
 
                                     <select
                                         id="dashboardJenisPkm"
-                                        class="
-                                            h-12 w-full
-                                            appearance-none
-                                            rounded-xl
-                                            border border-slate-200
-                                            bg-white
-                                            px-4 pr-11
-                                            text-sm font-semibold
-                                            text-slate-700
-                                            shadow-sm
-                                            outline-none
-                                            transition-all duration-200
-                                            hover:border-red-300
-                                            hover:shadow-md
-                                            focus:border-red-500
-                                            focus:ring-4
-                                            focus:ring-red-500/10
-                                        "
+                                        class="form-input"
                                     >
                                         <option value="ALL">
                                             Semua jenis PKM
@@ -847,184 +776,107 @@
                                             BTL DEALER
                                         </option>
                                     </select>
+                                </div>
 
-                                    <!-- CUSTOM CHEVRON -->
-                                    <div
-                                        class="
-                                            pointer-events-none
-                                            absolute inset-y-0 right-0
-                                            flex w-11
-                                            items-center justify-center
-                                            text-slate-400
-                                        "
-                                    >
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2.5"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        >
-                                            <path d="m6 9 6 6 6-6"/>
-                                        </svg>
-                                    </div>
+
+                                <!-- CABANG -->
+                                <div id="dashboardBranchFilterContainer">
+
+                                    <label class="form-label">
+                                        Cabang
+                                    </label>
+
+                                    <div id="dashboardBranchFilter"></div>
 
                                 </div>
 
                             </div>
 
 
-                            <!-- CABANG -->
-                            <div id="dashboardBranchFilterContainer">
-
-                                <label
-                                    class="
-                                        mb-2 block
-                                        text-xs
-                                        font-black
-                                        uppercase
-                                        tracking-wide
-                                        text-slate-500
-                                    "
-                                >
-                                    Cabang
-                                </label>
-
-                                <div
-                                    id="dashboardBranchFilter"
-                                    class="
-                                        min-h-12
-                                        [&>button]:h-12
-                                        [&>button]:w-full
-                                        [&>button]:rounded-xl
-                                    "
-                                ></div>
-
-                            </div>
-
-                        </div>
-
-
-                        <!-- FOOTER FILTER -->
-                        <div
-                            class="
-                                mt-5
-                                flex flex-col gap-3
-                                border-t border-slate-100
-                                pt-4
-                                sm:flex-row
-                                sm:items-center
-                                sm:justify-between
-                            "
-                        >
-
-                            <p
-                                id="dashboardFilterInfo"
-                                class="
-                                    text-xs
-                                    font-semibold
-                                    text-slate-500
-                                "
-                            ></p>
-
+                            <!-- APPLY -->
                             <button
                                 id="applyDashboardFilter"
                                 type="button"
                                 class="
-                                    inline-flex
-                                    h-11
-                                    w-full sm:w-auto
-                                    items-center
-                                    justify-center
-                                    gap-2
-                                    rounded-xl
-                                    bg-red-600
-                                    px-5
-                                    text-sm
-                                    font-black
-                                    text-white
-                                    shadow-lg
-                                    shadow-red-600/20
-                                    transition-all
-                                    duration-200
-                                    hover:-translate-y-0.5
-                                    hover:bg-red-700
-                                    hover:shadow-xl
-                                    active:translate-y-0
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-50
+                                    btn-primary
+                                    min-h-[48px]
+                                    w-full
+                                    xl:w-auto
+                                    xl:min-w-[150px]
                                 "
                             >
-                                <svg
-                                    class="h-4 w-4"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path d="m21 21-4.35-4.35"/>
-                                    <circle cx="11" cy="11" r="6"/>
-                                </svg>
-
-                                Terapkan Filter
+                                Terapkan filter
                             </button>
 
                         </div>
 
                     </div>
 
+
+                    <!-- FILTER INFO -->
+                    <div
+                        class="
+                            border-t
+                            border-slate-100
+                            bg-slate-50/70
+                            px-4
+                            py-3
+                            md:px-5
+                        "
+                    >
+                        <p
+                            id="dashboardFilterInfo"
+                            class="
+                                text-[11px]
+                                font-bold
+                                leading-5
+                                text-slate-500
+                            "
+                        ></p>
+                    </div>
+
                 </div>
 
-                <!-- STATISTIK DASHBOARD -->
-                <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <!-- KPI SUMMARY -->
+                <div
+                    class="
+                        mt-5
+                        grid
+                        gap-3
+                        sm:grid-cols-2
+                        xl:mt-6
+                        xl:grid-cols-4
+                        xl:gap-5
+                    "
+                >
 
-                    <!-- TOTAL PENGAJUAN -->
+                    <!-- TOTAL -->
                     <article
                         class="
-                            group relative overflow-hidden
+                            relative
+                            overflow-hidden
                             rounded-2xl
-                            border border-slate-200
+                            border
+                            border-slate-200
                             bg-white
-                            p-5
+                            p-4
                             shadow-sm
-                            transition-all duration-300
-                            hover:-translate-y-1
-                            hover:shadow-xl
+                            md:rounded-3xl
+                            md:p-5
                         "
                     >
 
-                        <!-- ACCENT -->
-                        <div
-                            class="
-                                absolute inset-x-0 top-0 h-1
-                                bg-red-500
-                            "
-                        ></div>
+                        <div class="flex items-start justify-between gap-3">
 
-                        <div class="flex items-start justify-between gap-4">
-
-                            <div class="min-w-0">
-
-                                <p
-                                    class="
-                                        text-[11px]
-                                        font-black
-                                        uppercase
-                                        tracking-[0.12em]
-                                        text-slate-400
-                                    "
-                                >
-                                    Total pengajuan
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                    Total Pengajuan
                                 </p>
 
                                 <p
                                     id="totalSubmission"
                                     class="
-                                        mt-3
+                                        mt-2
                                         text-3xl
                                         font-black
                                         tracking-tight
@@ -1034,93 +886,59 @@
                                     0
                                 </p>
 
-                                <p
-                                    class="
-                                        mt-1
-                                        text-xs
-                                        font-semibold
-                                        text-slate-400
-                                    "
-                                >
+                                <p class="mt-1 text-[11px] font-medium text-slate-500">
                                     Data cabang login
                                 </p>
-
                             </div>
 
                             <div
                                 class="
-                                    flex h-11 w-11 shrink-0
-                                    items-center justify-center
+                                    flex
+                                    h-10
+                                    w-10
+                                    shrink-0
+                                    items-center
+                                    justify-center
                                     rounded-xl
-                                    bg-red-50
-                                    text-red-600
-                                    transition-transform duration-300
-                                    group-hover:scale-110
+                                    bg-slate-100
+                                    text-slate-700
                                 "
                             >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path d="M9 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>
-                                    <path d="M9 3h6a2 2 0 0 1 2 2v2H7V5a2 2 0 0 1 2-2Z"/>
-                                    <path d="M8 13h8"/>
-                                    <path d="M8 17h5"/>
-                                    <path d="m17 15 2 2 4-4"/>
-                                </svg>
+                                <span class="text-lg">📋</span>
                             </div>
 
                         </div>
+
                     </article>
 
 
-                    <!-- MENUNGGU -->
+                    <!-- PENDING -->
                     <article
                         class="
-                            group relative overflow-hidden
+                            relative
+                            overflow-hidden
                             rounded-2xl
-                            border border-slate-200
+                            border
+                            border-amber-100
                             bg-white
-                            p-5
+                            p-4
                             shadow-sm
-                            transition-all duration-300
-                            hover:-translate-y-1
-                            hover:shadow-xl
+                            md:rounded-3xl
+                            md:p-5
                         "
                     >
 
-                        <div
-                            class="
-                                absolute inset-x-0 top-0 h-1
-                                bg-amber-400
-                            "
-                        ></div>
+                        <div class="flex items-start justify-between gap-3">
 
-                        <div class="flex items-start justify-between gap-4">
-
-                            <div class="min-w-0">
-
-                                <p
-                                    class="
-                                        text-[11px]
-                                        font-black
-                                        uppercase
-                                        tracking-[0.12em]
-                                        text-slate-400
-                                    "
-                                >
-                                    Menunggu persetujuan
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                    Menunggu
                                 </p>
 
                                 <p
                                     id="pendingSubmission"
                                     class="
-                                        mt-3
+                                        mt-2
                                         text-3xl
                                         font-black
                                         tracking-tight
@@ -1130,90 +948,59 @@
                                     0
                                 </p>
 
-                                <p
-                                    class="
-                                        mt-1
-                                        text-xs
-                                        font-semibold
-                                        text-slate-400
-                                    "
-                                >
+                                <p class="mt-1 text-[11px] font-medium text-slate-500">
                                     Perlu ditindaklanjuti
                                 </p>
-
                             </div>
 
                             <div
                                 class="
-                                    flex h-11 w-11 shrink-0
-                                    items-center justify-center
+                                    flex
+                                    h-10
+                                    w-10
+                                    shrink-0
+                                    items-center
+                                    justify-center
                                     rounded-xl
                                     bg-amber-50
                                     text-amber-600
-                                    transition-transform duration-300
-                                    group-hover:scale-110
                                 "
                             >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <circle cx="12" cy="12" r="9"/>
-                                    <path d="M12 7v5l3 2"/>
-                                </svg>
+                                <span class="text-lg">⏳</span>
                             </div>
 
                         </div>
+
                     </article>
 
 
-                    <!-- DISETUJUI -->
+                    <!-- APPROVED -->
                     <article
                         class="
-                            group relative overflow-hidden
+                            relative
+                            overflow-hidden
                             rounded-2xl
-                            border border-slate-200
+                            border
+                            border-emerald-100
                             bg-white
-                            p-5
+                            p-4
                             shadow-sm
-                            transition-all duration-300
-                            hover:-translate-y-1
-                            hover:shadow-xl
+                            md:rounded-3xl
+                            md:p-5
                         "
                     >
 
-                        <div
-                            class="
-                                absolute inset-x-0 top-0 h-1
-                                bg-emerald-500
-                            "
-                        ></div>
+                        <div class="flex items-start justify-between gap-3">
 
-                        <div class="flex items-start justify-between gap-4">
-
-                            <div class="min-w-0">
-
-                                <p
-                                    class="
-                                        text-[11px]
-                                        font-black
-                                        uppercase
-                                        tracking-[0.12em]
-                                        text-slate-400
-                                    "
-                                >
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">
                                     Disetujui
                                 </p>
 
                                 <p
                                     id="approvedSubmission"
                                     class="
-                                        mt-3
+                                        mt-2
                                         text-3xl
                                         font-black
                                         tracking-tight
@@ -1223,131 +1010,72 @@
                                     0
                                 </p>
 
-                                <p
-                                    class="
-                                        mt-1
-                                        text-xs
-                                        font-semibold
-                                        text-slate-400
-                                    "
-                                >
+                                <p class="mt-1 text-[11px] font-medium text-slate-500">
                                     Pengajuan berstatus ACC
                                 </p>
-
                             </div>
 
                             <div
                                 class="
-                                    flex h-11 w-11 shrink-0
-                                    items-center justify-center
+                                    flex
+                                    h-10
+                                    w-10
+                                    shrink-0
+                                    items-center
+                                    justify-center
                                     rounded-xl
                                     bg-emerald-50
                                     text-emerald-600
-                                    transition-transform duration-300
-                                    group-hover:scale-110
                                 "
                             >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path d="m5 12 4 4L19 6"/>
-                                </svg>
+                                <span class="text-lg">✓</span>
                             </div>
 
                         </div>
+
                     </article>
 
 
-                    <!-- TOTAL DANA -->
+                    <!-- FUND -->
                     <article
                         class="
-                            group relative overflow-hidden
+                            relative
+                            overflow-hidden
                             rounded-2xl
-                            border border-red-100
-                            bg-gradient-to-br
-                            from-red-600
-                            via-red-600
-                            to-red-700
-                            p-5
-                            text-white
-                            shadow-lg
-                            shadow-red-600/15
-                            transition-all duration-300
-                            hover:-translate-y-1
-                            hover:shadow-2xl
-                            hover:shadow-red-600/20
+                            border
+                            border-red-100
+                            bg-white
+                            p-4
+                            shadow-sm
+                            md:rounded-3xl
+                            md:p-5
                         "
                     >
 
-                        <!-- DECORATIVE CIRCLE -->
-                        <div
-                            class="
-                                pointer-events-none
-                                absolute
-                                -right-8
-                                -top-8
-                                h-28 w-28
-                                rounded-full
-                                bg-white/10
-                                blur-sm
-                            "
-                        ></div>
-
-                        <div
-                            class="
-                                pointer-events-none
-                                absolute
-                                -bottom-12
-                                right-8
-                                h-24 w-24
-                                rounded-full
-                                bg-white/5
-                            "
-                        ></div>
-
-                        <div class="relative flex items-start justify-between gap-4">
+                        <div class="flex items-start justify-between gap-3">
 
                             <div class="min-w-0">
 
-                                <p
-                                    class="
-                                        text-[11px]
-                                        font-black
-                                        uppercase
-                                        tracking-[0.12em]
-                                        text-red-100
-                                    "
-                                >
-                                    Total dana
+                                <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                    Total Dana
                                 </p>
 
                                 <p
                                     id="totalFund"
                                     class="
-                                        mt-3
+                                        mt-2
+                                        truncate
                                         text-2xl
                                         font-black
                                         tracking-tight
-                                        text-white
+                                        text-red-600
+                                        md:text-3xl
                                     "
                                 >
                                     Rp0
                                 </p>
 
-                                <p
-                                    class="
-                                        mt-1
-                                        text-xs
-                                        font-semibold
-                                        text-red-100
-                                    "
-                                >
+                                <p class="mt-1 text-[11px] font-medium text-slate-500">
                                     Akumulasi pengajuan
                                 </p>
 
@@ -1355,37 +1083,260 @@
 
                             <div
                                 class="
-                                    flex h-11 w-11 shrink-0
-                                    items-center justify-center
+                                    flex
+                                    h-10
+                                    w-10
+                                    shrink-0
+                                    items-center
+                                    justify-center
                                     rounded-xl
-                                    bg-white/15
-                                    text-white
-                                    ring-1 ring-white/10
-                                    backdrop-blur-sm
-                                    transition-transform duration-300
-                                    group-hover:scale-110
+                                    bg-red-50
+                                    text-red-600
                                 "
                             >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                    <path d="M7 10h.01"/>
-                                    <path d="M7 14h.01"/>
-                                    <path d="M17 10h.01"/>
-                                    <path d="M17 14h.01"/>
-                                    <path d="M12 10v4"/>
-                                </svg>
+                                <span class="text-lg">💰</span>
                             </div>
 
                         </div>
+
                     </article>
+
+                </div>
+
+                <!-- STATUS + QUICK ACTION -->
+                <div class="mt-5 grid gap-5 xl:grid-cols-[1.4fr_0.6fr]">
+
+                    <!-- STATUS -->
+                    <section
+                        class="
+                            rounded-3xl
+                            border
+                            border-slate-200
+                            bg-white
+                            p-5
+                            shadow-sm
+                        "
+                    >
+
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-red-600">
+                                Monitoring
+                            </p>
+
+                            <h3 class="mt-1 text-lg font-black text-slate-900">
+                                Status Pengajuan
+                            </h3>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                Komposisi status dari data yang sedang ditampilkan.
+                            </p>
+                        </div>
+
+
+                        <div class="mt-5 space-y-4">
+
+                            <!-- APPROVED -->
+                            <div>
+
+                                <div class="mb-2 flex items-center justify-between gap-3">
+                                    <span class="text-xs font-bold text-slate-700">
+                                        Disetujui
+                                    </span>
+
+                                    <span
+                                        id="approvedProgressText"
+                                        class="text-xs font-black text-emerald-600"
+                                    >
+                                        0
+                                    </span>
+                                </div>
+
+                                <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                                    <div
+                                        id="approvedProgressBar"
+                                        class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                                        style="width: 0%;"
+                                    ></div>
+                                </div>
+
+                            </div>
+
+
+                            <!-- PENDING -->
+                            <div>
+
+                                <div class="mb-2 flex items-center justify-between gap-3">
+                                    <span class="text-xs font-bold text-slate-700">
+                                        Menunggu
+                                    </span>
+
+                                    <span
+                                        id="pendingProgressText"
+                                        class="text-xs font-black text-amber-500"
+                                    >
+                                        0
+                                    </span>
+                                </div>
+
+                                <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                                    <div
+                                        id="pendingProgressBar"
+                                        class="h-full rounded-full bg-amber-400 transition-all duration-500"
+                                        style="width: 0%;"
+                                    ></div>
+                                </div>
+
+                            </div>
+
+
+                            <!-- REJECTED -->
+                            <div>
+
+                                <div class="mb-2 flex items-center justify-between gap-3">
+                                    <span class="text-xs font-bold text-slate-700">
+                                        Ditolak
+                                    </span>
+
+                                    <span
+                                        id="rejectedProgressText"
+                                        class="text-xs font-black text-red-600"
+                                    >
+                                        0
+                                    </span>
+                                </div>
+
+                                <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                                    <div
+                                        id="rejectedProgressBar"
+                                        class="h-full rounded-full bg-red-500 transition-all duration-500"
+                                        style="width: 0%;"
+                                    ></div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- QUICK ACTION -->
+                    <section
+                        class="
+                            rounded-3xl
+                            border
+                            border-slate-200
+                            bg-white
+                            p-5
+                            shadow-sm
+                        "
+                    >
+
+                        <p class="text-[10px] font-black uppercase tracking-[0.18em] text-red-600">
+                            Quick Action
+                        </p>
+
+                        <h3 class="mt-1 text-lg font-black text-slate-900">
+                            Akses cepat
+                        </h3>
+
+                        <div class="mt-4 grid grid-cols-2 gap-3">
+
+                            <button
+                                type="button"
+                                data-page="pengajuanPage"
+                                class="
+                                    rounded-2xl
+                                    border
+                                    border-red-100
+                                    bg-red-50
+                                    px-3
+                                    py-4
+                                    text-left
+                                    transition
+                                    hover:border-red-200
+                                    hover:bg-red-100
+                                "
+                            >
+                                <span class="text-lg">＋</span>
+
+                                <span class="mt-2 block text-xs font-black text-red-700">
+                                    Ajukan PKM
+                                </span>
+                            </button>
+
+
+                            <button
+                                type="button"
+                                data-page="listPkmPage"
+                                class="
+                                    rounded-2xl
+                                    border
+                                    border-slate-200
+                                    bg-slate-50
+                                    px-3
+                                    py-4
+                                    text-left
+                                    transition
+                                    hover:bg-slate-100
+                                "
+                            >
+                                <span class="text-lg">📋</span>
+
+                                <span class="mt-2 block text-xs font-black text-slate-700">
+                                    List PKM
+                                </span>
+                            </button>
+
+
+                            <button
+                                type="button"
+                                data-page="crmKpiPage"
+                                class="
+                                    rounded-2xl
+                                    border
+                                    border-slate-200
+                                    bg-slate-50
+                                    px-3
+                                    py-4
+                                    text-left
+                                    transition
+                                    hover:bg-slate-100
+                                "
+                            >
+                                <span class="text-lg">📊</span>
+
+                                <span class="mt-2 block text-xs font-black text-slate-700">
+                                    KPI CRM
+                                </span>
+                            </button>
+
+
+                            <button
+                                type="button"
+                                data-page="listPkmPage"
+                                class="
+                                    rounded-2xl
+                                    border
+                                    border-slate-200
+                                    bg-slate-50
+                                    px-3
+                                    py-4
+                                    text-left
+                                    transition
+                                    hover:bg-slate-100
+                                "
+                            >
+                                <span class="text-lg">🔎</span>
+
+                                <span class="mt-2 block text-xs font-black text-slate-700">
+                                    Monitoring
+                                </span>
+                            </button>
+
+                        </div>
+
+                    </section>
 
                 </div>
 

@@ -6174,23 +6174,140 @@ function renderDashboard() {
         );
     }).length;
 
+    const rejected = data.filter(function (item) {
+        const normalizedStatus =
+            String(item.status || "")
+                .toUpperCase();
+
+        return (
+            normalizedStatus.includes("DITOLAK") ||
+            normalizedStatus.includes("REJECT")
+        );
+    }).length;
+
     const totalFund = data.reduce(function (total, item) {
         return total + (Number(item.totalFund) || 0);
     }, 0);
 
-    document.getElementById("totalSubmission").textContent =
+    const total =
         data.length;
 
-    document.getElementById("pendingSubmission").textContent =
+    document.getElementById(
+        "totalSubmission"
+    ).textContent =
+        total;
+
+    document.getElementById(
+        "pendingSubmission"
+    ).textContent =
         pending;
 
-    document.getElementById("approvedSubmission").textContent =
+    document.getElementById(
+        "approvedSubmission"
+    ).textContent =
         approved;
 
-    document.getElementById("totalFund").textContent =
+    document.getElementById(
+        "totalFund"
+    ).textContent =
         rupiah(totalFund);
 
-    renderRecentPkm(data.slice(0, 5));
+
+    /*
+    |------------------------------------------------------------------
+    | PROGRESS STATUS
+    |------------------------------------------------------------------
+    */
+
+    const approvedPercentage =
+        total > 0
+            ? Math.round(
+                (approved / total) * 100
+            )
+            : 0;
+
+    const pendingPercentage =
+        total > 0
+            ? Math.round(
+                (pending / total) * 100
+            )
+            : 0;
+
+    const rejectedPercentage =
+        total > 0
+            ? Math.round(
+                (rejected / total) * 100
+            )
+            : 0;
+
+
+    const approvedBar =
+        document.getElementById(
+            "approvedProgressBar"
+        );
+
+    const pendingBar =
+        document.getElementById(
+            "pendingProgressBar"
+        );
+
+    const rejectedBar =
+        document.getElementById(
+            "rejectedProgressBar"
+        );
+
+
+    if (approvedBar) {
+        approvedBar.style.width =
+            `${approvedPercentage}%`;
+    }
+
+    if (pendingBar) {
+        pendingBar.style.width =
+            `${pendingPercentage}%`;
+    }
+
+    if (rejectedBar) {
+        rejectedBar.style.width =
+            `${rejectedPercentage}%`;
+    }
+
+
+    const approvedText =
+        document.getElementById(
+            "approvedProgressText"
+        );
+
+    const pendingText =
+        document.getElementById(
+            "pendingProgressText"
+        );
+
+    const rejectedText =
+        document.getElementById(
+            "rejectedProgressText"
+        );
+
+
+    if (approvedText) {
+        approvedText.textContent =
+            `${approved} • ${approvedPercentage}%`;
+    }
+
+    if (pendingText) {
+        pendingText.textContent =
+            `${pending} • ${pendingPercentage}%`;
+    }
+
+    if (rejectedText) {
+        rejectedText.textContent =
+            `${rejected} • ${rejectedPercentage}%`;
+    }
+
+
+    renderRecentPkm(
+        data.slice(0, 5)
+    );
 }
 
 function renderRecentPkm(data) {
@@ -10055,6 +10172,65 @@ document
             renderPkmTable();
         }
     );
+
+/*
+|--------------------------------------------------------------------------
+| TOGGLE FILTER DASHBOARD MOBILE
+|--------------------------------------------------------------------------
+*/
+
+const dashboardFilterToggle =
+    document.getElementById(
+        "dashboardFilterToggle"
+    );
+
+const dashboardFilterContent =
+    document.getElementById(
+        "dashboardFilterContent"
+    );
+
+const dashboardFilterChevron =
+    document.getElementById(
+        "dashboardFilterChevron"
+    );
+
+if (
+    dashboardFilterToggle &&
+    dashboardFilterContent
+) {
+    dashboardFilterToggle.addEventListener(
+        "click",
+        function () {
+
+            const isHidden =
+                dashboardFilterContent
+                    .classList
+                    .contains("hidden");
+
+            dashboardFilterContent
+                .classList
+                .toggle(
+                    "hidden",
+                    !isHidden
+                );
+
+            dashboardFilterToggle
+                .setAttribute(
+                    "aria-expanded",
+                    String(isHidden)
+                );
+
+            if (dashboardFilterChevron) {
+                dashboardFilterChevron
+                    .classList
+                    .toggle(
+                        "rotate-180",
+                        isHidden
+                    );
+            }
+        }
+    );
+}
 
 document
     .getElementById("applyDashboardFilter")
