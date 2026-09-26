@@ -3695,10 +3695,10 @@ function showPage(pageId) {
         }
 
         if (
-            typeof window.crmKpiDiscardUnsavedChanges ===
+            typeof window["crmKpiDiscardUnsavedChanges"] ===
                 "function"
         ) {
-            window["crmKpiDiscardUnsavedChanges"]()
+            window["crmKpiDiscardUnsavedChanges"]();
         }
     }
 

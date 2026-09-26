@@ -2688,6 +2688,17 @@ function updateCrmKpiPeriodInformation(
             badgeClass;
     }
 
+    if (
+        !periodLabel ||
+        !information
+    ) {
+        console.warn(
+            "Elemen KPI CRM untuk informasi periode tidak ditemukan."
+        );
+
+        return;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | BELUM ADA PERIODE
