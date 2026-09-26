@@ -8689,16 +8689,38 @@ async function approvePkmWithSignature() {
 
             /*
             |--------------------------------------------------------------------------
-            | MANAGER DISCORD FINAL
+            | MANAGER FINAL EXTERNAL
             |--------------------------------------------------------------------------
+            | Setelah approval tersimpan:
+            | - browser TIDAK membuat PDF
+            | - browser TIDAK butuh pdfSessionToken
+            | - PDF akan diproses otomatis oleh worker GAS
             */
 
             if (
-                !result.pdfSessionToken
+                isFinalDiscordManager
             ) {
-                throw new Error(
-                    "Approval Manager berhasil, tetapi session PDF tidak tersedia."
+                approvalModalMode =
+                    "APPROVAL";
+
+                pendingCrmSubmission =
+                    null;
+
+                pendingCrmSubmissionSaved =
+                    false;
+
+                closeApprovalModal(
+                    true
                 );
+
+                hideDiscordApprovalLoading();
+
+                showToast(
+                    "Approval Manager berhasil. PDF final akan diproses otomatis.",
+                    "success"
+                );
+
+                return;
             }
 
 
@@ -8722,9 +8744,6 @@ async function approvePkmWithSignature() {
             |--------------------------------------------------------------------------
             */
 
-            sessionToken =
-                result.pdfSessionToken;
-
             sessionStorage.setItem(
                 "sessionToken",
                 sessionToken
@@ -8743,16 +8762,6 @@ async function approvePkmWithSignature() {
                 updateDiscordApprovalLoading(
                     "Mengambil data PDF final..."
                 );
-
-
-                /*
-                | Fungsi yang SAMA dengan
-                | approval Manager normal.
-                */
-                await window
-                    .createAndStorePkmPdf(
-                        item.id
-                    );
 
 
                 pdfSaved =
