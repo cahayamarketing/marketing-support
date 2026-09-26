@@ -5714,16 +5714,60 @@ pkmForm.addEventListener("submit", async function (event) {
         return;
     }
 
+    const today =
+        getTodayLocalDate();
+
+    const tanggalMulai =
+        document.getElementById("tanggalMulai").value;
+
+    const tanggalSelesai =
+        document.getElementById("tanggalSelesai").value;
+
+
+    /*
+    |-------------------------------------------------------------
+    | FINAL CHECK TANGGAL MULAI
+    |-------------------------------------------------------------
+    */
+
     if (
-        new Date(endDate).getTime() <
-        new Date(startDate).getTime()
+        tanggalMulai &&
+        tanggalMulai < today
     ) {
         showToast(
-            "Waktu selesai tidak boleh sebelum waktu mulai."
+            "Tanggal mulai tidak boleh sebelum hari ini."
         );
 
         return;
     }
+
+
+    /*
+    |-------------------------------------------------------------
+    | FINAL CHECK TANGGAL SELESAI
+    |-------------------------------------------------------------
+    */
+
+    const startTime =
+        new Date(startDate).getTime();
+
+    const endTime =
+        new Date(endDate).getTime();
+
+    const minimumEndTime =
+        startTime + (60 * 1000);
+
+
+    if (
+        endTime < minimumEndTime
+    ) {
+
+        showToast(
+            "Tanggal dan jam selesai harus minimal 1 menit setelah waktu mulai."
+        );
+
+        return;
+}
 
     const focusType =
         selectedValues(".focus-type");
@@ -6155,8 +6199,59 @@ function renderRecentPkm(data) {
 
     if (!data.length) {
         container.innerHTML = `
-            <div class="empty-state">
-                Belum ada pengajuan dari cabang ini.
+            <div
+                class="
+                    flex
+                    flex-col
+                    items-center
+                    justify-center
+                    rounded-3xl
+                    border
+                    border-dashed
+                    border-slate-300
+                    bg-slate-50
+                    px-6
+                    py-10
+                    text-center
+                "
+            >
+                <div
+                    class="
+                        mb-3
+                        flex
+                        h-12
+                        w-12
+                        items-center
+                        justify-center
+                        rounded-2xl
+                        bg-white
+                        text-xl
+                        shadow-sm
+                    "
+                >
+                    📋
+                </div>
+
+                <p
+                    class="
+                        text-sm
+                        font-black
+                        text-slate-800
+                    "
+                >
+                    Belum ada pengajuan
+                </p>
+
+                <p
+                    class="
+                        mt-1
+                        text-xs
+                        font-medium
+                        text-slate-500
+                    "
+                >
+                    Belum ada pengajuan dari cabang ini.
+                </p>
             </div>
         `;
 
@@ -6164,7 +6259,11 @@ function renderRecentPkm(data) {
     }
 
     container.innerHTML = `
-        <div class="overflow-x-auto">
+        <!-- ========================================================= -->
+        <!-- DESKTOP TABLE -->
+        <!-- ========================================================= -->
+
+        <div class="hidden overflow-x-auto md:block">
 
             <table class="data-table">
 
@@ -6178,15 +6277,28 @@ function renderRecentPkm(data) {
                 </thead>
 
                 <tbody>
+
                     ${data.map(function (item) {
+
                         return `
                             <tr>
+
                                 <td>
-                                    <p class="font-bold text-slate-900">
+                                    <p
+                                        class="
+                                            font-bold
+                                            text-slate-900
+                                        "
+                                    >
                                         ${escapeHtml(item.name)}
                                     </p>
 
-                                    <p class="text-xs text-slate-500">
+                                    <p
+                                        class="
+                                            text-xs
+                                            text-slate-500
+                                        "
+                                    >
                                         ${escapeHtml(item.id)}
                                     </p>
                                 </td>
@@ -6202,17 +6314,202 @@ function renderRecentPkm(data) {
                                 <td>
                                     ${statusBadge(item.status)}
                                 </td>
+
                             </tr>
                         `;
+
                     }).join("")}
+
                 </tbody>
 
             </table>
 
         </div>
+
+
+        <!-- ========================================================= -->
+        <!-- MOBILE CARD -->
+        <!-- ========================================================= -->
+
+        <div class="space-y-3 md:hidden">
+
+            ${data.map(function (item) {
+
+                return `
+                    <article
+                        class="
+                            overflow-hidden
+                            rounded-2xl
+                            border
+                            border-slate-200
+                            bg-white
+                            shadow-sm
+                            transition
+                            duration-200
+                        "
+                    >
+
+                        <!-- TOP -->
+                        <div
+                            class="
+                                border-b
+                                border-slate-100
+                                px-4
+                                py-4
+                            "
+                        >
+
+                            <div
+                                class="
+                                    flex
+                                    items-start
+                                    justify-between
+                                    gap-3
+                                "
+                            >
+
+                                <div
+                                    class="
+                                        min-w-0
+                                        flex-1
+                                    "
+                                >
+
+                                    <p
+                                        class="
+                                            truncate
+                                            text-[14px]
+                                            font-black
+                                            leading-5
+                                            text-slate-900
+                                        "
+                                    >
+                                        ${escapeHtml(item.name)}
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            truncate
+                                            text-[11px]
+                                            font-medium
+                                            text-slate-400
+                                        "
+                                    >
+                                        ${escapeHtml(item.id)}
+                                    </p>
+
+                                </div>
+
+                                <div class="shrink-0">
+                                    ${statusBadge(item.status)}
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- INFORMATION -->
+                        <div
+                            class="
+                                grid
+                                grid-cols-2
+                                gap-3
+                                px-4
+                                py-4
+                            "
+                        >
+
+                            <!-- JENIS -->
+                            <div
+                                class="
+                                    min-w-0
+                                    rounded-xl
+                                    bg-slate-50
+                                    px-3
+                                    py-2.5
+                                "
+                            >
+
+                                <p
+                                    class="
+                                        text-[10px]
+                                        font-bold
+                                        uppercase
+                                        tracking-wide
+                                        text-slate-400
+                                    "
+                                >
+                                    Jenis PKM
+                                </p>
+
+                                <p
+                                    class="
+                                        mt-1
+                                        truncate
+                                        text-xs
+                                        font-black
+                                        text-slate-700
+                                    "
+                                >
+                                    ${escapeHtml(
+                                        item.jenisPkm || "-"
+                                    )}
+                                </p>
+
+                            </div>
+
+
+                            <!-- TANGGAL -->
+                            <div
+                                class="
+                                    min-w-0
+                                    rounded-xl
+                                    bg-slate-50
+                                    px-3
+                                    py-2.5
+                                "
+                            >
+
+                                <p
+                                    class="
+                                        text-[10px]
+                                        font-bold
+                                        uppercase
+                                        tracking-wide
+                                        text-slate-400
+                                    "
+                                >
+                                    Pelaksanaan
+                                </p>
+
+                                <p
+                                    class="
+                                        mt-1
+                                        text-xs
+                                        font-black
+                                        leading-5
+                                        text-slate-700
+                                    "
+                                >
+                                    ${formatDateTime(
+                                        item.startDate
+                                    )}
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </article>
+                `;
+
+            }).join("")}
+
+        </div>
     `;
 }
-
 /*
 |--------------------------------------------------------------------------
 | BADGE
@@ -9227,6 +9524,216 @@ const submitButtonIcon =
 const submitButtonText =
     document.getElementById("submitButtonText");
 
+/* =========================================================
+   VALIDASI TANGGAL PKM
+   ========================================================= */
+
+const tanggalMulaiInput =
+    document.getElementById("tanggalMulai");
+
+const tanggalSelesaiInput =
+    document.getElementById("tanggalSelesai");
+
+
+function getTodayLocalDate() {
+    const today = new Date();
+
+    const year = today.getFullYear();
+
+    const month = String(
+        today.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+        today.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+
+function updateDateConstraints() {
+    if (
+        !tanggalMulaiInput ||
+        !tanggalSelesaiInput
+    ) {
+        return;
+    }
+
+    /*
+    |---------------------------------------------------------
+    | TANGGAL MULAI
+    | Tidak boleh sebelum hari ini
+    |---------------------------------------------------------
+    */
+
+    const today =
+        getTodayLocalDate();
+
+    tanggalMulaiInput.min =
+        today;
+
+
+    /*
+    |---------------------------------------------------------
+    | TANGGAL SELESAI
+    | Minimal tanggal yang sama dengan tanggal mulai
+    |
+    | Validasi 1 menit dilakukan berdasarkan
+    | gabungan tanggal + jam di bawah.
+    |---------------------------------------------------------
+    */
+
+    const tanggalMulai =
+        tanggalMulaiInput.value;
+
+    if (tanggalMulai) {
+
+        tanggalSelesaiInput.min =
+            tanggalMulai;
+
+    } else {
+
+        tanggalSelesaiInput.min =
+            today;
+
+    }
+
+
+    /*
+    |---------------------------------------------------------
+    | CUSTOM VALIDATION
+    |---------------------------------------------------------
+    */
+
+    tanggalMulaiInput.setCustomValidity("");
+    tanggalSelesaiInput.setCustomValidity("");
+
+
+    /*
+    | Tanggal mulai harus >= hari ini
+    */
+
+    if (
+        tanggalMulai &&
+        tanggalMulai < today
+    ) {
+
+        tanggalMulaiInput.setCustomValidity(
+            "Tanggal mulai tidak boleh sebelum hari ini."
+        );
+
+    }
+
+
+    const tanggalSelesai =
+        tanggalSelesaiInput.value;
+
+    const jamMulai =
+        document.getElementById("jamMulai").value;
+
+    const jamSelesai =
+        document.getElementById("jamSelesai").value;
+
+
+    /*
+    |---------------------------------------------------------
+    | SELESAI MINIMAL 1 MENIT SETELAH MULAI
+    |---------------------------------------------------------
+    */
+
+    const startDateTime =
+        combineDateTime(
+            tanggalMulai,
+            jamMulai
+        );
+
+    const endDateTime =
+        combineDateTime(
+            tanggalSelesai,
+            jamSelesai
+        );
+
+
+    if (
+        startDateTime &&
+        endDateTime
+    ) {
+
+        const startTime =
+            new Date(startDateTime).getTime();
+
+        const endTime =
+            new Date(endDateTime).getTime();
+
+        const minimumEndTime =
+            startTime + (60 * 1000);
+
+
+        if (
+            endTime < minimumEndTime
+        ) {
+
+            tanggalSelesaiInput.setCustomValidity(
+                "Tanggal dan jam selesai harus minimal 1 menit setelah waktu mulai."
+            );
+
+        }
+
+    }
+}
+
+
+/*
+|-------------------------------------------------------------
+| EVENT TANGGAL
+|-------------------------------------------------------------
+*/
+
+tanggalMulaiInput.addEventListener(
+    "input",
+    function () {
+        updateDateConstraints();
+        validateFormState();
+    }
+);
+
+
+tanggalMulaiInput.addEventListener(
+    "change",
+    function () {
+        updateDateConstraints();
+        validateFormState();
+    }
+);
+
+
+tanggalSelesaiInput.addEventListener(
+    "input",
+    function () {
+        updateDateConstraints();
+        validateFormState();
+    }
+);
+
+
+tanggalSelesaiInput.addEventListener(
+    "change",
+    function () {
+        updateDateConstraints();
+        validateFormState();
+    }
+);
+
+
+/*
+|-------------------------------------------------------------
+| INITIAL STATE
+|-------------------------------------------------------------
+*/
+
+updateDateConstraints();
+
 function getMissingFields() {
     const missingFields = [];
 
@@ -9379,12 +9886,41 @@ function getMissingFields() {
         document.getElementById("jamSelesai").value
     );
 
+    const today =
+        getTodayLocalDate();
+
+    const tanggalMulai =
+        document.getElementById("tanggalMulai").value;
+
+    const tanggalSelesai =
+        document.getElementById("tanggalSelesai").value;
+
     if (
         startDate &&
         endDate &&
-        new Date(endDate).getTime() < new Date(startDate).getTime()
+        new Date(endDate).getTime() <
+            new Date(startDate).getTime() +
+                (60 * 1000)
     ) {
-        missingFields.push("Waktu selesai yang valid");
+        missingFields.push(
+            "Waktu selesai minimal 1 menit setelah waktu mulai"
+        );
+    }
+
+
+    /*
+    |-------------------------------------------------------------
+    | TANGGAL MULAI TIDAK BOLEH SEBELUM HARI INI
+    |-------------------------------------------------------------
+    */
+
+    if (
+        tanggalMulai &&
+        tanggalMulai < today
+    ) {
+        missingFields.push(
+            "Tanggal mulai tidak boleh sebelum hari ini"
+        );
     }
 
     /*
