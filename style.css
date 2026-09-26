@@ -1261,6 +1261,74 @@ body.modal-open {
     background: #16a34a;
 }
 
+/* ============================================================
+   APPROVAL TIMELINE MOBILE
+   ============================================================ */
+
+@media (max-width: 640px) {
+
+    #approvalModal .space-y-6 {
+        padding: 1rem;
+    }
+
+    #approvalModalFlow {
+        overflow-x: visible;
+    }
+
+    #approvalModalFlow > div {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+    }
+
+    .approval-flow-item {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        width: 100%;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 0;
+        text-align: left;
+    }
+
+    .approval-flow-circle {
+        width: 32px;
+        height: 32px;
+        margin: 0;
+        flex: 0 0 32px;
+        font-size: 11px;
+    }
+
+    .approval-flow-line {
+        width: 2px;
+        height: 20px;
+        margin: 0 0 0 15px;
+        flex-shrink: 0;
+        background: #cbd5e1;
+    }
+
+    .approval-flow-line.completed {
+        background: #16a34a;
+    }
+
+    .approval-flow-item .whitespace-nowrap {
+        white-space: normal;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .approval-flow-item.active {
+        margin: 2px 0;
+        padding: 9px 10px;
+        border-radius: 14px;
+        background: #fef2f2;
+    }
+
+}
+
 /*
 |--------------------------------------------------------------------------
 | PEMISAH HALAMAN
@@ -1286,6 +1354,44 @@ body.modal-open {
 
 #approvalModal {
     overscroll-behavior: contain;
+}
+
+/* ============================================================
+   APPROVAL MODAL MOBILE POLISH
+   ============================================================ */
+
+@media (max-width: 640px) {
+
+    #approvalModal > div {
+        padding: 10px;
+    }
+
+    #approvalModal > div > div {
+        max-height: 96vh;
+        border-radius: 22px;
+    }
+
+    #approvalModal .sticky.top-0 {
+        padding: 16px;
+    }
+
+    #approvalModal .sticky.top-0 h2 {
+        font-size: 17px;
+        line-height: 1.35;
+    }
+
+    #approvalModal .sticky.top-0 p {
+        line-height: 1.4;
+    }
+
+    #approvalModal .sticky.bottom-0 {
+        padding: 12px 16px;
+    }
+
+    #approvalModal .sticky.bottom-0 button {
+        width: 100%;
+    }
+
 }
 
 #profileSignatureCanvas {
