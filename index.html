@@ -4136,88 +4136,161 @@
                     <!-- DETAIL BUDGET -->
                     <!-- ================================================= -->
 
-                    <div class="form-section">
-                            <div class="section-heading">
-                                <span class="section-number">8</span>
+                    <section
+                        class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]"
+                    >
 
-                                <div>
-                                    <h2>Detail budget</h2>
+                        <!-- HEADER -->
+                        <div
+                            class="flex items-center gap-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-white px-5 py-5 sm:px-6"
+                        >
 
-                                    <p>
-                                        Masukkan rincian penggunaan dana kegiatan.
-                                        Realisasi dan dokumentasi dilengkapi melalui LPJ.
-                                    </p>
-                                </div>
+                            <div
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-sm font-black text-white shadow-lg shadow-red-600/20"
+                            >
+                                08
                             </div>
 
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                                    <div>
+                            <div class="min-w-0">
+
+                                <p
+                                    class="text-[11px] font-black uppercase tracking-[0.16em] text-red-600"
+                                >
+                                    Rincian pembiayaan
+                                </p>
+
+                                <h2 class="mt-0.5 text-lg font-black text-slate-900 sm:text-xl">
+                                    Detail budget
+                                </h2>
+
+                                <p class="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+                                    Masukkan rincian penggunaan dana kegiatan.
+                                    Realisasi dan dokumentasi dilengkapi melalui LPJ.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- BODY -->
+                        <div class="space-y-5 p-5 sm:p-6">
+
+
+                            <!-- ================================================= -->
+                            <!-- INPUT ITEM -->
+                            <!-- ================================================= -->
+
+                            <div
+                                class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                            >
+
+                                <div class="mb-4">
+
+                                    <p
+                                        class="text-xs font-black uppercase tracking-[0.08em] text-slate-500"
+                                    >
+                                        Tambah item budget
+                                    </p>
+
+                                    <p class="mt-1 text-xs text-slate-400">
+                                        Tambahkan rincian penggunaan dana satu per satu.
+                                    </p>
+
+                                </div>
+
+
+                                <div class="grid gap-4 lg:grid-cols-12">
+
+                                    <!-- NAMA ITEM -->
+                                    <div class="lg:col-span-4">
+
                                         <label
-                                            class="form-label"
                                             for="budgetItemName"
+                                            class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500"
                                         >
                                             Nama item
                                         </label>
 
                                         <input
                                             id="budgetItemName"
-                                            class="form-input"
+                                            class="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                                             type="text"
                                             placeholder="Contoh: Banner kegiatan"
                                         >
+
                                     </div>
 
-                                    <div>
+
+                                    <!-- HARGA TOTAL -->
+                                    <div class="lg:col-span-3">
+
                                         <label
-                                            class="form-label"
                                             for="budgetTotalPrice"
+                                            class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500"
                                         >
                                             Harga total
                                         </label>
 
-                                        <div class="input-currency">
+                                        <div
+                                            class="flex h-12 overflow-hidden rounded-xl border border-slate-200 bg-white transition-all focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10"
+                                        >
+
+                                            <span
+                                                class="flex items-center bg-slate-50 px-3 text-xs font-black text-slate-500"
+                                            >
+                                                Rp
+                                            </span>
 
                                             <input
                                                 id="budgetTotalPrice"
-                                                class="form-input"
+                                                class="min-w-0 flex-1 border-0 bg-white px-3 text-sm font-bold text-slate-700 outline-none placeholder:text-slate-300"
                                                 type="text"
                                                 inputmode="numeric"
-                                                placeholder="Contoh: 150000"
+                                                placeholder="150000"
                                                 autocomplete="off"
                                             >
+
                                         </div>
+
                                     </div>
 
-                                    <div>
+
+                                    <!-- QTY -->
+                                    <div class="lg:col-span-2">
+
                                         <label
-                                            class="form-label"
                                             for="budgetQuantity"
+                                            class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500"
                                         >
-                                            Jumlah (qty)
+                                            Jumlah
                                         </label>
 
                                         <input
                                             id="budgetQuantity"
-                                            class="form-input"
+                                            class="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                                             type="number"
                                             min="1"
                                             step="1"
                                             value="1"
                                         >
+
                                     </div>
 
-                                    <div>
+
+                                    <!-- JENIS ITEM -->
+                                    <div class="lg:col-span-3">
+
                                         <label
-                                            class="form-label"
                                             for="budgetItemType"
+                                            class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500"
                                         >
                                             Jenis item
                                         </label>
 
                                         <input
                                             id="budgetItemType"
-                                            class="form-input"
+                                            class="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                                             type="text"
                                             list="budgetItemTypeOptions"
                                             placeholder="Pilih atau ketik jenis"
@@ -4232,198 +4305,680 @@
                                             <option value="TRANSPORTASI"></option>
                                             <option value="LAIN-LAIN"></option>
                                         </datalist>
+
                                     </div>
+
                                 </div>
 
-                                <div class="mt-4 flex flex-wrap justify-end gap-3">
+
+                                <!-- ACTION -->
+                                <div
+                                    class="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"
+                                >
+
                                     <button
                                         id="cancelBudgetEditButton"
-                                        class="hidden rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-600 hover:bg-slate-100"
+                                        class="hidden h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-100"
                                         type="button"
                                     >
                                         Batal edit
                                     </button>
 
+
                                     <button
                                         id="addBudgetDetailButton"
-                                        class="btn-primary"
+                                        class="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-md"
                                         type="button"
                                     >
-                                        + Tambah item
+                                        <span class="mr-2 text-base">
+                                            +
+                                        </span>
+
+                                        Tambah item
                                     </button>
+
                                 </div>
+
                             </div>
 
-                            <!-- Tabel detail budget -->
 
-                            <div class="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
-                                <table class="data-table min-w-[850px]">
-                                    <thead>
-                                        <tr>
-                                            <th class="w-12">No.</th>
-                                            <th>Nama item</th>
-                                            <th>Jenis item</th>
-                                            <th class="text-center">Qty</th>
-                                            <th class="text-right">Harga total</th>
-                                            <th class="w-32 text-center">Aksi</th>
-                                        </tr>
-                                    </thead>
+                            <!-- ================================================= -->
+                            <!-- TABLE -->
+                            <!-- ================================================= -->
 
-                                    <tbody id="budgetDetailTableBody"></tbody>
-                                </table>
+                            <div
+                                class="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                            >
 
+                                <!-- TABLE HEADER -->
+                                <div
+                                    class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                >
+
+                                    <div>
+
+                                        <p class="text-sm font-black text-slate-800">
+                                            Daftar detail budget
+                                        </p>
+
+                                        <p class="mt-0.5 text-[11px] font-medium text-slate-400">
+                                            Setiap item akan masuk ke rincian pengajuan.
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- TABLE -->
+                                <div class="overflow-x-auto">
+
+                                    <table
+                                        class="w-full min-w-[850px] border-collapse"
+                                    >
+
+                                        <thead>
+
+                                            <tr class="bg-white">
+
+                                                <th
+                                                    class="border-b border-slate-200 px-4 py-3 text-left text-[10px] font-black uppercase tracking-wide text-slate-400"
+                                                >
+                                                    No.
+                                                </th>
+
+                                                <th
+                                                    class="border-b border-slate-200 px-4 py-3 text-left text-[10px] font-black uppercase tracking-wide text-slate-400"
+                                                >
+                                                    Nama item
+                                                </th>
+
+                                                <th
+                                                    class="border-b border-slate-200 px-4 py-3 text-left text-[10px] font-black uppercase tracking-wide text-slate-400"
+                                                >
+                                                    Jenis item
+                                                </th>
+
+                                                <th
+                                                    class="border-b border-slate-200 px-4 py-3 text-center text-[10px] font-black uppercase tracking-wide text-slate-400"
+                                                >
+                                                    Qty
+                                                </th>
+
+                                                <th
+                                                    class="border-b border-slate-200 px-4 py-3 text-right text-[10px] font-black uppercase tracking-wide text-slate-400"
+                                                >
+                                                    Harga total
+                                                </th>
+
+                                                <th
+                                                    class="border-b border-slate-200 px-4 py-3 text-center text-[10px] font-black uppercase tracking-wide text-slate-400"
+                                                >
+                                                    Aksi
+                                                </th>
+
+                                            </tr>
+
+                                        </thead>
+
+
+                                        <tbody id="budgetDetailTableBody"></tbody>
+
+                                    </table>
+
+                                </div>
+
+
+                                <!-- EMPTY -->
                                 <div
                                     id="emptyBudgetDetail"
-                                    class="px-5 py-10 text-center text-sm text-slate-500"
+                                    class="px-5 py-12 text-center"
                                 >
-                                    Belum ada detail budget.
+
+                                    <div
+                                        class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"
+                                    >
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-5 w-5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <rect
+                                                x="4"
+                                                y="4"
+                                                width="16"
+                                                height="16"
+                                                rx="2"
+                                            />
+
+                                            <path
+                                                stroke-linecap="round"
+                                                d="M8 9h8M8 13h6M8 17h4"
+                                            />
+                                        </svg>
+                                    </div>
+
+                                    <p class="mt-3 text-sm font-black text-slate-700">
+                                        Belum ada detail budget
+                                    </p>
+
+                                    <p class="mt-1 text-xs text-slate-400">
+                                        Tambahkan item menggunakan form di atas.
+                                    </p>
+
                                 </div>
+
                             </div>
 
-                            <!-- Ringkasan detail budget -->
 
-                            <div class="mt-4 grid gap-3 md:grid-cols-3">
-                                <div class="rounded-xl bg-slate-100 p-4">
-                                    <p class="text-xs font-bold uppercase text-slate-500">
-                                        Total detail budget
-                                    </p>
+                            <!-- ================================================= -->
+                            <!-- SUMMARY -->
+                            <!-- ================================================= -->
 
-                                    <p
-                                        id="budgetDetailTotalDisplay"
-                                        class="mt-1 text-lg font-black text-slate-900"
-                                    >
-                                        Rp0
-                                    </p>
-                                </div>
+                            <div>
 
-                                <div class="rounded-xl bg-slate-100 p-4">
-                                    <p class="text-xs font-bold uppercase text-slate-500">
-                                        Total sumber dana
-                                    </p>
+                                <div class="mb-3">
 
                                     <p
-                                        id="budgetFundTotalDisplay"
-                                        class="mt-1 text-lg font-black text-slate-900"
+                                        class="text-xs font-black uppercase tracking-[0.08em] text-slate-500"
                                     >
-                                        Rp0
+                                        Rekap budget
                                     </p>
+
+                                    <p class="mt-1 text-xs text-slate-400">
+                                        Total detail harus sama dengan total sumber dana.
+                                    </p>
+
                                 </div>
 
+
+                                <div class="grid gap-3 md:grid-cols-3">
+
+
+                                    <!-- DETAIL -->
+                                    <div
+                                        class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                                    >
+
+                                        <p
+                                            class="text-[10px] font-black uppercase tracking-wide text-slate-400"
+                                        >
+                                            Total detail budget
+                                        </p>
+
+                                        <p
+                                            id="budgetDetailTotalDisplay"
+                                            class="mt-2 text-xl font-black tracking-tight text-slate-900"
+                                        >
+                                            Rp0
+                                        </p>
+
+                                    </div>
+
+
+                                    <!-- FUND -->
+                                    <div
+                                        class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                                    >
+
+                                        <p
+                                            class="text-[10px] font-black uppercase tracking-wide text-slate-400"
+                                        >
+                                            Total sumber dana
+                                        </p>
+
+                                        <p
+                                            id="budgetFundTotalDisplay"
+                                            class="mt-2 text-xl font-black tracking-tight text-slate-900"
+                                        >
+                                            Rp0
+                                        </p>
+
+                                    </div>
+
+
+                                    <!-- DIFFERENCE -->
+                                    <div
+                                        id="budgetDifferenceBox"
+                                        class="rounded-2xl bg-amber-50 p-4"
+                                    >
+
+                                        <p
+                                            class="text-[10px] font-black uppercase tracking-wide text-amber-700"
+                                        >
+                                            Selisih
+                                        </p>
+
+                                        <p
+                                            id="budgetDifferenceDisplay"
+                                            class="mt-2 text-xl font-black tracking-tight text-amber-700"
+                                        >
+                                            Rp0
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- MESSAGE -->
                                 <div
-                                    id="budgetDifferenceBox"
-                                    class="rounded-xl bg-amber-50 p-4"
+                                    class="mt-3 flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3"
                                 >
-                                    <p class="text-xs font-bold uppercase text-amber-700">
-                                        Selisih
-                                    </p>
+
+                                    <div
+                                        class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-amber-600 shadow-sm"
+                                    >
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-3.5 w-3.5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <circle
+                                                cx="12"
+                                                cy="12"
+                                                r="9"
+                                            />
+
+                                            <path
+                                                stroke-linecap="round"
+                                                d="M12 8v4m0 4h.01"
+                                            />
+                                        </svg>
+                                    </div>
 
                                     <p
-                                        id="budgetDifferenceDisplay"
-                                        class="mt-1 text-lg font-black text-amber-700"
+                                        id="budgetDetailMessage"
+                                        class="text-xs font-bold leading-5 text-amber-700"
                                     >
-                                        Rp0
+                                        Total detail budget harus sama dengan total sumber dana.
                                     </p>
+
                                 </div>
+
                             </div>
 
-                            <p
-                                id="budgetDetailMessage"
-                                class="mt-3 text-sm font-bold text-amber-600"
-                            >
-                                Total detail budget harus sama dengan total sumber dana.
-                            </p>
-                    </div>                    
+                        </div>
+
+                    </section>                 
                     
 
                     <!-- TARGET -->
-                    <div class="form-section">
+                    <section
+                        class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]"
+                    >
 
-                        <div class="section-heading">
-                            <span class="section-number">9</span>
+                        <!-- HEADER -->
+                        <div
+                            class="flex items-center gap-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-white px-5 py-5 sm:px-6"
+                        >
 
-                            <div>
-                                <h2>Target kegiatan</h2>
-                                <p>Masukkan target DB, deal, dan unit entry.</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-5 md:grid-cols-3">
-
-                            <div>
-                                <label for="targetDb" class="form-label">
-                                    Target DB
-                                </label>
-
-                                <input
-                                    id="targetDb"
-                                    class="form-input"
-                                    type="number"
-                                    min="0"
-                                    value="0"
-                                >
+                            <div
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-sm font-black text-white shadow-lg shadow-red-600/20"
+                            >
+                                09
                             </div>
 
-                            <div>
-                                <label for="targetDeal" class="form-label">
-                                    Target deal
-                                </label>
+                            <div class="min-w-0">
 
-                                <input
-                                    id="targetDeal"
-                                    class="form-input"
-                                    type="number"
-                                    min="0"
-                                    value="0"
+                                <p
+                                    class="text-[11px] font-black uppercase tracking-[0.16em] text-red-600"
                                 >
-                            </div>
+                                    Target kegiatan
+                                </p>
 
-                            <div id="targetUeContainer" class="hidden">
-                                <label for="targetUe" class="form-label">
-                                    Target UE
-                                </label>
+                                <h2 class="mt-0.5 text-lg font-black text-slate-900 sm:text-xl">
+                                    Target kegiatan
+                                </h2>
 
-                                <input
-                                    id="targetUe"
-                                    class="form-input"
-                                    type="number"
-                                    min="0"
-                                    value="0"
-                                >
+                                <p class="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+                                    Masukkan target DB, deal, dan unit entry sesuai kebutuhan kegiatan.
+                                </p>
+
                             </div>
 
                         </div>
-                    </div>
+
+
+                        <!-- BODY -->
+                        <div class="p-5 sm:p-6">
+
+                            <div class="grid gap-3 md:grid-cols-3">
+
+
+                                <!-- TARGET DB -->
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all duration-200 hover:border-red-200 hover:bg-white hover:shadow-sm"
+                                >
+
+                                    <div class="flex items-start justify-between gap-3">
+
+                                        <div>
+
+                                            <p
+                                                class="text-[10px] font-black uppercase tracking-[0.12em] text-red-600"
+                                            >
+                                                Target
+                                            </p>
+
+                                            <label
+                                                for="targetDb"
+                                                class="mt-1 block text-sm font-black text-slate-800"
+                                            >
+                                                DB
+                                            </label>
+
+                                            <p class="mt-0.5 text-[11px] text-slate-400">
+                                                Database / prospect
+                                            </p>
+
+                                        </div>
+
+
+                                        <div
+                                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-xs font-black text-red-600"
+                                        >
+                                            DB
+                                        </div>
+
+                                    </div>
+
+
+                                    <div
+                                        class="mt-4 flex h-12 overflow-hidden rounded-xl border border-slate-200 bg-white transition-all focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10"
+                                    >
+
+                                        <input
+                                            id="targetDb"
+                                            type="number"
+                                            min="0"
+                                            value="0"
+                                            class="min-w-0 flex-1 border-0 bg-white px-4 text-lg font-black text-slate-800 outline-none placeholder:text-slate-300"
+                                        >
+
+                                        <span
+                                            class="flex items-center border-l border-slate-100 bg-slate-50 px-3 text-xs font-bold text-slate-400"
+                                        >
+                                            unit
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- TARGET DEAL -->
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all duration-200 hover:border-blue-200 hover:bg-white hover:shadow-sm"
+                                >
+
+                                    <div class="flex items-start justify-between gap-3">
+
+                                        <div>
+
+                                            <p
+                                                class="text-[10px] font-black uppercase tracking-[0.12em] text-blue-600"
+                                            >
+                                                Target
+                                            </p>
+
+                                            <label
+                                                for="targetDeal"
+                                                class="mt-1 block text-sm font-black text-slate-800"
+                                            >
+                                                Deal
+                                            </label>
+
+                                            <p class="mt-0.5 text-[11px] text-slate-400">
+                                                Target transaksi
+                                            </p>
+
+                                        </div>
+
+
+                                        <div
+                                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-black text-blue-600"
+                                        >
+                                            D
+                                        </div>
+
+                                    </div>
+
+
+                                    <div
+                                        class="mt-4 flex h-12 overflow-hidden rounded-xl border border-slate-200 bg-white transition-all focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10"
+                                    >
+
+                                        <input
+                                            id="targetDeal"
+                                            type="number"
+                                            min="0"
+                                            value="0"
+                                            class="min-w-0 flex-1 border-0 bg-white px-4 text-lg font-black text-slate-800 outline-none placeholder:text-slate-300"
+                                        >
+
+                                        <span
+                                            class="flex items-center border-l border-slate-100 bg-slate-50 px-3 text-xs font-bold text-slate-400"
+                                        >
+                                            unit
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- TARGET UE -->
+                                <div
+                                    id="targetUeContainer"
+                                    class="hidden rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all duration-200 hover:border-emerald-200 hover:bg-white hover:shadow-sm"
+                                >
+
+                                    <div class="flex items-start justify-between gap-3">
+
+                                        <div>
+
+                                            <p
+                                                class="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-600"
+                                            >
+                                                Target
+                                            </p>
+
+                                            <label
+                                                for="targetUe"
+                                                class="mt-1 block text-sm font-black text-slate-800"
+                                            >
+                                                UE
+                                            </label>
+
+                                            <p class="mt-0.5 text-[11px] text-slate-400">
+                                                Unit entry
+                                            </p>
+
+                                        </div>
+
+
+                                        <div
+                                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xs font-black text-emerald-600"
+                                        >
+                                            UE
+                                        </div>
+
+                                    </div>
+
+
+                                    <div
+                                        class="mt-4 flex h-12 overflow-hidden rounded-xl border border-slate-200 bg-white transition-all focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10"
+                                    >
+
+                                        <input
+                                            id="targetUe"
+                                            type="number"
+                                            min="0"
+                                            value="0"
+                                            class="min-w-0 flex-1 border-0 bg-white px-4 text-lg font-black text-slate-800 outline-none placeholder:text-slate-300"
+                                        >
+
+                                        <span
+                                            class="flex items-center border-l border-slate-100 bg-slate-50 px-3 text-xs font-bold text-slate-400"
+                                        >
+                                            unit
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- INFO -->
+                            <div
+                                class="mt-4 flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                            >
+
+                                <div
+                                    class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-3.5 w-3.5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="9"
+                                        />
+
+                                        <path
+                                            stroke-linecap="round"
+                                            d="M12 8v4m0 4h.01"
+                                        />
+                                    </svg>
+                                </div>
+
+                                <p class="text-xs leading-5 text-slate-500">
+                                    Target digunakan sebagai acuan hasil kegiatan. Target UE akan muncul otomatis untuk type PKM yang membutuhkan H23.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </section>
 
                     <!-- TOMBOL SUBMIT -->
-                    <div id="submitPanel" class="sticky-submit submit-panel-locked">
+                    <div
+                        id="submitPanel"
+                        class="sticky-submit submit-panel-locked sticky bottom-4 z-30 mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(15,23,42,0.12)]"
+                    >
 
-                        <div class="submit-information">
+                        <div
+                            class="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
+                        >
 
-                            <div id="submitStatusIcon" class="submit-status-icon">
-                                🔒
+                            <!-- STATUS -->
+                            <div class="flex min-w-0 items-center gap-3 sm:gap-4">
+
+                                <div
+                                    id="submitStatusIcon"
+                                    class="submit-status-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-sm font-black text-slate-500 shadow-sm transition-all duration-200"
+                                >
+                                    🔒
+                                </div>
+
+
+                                <div class="min-w-0">
+
+                                    <div class="flex flex-wrap items-center gap-2">
+
+                                        <p
+                                            class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400"
+                                        >
+                                            Status pengajuan
+                                        </p>
+
+                                        <span
+                                            class="h-1 w-1 rounded-full bg-slate-300"
+                                        ></span>
+
+                                        <span
+                                            class="text-[10px] font-bold text-slate-400"
+                                        >
+                                            Validasi otomatis
+                                        </span>
+
+                                    </div>
+
+
+                                    <p
+                                        id="submitStatusTitle"
+                                        class="mt-0.5 text-sm font-black text-slate-900 sm:text-base"
+                                    >
+                                        Lengkapi pengajuan
+                                    </p>
+
+
+                                    <p
+                                        id="submitStatusMessage"
+                                        class="mt-0.5 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm"
+                                    >
+                                        Tombol aktif setelah seluruh data wajib diisi.
+                                    </p>
+
+                                </div>
+
                             </div>
 
-                            <div>
-                                <p id="submitStatusTitle" class="font-black text-slate-900">
-                                    Lengkapi pengajuan
-                                </p>
 
-                                <p id="submitStatusMessage" class="text-sm text-slate-500">
-                                    Tombol aktif setelah seluruh data wajib diisi.
-                                </p>
+                            <!-- ACTION -->
+                            <div class="w-full shrink-0 lg:w-auto">
+
+                                <button
+                                    id="submitPkmButton"
+                                    type="submit"
+                                    disabled
+                                    class="group flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3 text-sm font-black text-slate-400 shadow-none transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-100 enabled:bg-gradient-to-r enabled:from-red-600 enabled:to-red-700 enabled:text-white enabled:shadow-[0_10px_24px_rgba(220,24,32,0.22)] enabled:hover:-translate-y-0.5 enabled:hover:shadow-[0_14px_30px_rgba(220,24,32,0.28)] sm:min-w-[210px]"
+                                >
+
+                                    <span
+                                        id="submitButtonIcon"
+                                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-sm transition-transform duration-200 group-hover:translate-x-0.5"
+                                    >
+                                        🔒
+                                    </span>
+
+                                    <span id="submitButtonText">
+                                        Lengkapi data
+                                    </span>
+
+                                </button>
+
                             </div>
 
                         </div>
 
-                        <button
-                            id="submitPkmButton"
-                            type="submit"
-                            class="submit-pkm-button"
-                            disabled
+
+                        <!-- PROGRESS ACCENT -->
+                        <div
+                            class="h-1 w-full bg-slate-100"
                         >
-                            <span id="submitButtonIcon">🔒</span>
-                            <span id="submitButtonText">Lengkapi data</span>
-                        </button>
+
+                            <div
+                                class="h-full w-1/3 rounded-r-full bg-slate-300 transition-all duration-300"
+                            ></div>
+
+                        </div>
 
                     </div>
 
