@@ -828,6 +828,25 @@ function renderCrmKpiTable() {
     ).textContent =
         percentageText;
 
+    const scoreBar =
+        document.getElementById(
+            "crmKpiScoreBar"
+        );
+
+    if (scoreBar) {
+        const scoreProgress =
+            (
+                totalPercentage /
+                CRM_KPI_MAX_SCORE
+            ) * 100;
+
+        scoreBar.style.width =
+            `${Math.min(
+                scoreProgress,
+                100
+            )}%`;
+    }
+
     const totalLabel =
         document.getElementById(
             "crmKpiTotalLabel"
@@ -846,7 +865,288 @@ function renderCrmKpiTable() {
                 : 5;
     }
 
+    renderCrmKpiMobileList(
+        showHoColumns
+    );
     updateCrmKpiHoVisibility();
+}
+
+function renderCrmKpiMobileList(
+    showHoColumns
+) {
+    const container =
+        document.getElementById(
+            "crmKpiMobileList"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML =
+        CRM_KPI_METRICS
+            .map(function (metric, index) {
+
+                const row =
+                    crmKpiRows.find(
+                        function (item) {
+                            return (
+                                item.code ===
+                                metric.code
+                            );
+                        }
+                    );
+
+                if (!row) {
+                    return "";
+                }
+
+                const score =
+                    calculateCrmKpiScore(
+                        metric,
+                        row
+                    );
+
+                return `
+                    <article
+                        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
+
+                        <div class="flex items-start justify-between gap-3">
+
+                            <div class="min-w-0">
+
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 text-xs font-black text-red-600"
+                                    >
+                                        ${index + 1}
+                                    </span>
+
+                                    <p class="font-black text-slate-900">
+                                        ${escapeHtml(
+                                            metric.name
+                                        )}
+                                    </p>
+                                </div>
+
+                                <p class="mt-2 pl-9 text-xs leading-5 text-slate-500">
+                                    ${escapeHtml(
+                                        getMetricInformation(
+                                            metric
+                                        )
+                                    )}
+                                </p>
+
+                            </div>
+
+                            <div class="shrink-0 rounded-xl bg-red-50 px-3 py-2 text-right">
+                                <p class="text-[10px] font-bold uppercase text-red-400">
+                                    Score
+                                </p>
+
+                                <p class="mt-0.5 text-lg font-black text-red-600">
+                                    ${formatKpiNumber(
+                                        score
+                                    )}
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-4 grid gap-3 ${
+                            showHoColumns
+                                ? "sm:grid-cols-3"
+                                : "sm:grid-cols-2"
+                        }">
+
+                            <div class="rounded-xl bg-slate-50 p-3">
+
+                                <p class="text-[10px] font-black uppercase text-slate-400">
+                                    Target
+                                </p>
+
+                                <div class="mt-2">
+                                    ${renderCrmKpiTarget(
+                                        metric,
+                                        row
+                                    )}
+                                </div>
+
+                            </div>
+
+                            <div class="rounded-xl bg-slate-50 p-3">
+
+                                <p class="text-[10px] font-black uppercase text-slate-400">
+                                    Actual CRM
+                                </p>
+
+                                <div class="mt-2">
+                                    ${renderCrmKpiMobileActual(
+                                        metric,
+                                        row.actualCrm,
+                                        "crm",
+                                        crmKpiEditing
+                                    )}
+                                </div>
+
+                            </div>
+
+                            ${
+                                showHoColumns
+                                    ? `
+                                        <div class="rounded-xl bg-slate-50 p-3">
+
+                                            <p class="text-[10px] font-black uppercase text-slate-400">
+                                                Actual HO
+                                            </p>
+
+                                            <div class="mt-2">
+                                                ${renderCrmKpiMobileActual(
+                                                    metric,
+                                                    row.actualHo,
+                                                    "ho",
+                                                    crmKpiVerifying
+                                                )}
+                                            </div>
+
+                                        </div>
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+
+                        ${
+                            showHoColumns
+                                ? `
+                                    <div class="mt-3 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+
+                                        <span class="text-xs font-bold text-slate-500">
+                                            Selisih CRM vs HO
+                                        </span>
+
+                                        <span class="font-black ${getDifferenceClass(
+                                            metric,
+                                            row
+                                        )}">
+                                            ${formatCrmKpiDifference(
+                                                metric,
+                                                row
+                                            )}
+                                        </span>
+
+                                    </div>
+                                `
+                                : ""
+                        }
+
+                        <div class="mt-3 flex items-center justify-between text-xs">
+
+                            <span class="font-semibold text-slate-400">
+                                Bobot
+                            </span>
+
+                            <span class="font-black text-slate-700">
+                                ${formatKpiNumber(
+                                    metric.weight
+                                )}
+                            </span>
+
+                        </div>
+
+                    </article>
+                `;
+            })
+            .join("");
+}
+
+function renderCrmKpiMobileActual(
+    metric,
+    value,
+    owner,
+    editable
+) {
+    if (metric.unit === "KPB") {
+
+        const values =
+            normalizeKpbDisplayValues(
+                value
+            );
+
+        return `
+            <div class="grid grid-cols-2 gap-2">
+
+                ${values
+                    .slice(0, 4)
+                    .map(function (
+                        item,
+                        index
+                    ) {
+                        return `
+                            <div>
+                                <span class="mb-1 block text-[10px] font-black text-slate-400">
+                                    KPB${index + 1}
+                                </span>
+
+                                <input
+                                    class="form-input px-2 text-sm"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    data-kpi-actual="${owner}"
+                                    data-kpi-code="${metric.code}"
+                                    data-kpi-index="${index}"
+                                    value="${escapeHtml(item)}"
+                                    ${editable ? "" : "disabled"}
+                                >
+                            </div>
+                        `;
+                    })
+                    .join("")}
+
+                <div class="col-span-2">
+                    <span class="mb-1 block text-[10px] font-black text-red-500">
+                        Rata-rata
+                    </span>
+
+                    <input
+                        class="form-input bg-red-50 text-sm font-black text-red-700"
+                        type="text"
+                        data-kpi-kpb-average="${owner}"
+                        value="${escapeHtml(values[4])}"
+                        disabled
+                    >
+                </div>
+
+            </div>
+        `;
+    }
+
+    return `
+        <div class="relative">
+            <input
+                class="form-input pr-10"
+                type="number"
+                min="0"
+                step="0.01"
+                data-kpi-actual="${owner}"
+                data-kpi-code="${metric.code}"
+                value="${escapeHtml(value)}"
+                ${editable ? "" : "disabled"}
+            >
+
+            ${
+                metric.unit === "PERCENT"
+                    ? `
+                        <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                            %
+                        </span>
+                    `
+                    : ""
+            }
+        </div>
+    `;
 }
 
 function renderCrmKpiTarget(
@@ -1697,11 +1997,29 @@ function cancelCrmKpiInput() {
 |--------------------------------------------------------------------------
 */
 
+function getCrmKpiInputRoot() {
+    return window.innerWidth < 768
+        ? document.getElementById(
+              "crmKpiMobileList"
+          )
+        : document.getElementById(
+              "crmKpiDesktopTable"
+          );
+}
+
+
 function collectCrmKpiTableValues(owner) {
     const actualSelector =
         `[data-kpi-actual="${owner}"]`;
 
-    document
+    const inputRoot =
+        getCrmKpiInputRoot();
+
+    if (!inputRoot) {
+        return;
+    }
+
+    inputRoot
         .querySelectorAll(actualSelector)
         .forEach(function (input) {
             const code = input.dataset.kpiCode;
@@ -1794,7 +2112,7 @@ function collectCrmKpiTableValues(owner) {
         ];
     }
 
-    document
+    inputRoot
         .querySelectorAll(
             "[data-kpi-target]"
         )
@@ -1997,6 +2315,52 @@ function updateCrmKpiButtons(status) {
         !crmKpiEditing &&
         !crmKpiVerifying
     );
+
+    const actionBar =
+        document.getElementById(
+            "crmKpiActionBar"
+        );
+
+    if (actionBar) {
+        const shouldStick =
+            crmKpiEditing ||
+            crmKpiVerifying;
+
+        actionBar.classList.toggle(
+            "sticky",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "bottom-3",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "z-30",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "border",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "border-slate-200",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "shadow-lg",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "md:static",
+            shouldStick
+        );
+    }
 }
 
 
@@ -2046,9 +2410,75 @@ function updateCrmKpiPeriodInformation(
     */
 
     if (statusElement) {
+
+        const currentStatus =
+            String(
+                status ||
+                "Belum ada data"
+            )
+                .trim()
+                .toUpperCase();
+
         statusElement.textContent =
             status ||
             "Belum ada data";
+
+        let statusClass =
+            "mt-2 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-xs font-black text-white";
+
+        if (
+            currentStatus ===
+            "TERVERIFIKASI"
+        ) {
+            statusClass =
+                "mt-2 inline-flex rounded-full bg-emerald-400/20 px-3 py-1.5 text-xs font-black text-emerald-50";
+        } else if (
+            currentStatus.includes(
+                "MENUNGGU"
+            )
+        ) {
+            statusClass =
+                "mt-2 inline-flex rounded-full bg-amber-300/20 px-3 py-1.5 text-xs font-black text-amber-50";
+        } else if (
+            currentStatus ===
+            "DRAFT"
+        ) {
+            statusClass =
+                "mt-2 inline-flex rounded-full bg-sky-300/20 px-3 py-1.5 text-xs font-black text-sky-50";
+        }
+
+        statusElement.className =
+            statusClass;
+    }
+
+    const modeBadge =
+        document.getElementById(
+            "crmKpiModeBadge"
+        );
+
+    if (modeBadge) {
+        let badgeText = "Pilih Periode";
+        let badgeClass =
+            "inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500";
+
+        if (selectedPeriod === "CLOSING") {
+            badgeText = "● Closing";
+            badgeClass =
+                "inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700";
+        } else if (
+            Number.isFinite(Number(selectedPeriod)) &&
+            Number(selectedPeriod) > 0
+        ) {
+            badgeText = "● Weekly";
+            badgeClass =
+                "inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-sky-700";
+        }
+
+        modeBadge.textContent =
+            badgeText;
+
+        modeBadge.className =
+            badgeClass;
     }
 
     /*
@@ -2742,6 +3172,53 @@ crmKpiMonth.addEventListener(
     }
 );
 
+const crmKpiFilterToggle =
+    document.getElementById(
+        "crmKpiFilterToggle"
+    );
+
+const crmKpiFilterContent =
+    document.getElementById(
+        "crmKpiFilterContent"
+    );
+
+const crmKpiFilterChevron =
+    document.getElementById(
+        "crmKpiFilterChevron"
+    );
+
+if (
+    crmKpiFilterToggle &&
+    crmKpiFilterContent
+) {
+    crmKpiFilterToggle.addEventListener(
+        "click",
+        function () {
+            const isOpen =
+                !crmKpiFilterContent.classList.contains(
+                    "hidden"
+                );
+
+            crmKpiFilterContent.classList.toggle(
+                "hidden",
+                isOpen
+            );
+
+            crmKpiFilterToggle.setAttribute(
+                "aria-expanded",
+                String(!isOpen)
+            );
+
+            if (crmKpiFilterChevron) {
+                crmKpiFilterChevron.classList.toggle(
+                    "rotate-180",
+                    !isOpen
+                );
+            }
+        }
+    );
+}
+
 
 crmKpiWeek.addEventListener(
     "change",
@@ -2785,9 +3262,16 @@ document.addEventListener(
         const owner =
             input.dataset.kpiActual;
 
+        const inputRoot =
+            getCrmKpiInputRoot();
+
+        if (!inputRoot) {
+            return;
+        }
+
         const inputs =
             Array.from(
-                document.querySelectorAll(
+                inputRoot.querySelectorAll(
                     `[data-kpi-actual="${owner}"][data-kpi-code="KPB"][data-kpi-index]`
                 )
             );
@@ -2803,7 +3287,7 @@ document.addEventListener(
             );
 
         const averageInput =
-            document.querySelector(
+            inputRoot.querySelector(
                 `[data-kpi-kpb-average="${owner}"]`
             );
 
