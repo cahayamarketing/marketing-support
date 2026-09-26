@@ -2504,9 +2504,9 @@ async function initializeApplication() {
     setDefaultApprovalStepFilter();
 
     document.getElementById(
-        "cabang"
-    ).value =
-        `${currentUser.branch} — ${currentUser.branchName}`;
+        "sidebarBranch"
+    ).textContent =
+        `${currentUser.branchName} — ${currentUser.jabatan}`;
 
     /*
     |--------------------------------------------------------------------------
