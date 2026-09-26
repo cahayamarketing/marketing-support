@@ -3665,12 +3665,43 @@ bindSidebarSubmenuButton(
 
 document.querySelectorAll("[data-page]").forEach(function (button) {
     button.addEventListener("click", function () {
-        showPage(button.dataset.page);
-        closeSidebar();
+
+        const result =
+            showPage(
+                button.dataset.page
+            );
+
+        if (result !== false) {
+            closeSidebar();
+        }
     });
 });
 
 function showPage(pageId) {
+
+    if (
+        pageId !== "crmKpiPage" &&
+        typeof window["crmKpiHasUnsavedChanges"] ===
+            "function" &&
+        window["crmKpiHasUnsavedChanges"]()
+    ) {
+        const confirmed =
+            window.confirm(
+                "Perubahan KPI CRM belum disimpan.\n\nLanjutkan tanpa menyimpan?"
+            );
+
+        if (!confirmed) {
+            return false;
+        }
+
+        if (
+            typeof window.crmKpiDiscardUnsavedChanges ===
+                "function"
+        ) {
+            window["crmKpiDiscardUnsavedChanges"]()
+        }
+    }
+
     const pageInformation = {
         dashboardPage: {
             title: "Dashboard",

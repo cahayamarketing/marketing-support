@@ -167,8 +167,10 @@ const crmKpiSnapshotNote =
 */
 
 let crmKpiRows = [];
+let crmKpiSavedRows = [];
 let crmKpiEditing = false;
 let crmKpiVerifying = false;
+let crmKpiDirty = false;
 let crmKpiInitialized = false;
 
 let crmKpiLoadingTimer = null;
@@ -447,8 +449,16 @@ async function executeCrmKpiLoad() {
                 )
                 : createEmptyCrmKpiRows();
 
+        crmKpiSavedRows =
+            JSON.parse(
+                JSON.stringify(
+                    crmKpiRows
+                )
+            );
+
         crmKpiEditing = false;
         crmKpiVerifying = false;
+        crmKpiDirty = false;
 
         updateCrmKpiPeriodInformation(
             result.status || ""
@@ -990,32 +1000,76 @@ function renderCrmKpiMobileList(
                                     )}
                                 </div>
 
-                            </div>
+                        </div>
 
-                            ${
-                                showHoColumns
-                                    ? `
-                                        <div class="rounded-xl bg-slate-50 p-3">
+                        ${
+                            (() => {
+                                const achievement =
+                                    getCrmKpiAchievementPercentage(
+                                        metric,
+                                        row
+                                    );
 
-                                            <p class="text-[10px] font-black uppercase text-slate-400">
-                                                Actual HO
-                                            </p>
+                                if (
+                                    achievement === null
+                                ) {
+                                    return `
+                                        <div class="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2">
+                                            <span class="text-xs font-semibold text-slate-400">
+                                                Belum ada actual
+                                            </span>
+                                        `;
+                                }
 
-                                            <div class="mt-2">
-                                                ${renderCrmKpiMobileActual(
-                                                    metric,
-                                                    row.actualHo,
-                                                    "ho",
-                                                    crmKpiVerifying
-                                                )}
-                                            </div>
+                                const safeAchievement =
+                                    Math.min(
+                                        Math.max(
+                                            achievement,
+                                            0
+                                        ),
+                                        100
+                                    );
+
+                                const achievementClass =
+                                    achievement >= 100
+                                        ? "text-emerald-600"
+                                        : achievement >= 80
+                                            ? "text-amber-600"
+                                            : "text-red-600";
+
+                                const barClass =
+                                    achievement >= 100
+                                        ? "bg-emerald-500"
+                                        : achievement >= 80
+                                            ? "bg-amber-500"
+                                            : "bg-red-500";
+
+                                return `
+                                    <div class="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">
+
+                                        <div class="flex items-center justify-between gap-3">
+
+                                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                Pencapaian Target
+                                            </span>
+
+                                            <span class="text-sm font-black ${achievementClass}">
+                                                ${formatKpiNumber(achievement)}%
+                                            </span>
 
                                         </div>
-                                    `
-                                    : ""
-                            }
 
-                        </div>
+                                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                                            <div
+                                                class="h-full rounded-full transition-all duration-500 ${barClass}"
+                                                style="width: ${safeAchievement}%"
+                                            ></div>
+                                        </div>
+
+                                    </div>
+                                `;
+                            })()
+                        }
 
                         ${
                             showHoColumns
@@ -1059,6 +1113,120 @@ function renderCrmKpiMobileList(
                 `;
             })
             .join("");
+}
+
+function getCrmKpiAchievementPercentage(
+    metric,
+    row
+) {
+    if (!metric || !row) {
+        return null;
+    }
+
+    const status =
+        String(
+            row.status || ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const verified =
+        status === "TERVERIFIKASI";
+
+    const useHoResult =
+        verified &&
+        canViewCrmKpiHo() &&
+        hasKpiValue(
+            row.actualHo
+        );
+
+    const selectedActual =
+        useHoResult ||
+        crmKpiVerifying
+            ? row.actualHo
+            : row.actualCrm;
+
+    if (!hasKpiValue(selectedActual)) {
+        return null;
+    }
+
+    if (metric.unit === "KPB") {
+        const targets =
+            Array.isArray(row.target)
+                ? row.target
+                : Array.isArray(metric.target)
+                    ? metric.target
+                    : [60, 50, 30, 40];
+
+        const actuals =
+            Array.isArray(selectedActual)
+                ? selectedActual
+                : [
+                    selectedActual,
+                    "",
+                    "",
+                    ""
+                ];
+
+        const achievements =
+            targets.map(function (
+                targetValue,
+                index
+            ) {
+                return calculateAchievement(
+                    Number(targetValue || 0),
+                    Number(actuals[index] || 0),
+                    false
+                );
+            });
+
+        if (!achievements.length) {
+            return null;
+        }
+
+        const averageAchievement =
+            achievements.reduce(
+                function (
+                    total,
+                    achievement
+                ) {
+                    return (
+                        total +
+                        achievement
+                    );
+                },
+                0
+            ) /
+            achievements.length;
+
+        return roundCrmKpiNumber(
+            averageAchievement * 100,
+            1
+        );
+    }
+
+    const target =
+        Number(
+            row.target !== "" &&
+            row.target !== null &&
+            row.target !== undefined
+                ? row.target
+                : metric.target || 0
+        );
+
+    const actual =
+        Number(
+            selectedActual || 0
+        );
+
+    return roundCrmKpiNumber(
+        calculateAchievement(
+            target,
+            actual,
+            metric.lowerIsBetter === true
+        ) * 100,
+        1
+    );
 }
 
 function renderCrmKpiMobileActual(
@@ -1982,6 +2150,45 @@ function startCrmKpiVerification() {
 
     renderCrmKpiTable();
 }
+
+function hasCrmKpiUnsavedChanges() {
+    return (
+        crmKpiDirty &&
+        (
+            crmKpiEditing ||
+            crmKpiVerifying
+        )
+    );
+}
+
+function discardCrmKpiUnsavedChanges() {
+    crmKpiRows =
+        JSON.parse(
+            JSON.stringify(
+                crmKpiSavedRows
+            )
+        );
+
+    crmKpiEditing = false;
+    crmKpiVerifying = false;
+    crmKpiDirty = false;
+
+    renderCrmKpiTable();
+
+    updateCrmKpiButtons(
+        ""
+    );
+
+    updateCrmKpiPeriodInformation(
+        ""
+    );
+}
+
+window["crmKpiHasUnsavedChanges"] =
+    hasCrmKpiUnsavedChanges;
+
+window["crmKpiDiscardUnsavedChanges"] =
+    discardCrmKpiUnsavedChanges;
 
 function cancelCrmKpiInput() {
     crmKpiEditing = false;
@@ -3323,6 +3530,45 @@ document.addEventListener(
 );
 
 
+function markCrmKpiDirty() {
+    if (
+        crmKpiEditing ||
+        crmKpiVerifying
+    ) {
+        crmKpiDirty = true;
+    }
+}
+
+document.addEventListener(
+    "input",
+    function (event) {
+        if (
+            !event.target.closest(
+                "#crmKpiPage"
+            )
+        ) {
+            return;
+        }
+
+        markCrmKpiDirty();
+    }
+);
+
+document.addEventListener(
+    "change",
+    function (event) {
+        if (
+            !event.target.closest(
+                "#crmKpiPage"
+            )
+        ) {
+            return;
+        }
+
+        markCrmKpiDirty();
+    }
+);
+
 /*
 |--------------------------------------------------------------------------
 | EVENT
@@ -3333,7 +3579,24 @@ document
     .getElementById("loadCrmKpiButton")
     .addEventListener(
         "click",
-        loadCrmKpiPage
+        function () {
+            if (
+                hasCrmKpiUnsavedChanges()
+            ) {
+                const confirmed =
+                    window.confirm(
+                        "Perubahan KPI CRM belum disimpan.\n\nLanjutkan tanpa menyimpan?"
+                    );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                discardCrmKpiUnsavedChanges();
+            }
+
+            loadCrmKpiPage();
+        }
     );
 
 newCrmKpiButton.addEventListener(
