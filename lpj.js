@@ -138,6 +138,46 @@ function initializeLpjFrontend() {
         );
 
     [
+        ["lpjTentPhoto", "lpjTentPhotoPreview"],
+        ["lpjActivityPhoto1", "lpjActivityPhoto1Preview"],
+        ["lpjActivityPhoto2", "lpjActivityPhoto2Preview"]
+    ].forEach(function (config) {
+
+        const input =
+            document.getElementById(config[0]);
+
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener(
+            "change",
+            function () {
+                previewLpjImage(
+                    config[0],
+                    config[1]
+                );
+            }
+        );
+
+    });
+
+    document.addEventListener(
+        "input",
+        function (event) {
+            if (
+                event.target.matches(
+                    ".lpj-actual-price"
+                )
+            ) {
+                formatLpjCurrencyInput(
+                    event.target
+                );
+            }
+        }
+    );
+
+    [
         ["lpjActualDb", "lpjTargetDb", "lpjProgressDbText", "lpjProgressDbBar"],
         ["lpjActualDeal", "lpjTargetDeal", "lpjProgressDealText", "lpjProgressDealBar"],
         ["lpjActualUe", "lpjTargetUe", "lpjProgressUeText", "lpjProgressUeBar"]
@@ -859,6 +899,32 @@ function openLpjModal(pkmId) {
         "lpjActivityPhoto2"
     ).value = "";
 
+    [
+        "lpjTentPhotoPreview",
+        "lpjActivityPhoto1Preview",
+        "lpjActivityPhoto2Preview"
+    ].forEach(function (previewId) {
+
+        const preview =
+            document.getElementById(
+                previewId
+            );
+
+        if (!preview) {
+            return;
+        }
+
+        const image =
+            preview.querySelector("img");
+
+        if (image) {
+            image.src = "";
+        }
+
+        preview.classList.add("hidden");
+
+    });
+
     renderLpjBudgetTable();
 
     const modal =
@@ -919,7 +985,7 @@ function renderLpjBudgetTable() {
                                 class="form-input lpj-actual-price"
                                 type="text"
                                 inputmode="numeric"
-                                placeholder="0"
+                                placeholder="Rp 0"
                             >
                         </td>
 
@@ -949,6 +1015,164 @@ function renderLpjBudgetTable() {
                 `;
             })
             .join("");
+
+    const mobileList =
+        document.getElementById(
+            "lpjBudgetMobileList"
+        );
+
+    if (mobileList) {
+        mobileList.innerHTML =
+            lpjBudgetItems
+                .map(function (item, index) {
+                    return `
+                        <div
+                            class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                            data-lpj-budget-mobile-row="${index}"
+                        >
+
+                            <div class="flex items-start justify-between gap-3">
+
+                                <div class="min-w-0">
+                                    <p class="font-black text-slate-900">
+                                        ${escapeHtml(
+                                            item.itemName ||
+                                            item.name ||
+                                            "-"
+                                        )}
+                                    </p>
+
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">
+                                        ${escapeHtml(
+                                            item.itemType ||
+                                            item.type ||
+                                            "-"
+                                        )}
+                                        · Qty ${
+                                            Number(item.quantity) || 0
+                                        }
+                                    </p>
+                                </div>
+
+                                <div class="text-right">
+                                    <p class="text-[10px] font-bold uppercase text-slate-400">
+                                        Pengajuan
+                                    </p>
+
+                                    <p class="mt-1 text-sm font-black text-slate-800">
+                                        ${rupiah(
+                                            Number(item.totalPrice) || 0
+                                        )}
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div class="mt-4">
+
+                                <label class="text-xs font-bold text-slate-500">
+                                    Harga Realisasi
+                                </label>
+
+                                <input
+                                    class="form-input lpj-actual-price mt-1"
+                                    type="text"
+                                    inputmode="numeric"
+                                    placeholder="Rp 0"
+                                >
+
+                            </div>
+
+                            <div class="mt-4">
+
+                                <label class="text-xs font-bold text-slate-500">
+                                    Gambar Desain
+                                </label>
+
+                                <input
+                                    class="form-input lpj-design-image mt-1"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                >
+
+                            </div>
+
+                            <div class="mt-4">
+
+                                <label class="text-xs font-bold text-slate-500">
+                                    Foto
+                                </label>
+
+                                <input
+                                    class="form-input lpj-item-photo mt-1"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                >
+
+                            </div>
+
+                            <div class="mt-4">
+
+                                <label class="text-xs font-bold text-slate-500">
+                                    Keterangan
+                                </label>
+
+                                <textarea
+                                    class="form-input lpj-budget-note mt-1 min-h-20"
+                                    placeholder="Keterangan..."
+                                ></textarea>
+
+                            </div>
+
+                        </div>
+                    `;
+                })
+                .join("");
+    }
+}
+
+function formatLpjCurrencyInput(input) {
+    if (!input) {
+        return;
+    }
+
+    input.value =
+        input.value
+            .replace(/\D/g, "")
+            .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+
+function previewLpjImage(inputId, previewId) {
+    const input =
+        document.getElementById(inputId);
+
+    const preview =
+        document.getElementById(previewId);
+
+    if (!input || !preview) {
+        return;
+    }
+
+    const image =
+        preview.querySelector("img");
+
+    if (!image) {
+        return;
+    }
+
+    const file = input.files[0];
+
+    if (!file) {
+        image.src = "";
+        preview.classList.add("hidden");
+        return;
+    }
+
+    image.src =
+        URL.createObjectURL(file);
+
+    preview.classList.remove("hidden");
 }
 
 function closeLpjModal() {
@@ -1007,11 +1231,18 @@ async function finalizeLpj() {
             </span>
         `;
 
-        const budgetRows = [
-            ...document.querySelectorAll(
-                "[data-lpj-budget-row]"
-            )
-        ];
+        const budgetRows =
+            window.innerWidth < 768
+                ? [
+                    ...document.querySelectorAll(
+                        "#lpjBudgetMobileList > div"
+                    )
+                ]
+                : [
+                    ...document.querySelectorAll(
+                        "[data-lpj-budget-row]"
+                    )
+                ];
 
         const budgetDetails =
             await Promise.all(
