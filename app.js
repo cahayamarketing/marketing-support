@@ -7509,14 +7509,33 @@ function renderPkmTable() {
                     |--------------------------------------------------------------
                     */
 
-                    let primaryAction;
+                    let primaryAction = `
+                        <button
+                            type="button"
+                            data-view-pkm="${escapeHtml(item.id)}"
+                            class="
+                                flex-1
+                                rounded-xl
+                                border
+                                border-slate-300
+                                bg-white
+                                px-3
+                                py-2.5
+                                text-xs
+                                font-black
+                                text-slate-700
+                                transition
+                                hover:bg-slate-50
+                                active:scale-[0.98]
+                            "
+                        >
+                            Detail
+                        </button>
+                    `;
 
+                    if (canCurrentUserProcess(item)) {
 
-                    if (
-                        canCurrentUserProcess(item)
-                    ) {
-
-                        primaryAction = `
+                        primaryAction += `
                             <button
                                 type="button"
                                 data-process-pkm="${escapeHtml(item.id)}"
@@ -7542,7 +7561,7 @@ function renderPkmTable() {
 
                     } else {
 
-                        primaryAction = `
+                        primaryAction += `
                             <div
                                 class="
                                     flex-1
@@ -8090,6 +8109,53 @@ function renderPkmTable() {
                 | PROSES PKM
                 |--------------------------------------------------------------
                 */
+
+                const viewButton =
+                    event.target.closest(
+                        "[data-view-pkm]"
+                    );
+
+                if (
+                    viewButton &&
+                    mobilePkmContainer.contains(
+                        viewButton
+                    )
+                ) {
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const pkmId =
+                        viewButton.dataset.viewPkm;
+
+                    if (!pkmId) {
+                        return;
+                    }
+
+                    try {
+
+                        await openApprovalModal(
+                            pkmId,
+                            true
+                        );
+
+                    } catch (error) {
+
+                        console.error(
+                            "Gagal membuka detail PKM:",
+                            error
+                        );
+
+                        showToast(
+                            error.message ||
+                            "Detail PKM gagal dibuka.",
+                            "error"
+                        );
+
+                    }
+
+                    return;
+                }
 
                 const processButton =
                     event.target.closest(
@@ -8949,7 +9015,10 @@ function prepareDiscordApprovalSignature() {
 |--------------------------------------------------------------------------
 */
 
-async function openApprovalModal(itemId) {
+async function openApprovalModal(
+    itemId,
+    viewOnly = false
+) {
     const isCrmSubmission =
         approvalModalMode === "SUBMIT_CRM";
 
@@ -9066,14 +9135,17 @@ async function openApprovalModal(itemId) {
     renderApprovalHistory(item);
 
     const canProcess =
-        isDiscordApprovalMode
-            ? true
-            : isCrmSubmission
-                ? getCurrentUserRole() ===
-                    "CRM"
-                : canCurrentUserProcess(
-                    item
-                );
+        !viewOnly &&
+        (
+            isDiscordApprovalMode
+                ? true
+                : isCrmSubmission
+                    ? getCurrentUserRole() ===
+                        "CRM"
+                    : canCurrentUserProcess(
+                        item
+                    )
+        );
 
     signatureSection.classList.toggle(
         "hidden",
