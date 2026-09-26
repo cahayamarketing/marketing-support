@@ -7456,6 +7456,446 @@ function renderPkmTable() {
 
     /*
     |--------------------------------------------------------------------------
+    | MOBILE CARD
+    |--------------------------------------------------------------------------
+    */
+
+    const pkmMobileList =
+        document.getElementById(
+            "pkmMobileList"
+        );
+
+
+    if (pkmMobileList) {
+
+        pkmMobileList.innerHTML =
+            pageData
+                .map(function (item) {
+
+                    const typeText =
+                        Array.isArray(item.type)
+                            ? item.type.join(", ")
+                            : item.type || "-";
+
+
+                    const normalizedStatus =
+                        String(
+                            item.status || ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+
+                    const managerApproved =
+                        Boolean(
+                            item.approvals &&
+                            item.approvals.managerH1
+                        );
+
+
+                    const pdfAvailable =
+                        [
+                            "ACC",
+                            "DISETUJUI"
+                        ].includes(
+                            normalizedStatus
+                        ) &&
+                        managerApproved;
+
+
+                    /*
+                    |--------------------------------------------------------------
+                    | PRIMARY ACTION
+                    |--------------------------------------------------------------
+                    */
+
+                    let primaryAction;
+
+
+                    if (
+                        canCurrentUserProcess(item)
+                    ) {
+
+                        primaryAction = `
+                            <button
+                                type="button"
+                                data-process-pkm="${escapeHtml(item.id)}"
+                                class="
+                                    flex-1
+                                    rounded-xl
+                                    bg-red-600
+                                    px-3
+                                    py-2.5
+                                    text-xs
+                                    font-black
+                                    text-white
+                                    shadow-sm
+                                    shadow-red-100
+                                    transition
+                                    hover:bg-red-700
+                                    active:scale-[0.98]
+                                "
+                            >
+                                Proses
+                            </button>
+                        `;
+
+                    } else {
+
+                        primaryAction = `
+                            <div
+                                class="
+                                    flex-1
+                                    rounded-xl
+                                    border
+                                    border-slate-200
+                                    bg-slate-50
+                                    px-3
+                                    py-2.5
+                                    text-center
+                                    text-xs
+                                    font-bold
+                                    text-slate-400
+                                "
+                            >
+                                ${escapeHtml(
+                                    getApprovalActionLabel(item)
+                                )}
+                            </div>
+                        `;
+                    }
+
+
+                    /*
+                    |--------------------------------------------------------------
+                    | DISCORD
+                    |--------------------------------------------------------------
+                    */
+
+                    const discordHelperButton =
+                        canShowDiscordHelper(item)
+
+                            ? `
+                                <button
+                                    type="button"
+                                    data-push-discord="${escapeHtml(item.id)}"
+                                    class="
+                                        inline-flex
+                                        h-10
+                                        w-10
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-xl
+                                        border
+                                        border-indigo-200
+                                        bg-indigo-50
+                                        text-indigo-700
+                                        transition
+                                        hover:border-indigo-300
+                                        hover:bg-indigo-100
+                                        disabled:cursor-wait
+                                        disabled:opacity-60
+                                    "
+                                    title="Kirim ulang reminder ke Discord"
+                                >
+                                    🔔
+                                </button>
+                            `
+
+                            : "";
+
+
+                    return `
+
+                        <article
+                            class="
+                                overflow-hidden
+                                rounded-2xl
+                                border
+                                border-slate-200
+                                bg-white
+                                p-4
+                                shadow-sm
+                                transition-all
+                                duration-200
+                                active:scale-[0.995]
+                            "
+                        >
+
+                            <!-- HEADER -->
+                            <div
+                                class="
+                                    flex
+                                    items-start
+                                    justify-between
+                                    gap-3
+                                "
+                            >
+
+                                <div class="min-w-0">
+
+                                    <p
+                                        class="
+                                            truncate
+                                            text-[10px]
+                                            font-black
+                                            uppercase
+                                            tracking-[0.08em]
+                                            text-slate-400
+                                        "
+                                    >
+                                        ${escapeHtml(
+                                            item.id || "-"
+                                        )}
+                                    </p>
+
+                                    <h3
+                                        class="
+                                            mt-1
+                                            line-clamp-2
+                                            text-sm
+                                            font-black
+                                            leading-5
+                                            text-slate-900
+                                        "
+                                    >
+                                        ${escapeHtml(
+                                            item.name || "-"
+                                        )}
+                                    </h3>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            line-clamp-1
+                                            text-[11px]
+                                            font-medium
+                                            text-slate-500
+                                        "
+                                    >
+                                        ${escapeHtml(
+                                            item.kegiatan || "-"
+                                        )}
+                                    </p>
+
+                                </div>
+
+
+                                <div class="shrink-0">
+                                    ${statusBadge(
+                                        item.status
+                                    )}
+                                </div>
+
+                            </div>
+
+
+                            <!-- META -->
+                            <div
+                                class="
+                                    mt-4
+                                    grid
+                                    grid-cols-2
+                                    gap-2
+                                "
+                            >
+
+                                <!-- CABANG -->
+                                <div
+                                    class="
+                                        rounded-xl
+                                        bg-slate-50
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+
+                                    <p
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-slate-400
+                                        "
+                                    >
+                                        Cabang
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            truncate
+                                            text-xs
+                                            font-black
+                                            text-slate-700
+                                        "
+                                    >
+                                        ${escapeHtml(
+                                            item.branch || "-"
+                                        )}
+                                    </p>
+
+                                </div>
+
+
+                                <!-- TYPE -->
+                                <div
+                                    class="
+                                        rounded-xl
+                                        bg-slate-50
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+
+                                    <p
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-slate-400
+                                        "
+                                    >
+                                        Type
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            truncate
+                                            text-xs
+                                            font-black
+                                            text-slate-700
+                                        "
+                                    >
+                                        ${escapeHtml(
+                                            typeText
+                                        )}
+                                    </p>
+
+                                </div>
+
+
+                                <!-- TANGGAL -->
+                                <div
+                                    class="
+                                        rounded-xl
+                                        bg-slate-50
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+
+                                    <p
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-slate-400
+                                        "
+                                    >
+                                        Pelaksanaan
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            text-xs
+                                            font-black
+                                            text-slate-700
+                                        "
+                                    >
+                                        ${escapeHtml(
+                                            formatDateTime(
+                                                item.startDate
+                                            )
+                                        )}
+                                    </p>
+
+                                </div>
+
+
+                                <!-- DANA -->
+                                <div
+                                    class="
+                                        rounded-xl
+                                        bg-red-50
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+
+                                    <p
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-red-400
+                                        "
+                                    >
+                                        Total Dana
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            truncate
+                                            text-xs
+                                            font-black
+                                            text-red-700
+                                        "
+                                    >
+                                        ${rupiah(
+                                            item.totalFund
+                                        )}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- SOURCE + ACTION -->
+                            <div
+                                class="
+                                    mt-4
+                                    flex
+                                    items-center
+                                    gap-2
+                                "
+                            >
+
+                                <div class="shrink-0">
+                                    ${sourceBadge(
+                                        item.source
+                                    )}
+                                </div>
+
+
+                                <div class="flex min-w-0 flex-1 gap-2">
+                                    ${primaryAction}
+                                    ${discordHelperButton}
+                                </div>
+
+                            </div>
+
+                        </article>
+
+                    `;
+
+                })
+                .join("");
+
+    }        
+    
+            
+    /*
+    |--------------------------------------------------------------------------
     | EMPTY STATE
     |--------------------------------------------------------------------------
     */
@@ -7612,6 +8052,130 @@ function renderPkmTable() {
                 }
             );
         });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | EVENT TOMBOL MOBILE
+    |--------------------------------------------------------------------------
+    */
+
+    const mobilePkmContainer =
+        document.getElementById(
+            "pkmMobileList"
+        );
+
+
+    if (mobilePkmContainer) {
+
+        /*
+        | PROSES
+        */
+
+        mobilePkmContainer
+            .querySelectorAll(
+                "[data-process-pkm]"
+            )
+            .forEach(function (button) {
+
+                button.addEventListener(
+                    "click",
+                    function () {
+
+                        openApprovalModal(
+                            button.dataset.processPkm
+                        );
+
+                    }
+                );
+
+            });
+
+
+        /*
+        | PUSH DISCORD
+        */
+
+        mobilePkmContainer
+            .querySelectorAll(
+                "[data-push-discord]"
+            )
+            .forEach(function (button) {
+
+                button.addEventListener(
+                    "click",
+                    async function () {
+
+                        const pkmId =
+                            button.dataset
+                                .pushDiscord;
+
+                        const originalContent =
+                            button.innerHTML;
+
+
+                        const confirmed =
+                            window.confirm(
+                                "Kirim reminder PKM " +
+                                pkmId +
+                                " ke Discord?"
+                            );
+
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+
+                        try {
+
+                            button.disabled = true;
+
+                            button.innerHTML = `
+                                <span class="ui-spinner ui-spinner-small"></span>
+                            `;
+
+
+                            const result =
+                                await requestBackend(
+                                    "pushPkmDiscordReminder",
+                                    {
+                                        pkmId: pkmId
+                                    }
+                                );
+
+
+                            showToast(
+                                result.message ||
+                                "Reminder Discord berhasil dikirim.",
+                                "success"
+                            );
+
+
+                        } catch (error) {
+
+                            showToast(
+                                getApiErrorMessage(
+                                    error
+                                ),
+                                "error"
+                            );
+
+
+                        } finally {
+
+                            button.disabled = false;
+
+                            button.innerHTML =
+                                originalContent;
+
+                        }
+
+                    }
+                );
+
+            });
+
     }
 
 function setDefaultApprovalStepFilter() {
