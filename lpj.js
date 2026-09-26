@@ -90,6 +90,26 @@ function initializeLpjFrontend() {
         );
 
     document
+        .getElementById("lpjMobileList")
+        .addEventListener(
+            "click",
+            function (event) {
+                const button =
+                    event.target.closest(
+                        "[data-create-lpj]"
+                    );
+
+                if (!button) {
+                    return;
+                }
+
+                openLpjModal(
+                    button.dataset.createLpj
+                );
+            }
+        );
+
+    document
         .getElementById("closeLpjModal")
         .addEventListener(
             "click",
@@ -116,6 +136,33 @@ function initializeLpjFrontend() {
             "click",
             finalizeLpj
         );
+
+    [
+        ["lpjActualDb", "lpjTargetDb", "lpjProgressDbText", "lpjProgressDbBar"],
+        ["lpjActualDeal", "lpjTargetDeal", "lpjProgressDealText", "lpjProgressDealBar"],
+        ["lpjActualUe", "lpjTargetUe", "lpjProgressUeText", "lpjProgressUeBar"]
+    ].forEach(function (config) {
+
+        const input =
+            document.getElementById(config[0]);
+
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener(
+            "input",
+            function () {
+                updateLpjAchievement(
+                    config[0],
+                    config[1],
+                    config[2],
+                    config[3]
+                );
+            }
+        );
+
+    });
 }
 
 async function loadLpjCandidates(
@@ -293,6 +340,169 @@ function renderLpjTable() {
                 `;
             })
             .join("");
+
+    const mobileList =
+        document.getElementById("lpjMobileList");
+
+    if (mobileList) {
+        mobileList.innerHTML =
+            lpjCandidates
+                .map(function (item) {
+                    const overdue =
+                        Number(item.daysOverdue) || 0;
+
+                    let overdueClass =
+                        "bg-slate-100 text-slate-600";
+
+                    if (overdue >= 4 && overdue <= 7) {
+                        overdueClass =
+                            "bg-amber-50 text-amber-700";
+                    }
+
+                    if (overdue > 7) {
+                        overdueClass =
+                            "bg-red-50 text-red-700";
+                    }
+
+                    return `
+                        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-black uppercase tracking-wider text-red-600">
+                                        ${escapeHtml(item.id)}
+                                    </p>
+
+                                    <p class="mt-1 font-black text-slate-900">
+                                        ${escapeHtml(item.name)}
+                                    </p>
+
+                                    <p class="mt-1 text-xs text-slate-500">
+                                        ${escapeHtml(item.jenisPkm || "-")}
+                                    </p>
+                                </div>
+
+                                <span class="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-600">
+                                    Belum LPJ
+                                </span>
+                            </div>
+
+                            <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+
+                                <div>
+                                    <p class="text-[11px] font-bold uppercase text-slate-400">
+                                        Cabang
+                                    </p>
+                                    <p class="mt-1 font-bold text-slate-800">
+                                        ${escapeHtml(item.branch || "-")}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[11px] font-bold uppercase text-slate-400">
+                                        Type
+                                    </p>
+                                    <p class="mt-1 font-bold text-slate-800">
+                                        ${escapeHtml(
+                                            Array.isArray(item.type)
+                                                ? item.type.join(", ")
+                                                : item.type || "-"
+                                        )}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[11px] font-bold uppercase text-slate-400">
+                                        Pelaksanaan
+                                    </p>
+                                    <p class="mt-1 font-bold text-slate-800">
+                                        ${formatLpjDate(item.startDate)}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[11px] font-bold uppercase text-slate-400">
+                                        Terlambat
+                                    </p>
+
+                                    <span class="mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-black ${overdueClass}">
+                                        ${overdue} hari
+                                    </span>
+                                </div>
+
+                            </div>
+
+                            <div class="mt-3">
+                                <p class="text-[11px] font-bold uppercase text-slate-400">
+                                    Lokasi
+                                </p>
+                                <p class="mt-1 text-sm font-semibold text-slate-700">
+                                    ${escapeHtml(item.location || "-")}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                data-create-lpj="${escapeHtml(item.id)}"
+                                class="mt-4 w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-700 active:scale-[0.99]"
+                            >
+                                Buat LPJ
+                            </button>
+
+                        </div>
+                    `;
+                })
+                .join("");
+    }        
+}
+
+function updateLpjAchievement(
+    actualId,
+    targetId,
+    textId,
+    barId
+) {
+    const actualElement =
+        document.getElementById(actualId);
+
+    const targetElement =
+        document.getElementById(targetId);
+
+    const textElement =
+        document.getElementById(textId);
+
+    const barElement =
+        document.getElementById(barId);
+
+    if (
+        !actualElement ||
+        !targetElement ||
+        !textElement ||
+        !barElement
+    ) {
+        return;
+    }
+
+    const actual =
+        Number(actualElement.value) || 0;
+
+    const target =
+        Number(targetElement.textContent) || 0;
+
+    if (target <= 0) {
+        textElement.textContent = "0%";
+        barElement.style.width = "0%";
+        return;
+    }
+
+    const percentage =
+        (actual / target) * 100;
+
+    textElement.textContent =
+        `${Math.round(percentage)}%`;
+
+    barElement.style.width =
+        `${Math.min(percentage, 100)}%`;
 }
 
 function renderLpjPagination() {
@@ -611,6 +821,27 @@ function openLpjModal(pkmId) {
     document.getElementById(
         "lpjActualUe"
     ).value = 0;
+
+    updateLpjAchievement(
+        "lpjActualDb",
+        "lpjTargetDb",
+        "lpjProgressDbText",
+        "lpjProgressDbBar"
+    );
+
+    updateLpjAchievement(
+        "lpjActualDeal",
+        "lpjTargetDeal",
+        "lpjProgressDealText",
+        "lpjProgressDealBar"
+    );
+
+    updateLpjAchievement(
+        "lpjActualUe",
+        "lpjTargetUe",
+        "lpjProgressUeText",
+        "lpjProgressUeBar"
+    );
 
     document.getElementById(
         "lpjEvaluation"
