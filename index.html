@@ -292,22 +292,32 @@
         </div> 
 
         <div
+            id="accountMenuBackdrop"
+            class="account-menu-backdrop hidden"
+            aria-hidden="true"
+        ></div>
+
+        <div
             id="accountMenuWrapper"
             class="absolute bottom-0 w-full border-t border-white/10 bg-black/5 p-4"
         >
             <button
                 id="accountMenuButton"
                 type="button"
-                class="nav-item account-menu-trigger"
+                class="account-profile-trigger"
                 aria-expanded="false"
+                aria-controls="accountMenu"
             >
-                <span
-                    class="nav-item-icon"
-                    data-app-icon="user"
-                ></span>
+                <span id="accountUserInitial" class="account-profile-avatar">?</span>
 
-                <span class="flex-1 text-left">
-                    Menu akun
+                <span class="account-profile-copy">
+                    <span id="accountUserName" class="account-profile-name">
+                        Pengguna
+                    </span>
+
+                    <span id="accountUserMeta" class="account-profile-meta">
+                        Memuat profil...
+                    </span>
                 </span>
 
                 <span

@@ -2638,6 +2638,49 @@ const accountMenuArrow =
         "accountMenuArrow"
     );
 
+
+const accountMenuBackdrop =
+    document.getElementById(
+        "accountMenuBackdrop"
+    );
+
+function setAccountMenuOpen(isOpen) {
+    accountMenu.classList.toggle(
+        "hidden",
+        !isOpen
+    );
+
+    accountMenuButton.classList.toggle(
+        "submenu-open",
+        isOpen
+    );
+
+    accountMenuButton.setAttribute(
+        "aria-expanded",
+        String(isOpen)
+    );
+
+    if (accountMenuBackdrop) {
+        accountMenuBackdrop.classList.toggle(
+            "hidden",
+            !isOpen
+        );
+    }
+}
+
+
+const accountMenuWrapper =
+    document.getElementById("accountMenuWrapper");
+
+const accountUserInitial =
+    document.getElementById("accountUserInitial");
+
+const accountUserName =
+    document.getElementById("accountUserName");
+
+const accountUserMeta =
+    document.getElementById("accountUserMeta");
+
 const manageAccountsButton =
     document.getElementById(
         "manageAccountsButton"
@@ -3327,20 +3370,7 @@ accountMenuButton.addEventListener(
                 "hidden"
             );
 
-        accountMenu.classList.toggle(
-            "hidden",
-            !willOpen
-        );
-
-        accountMenuButton.classList.toggle(
-            "submenu-open",
-            willOpen
-        );
-
-        accountMenuButton.setAttribute(
-            "aria-expanded",
-            String(willOpen)
-        );
+        setAccountMenuOpen(willOpen);
     }
 );
 
@@ -4045,10 +4075,10 @@ document.addEventListener("click", function (event) {
         document.querySelector(".people-picker");
 
     if (
-        peoplePicker &&
-        !peoplePicker.contains(event.target)
+        wrapper &&
+        !wrapper.contains(event.target)
     ) {
-        peopleSearchResults.classList.add("hidden");
+        setAccountMenuOpen(false);
     }
 });
 
