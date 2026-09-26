@@ -478,6 +478,8 @@ let currentPkmPage = 1;
 
 let currentUser;
 
+let isDiscordAutoLogin = false;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -8603,7 +8605,8 @@ async function approvePkmWithSignature() {
         */
 
         const approvalAction =
-            isDiscordApprovalMode
+            isDiscordApprovalMode &&
+            !isDiscordAutoLogin
                 ? "approvePkmFromDiscord"
                 : "approvePkm";
 
@@ -8623,7 +8626,8 @@ async function approvePkmWithSignature() {
 
 
         if (
-            isDiscordApprovalMode
+            isDiscordApprovalMode &&
+            !isDiscordAutoLogin
         ) {
             approvalPayload.approvalToken =
                 discordApprovalToken;
@@ -8829,7 +8833,10 @@ async function approvePkmWithSignature() {
 
         if (
             isFinalManagerApproval &&
-            !isDiscordApprovalMode
+            (
+                !isDiscordApprovalMode ||
+                isDiscordAutoLogin
+            )
         ) {
             approveWithSignatureButton.innerHTML = `
                 <span class="flex items-center justify-center gap-2">
@@ -11589,45 +11596,34 @@ async function initializeDiscordApproval() {
                 .trim()
                 .toUpperCase();
 
-        currentUser = {
-            id:
-                "DISCORD_" +
-                role,
+        if (
+            !result.sessionToken ||
+            !result.user
+        ) {
+            throw new Error(
+                "Session auto-login tidak tersedia."
+            );
+        }
 
-            nik:
-                "DISCORD_" +
-                role,
+        sessionToken =
+            result.sessionToken;
 
-            username:
-                "DISCORD_" +
-                role,
+        sessionStorage.setItem(
+            "sessionToken",
+            sessionToken
+        );
 
-            name:
-                role === "MSMC"
-                    ? "MSMC via Discord"
-                    : "Manager via Discord",
+        currentUser =
+            result.user;
 
-            jabatan:
-                role,
+        sessionStorage.setItem(
+            "currentUser",
+            JSON.stringify(
+                currentUser
+            )
+        );
 
-            role:
-                role,
-
-            branch:
-                "ALL",
-
-            originalBranch:
-                "HO",
-
-            branchName:
-                "HEAD OFFICE",
-
-            status:
-                "AKTIF",
-
-            isMaster:
-                false
-        };
+        isDiscordAutoLogin = true;
 
         sheetPkmData = [
             result.pkm
@@ -11666,7 +11662,8 @@ async function initializeDiscordApproval() {
 
 
 if (
-    isDiscordApprovalMode
+    isDiscordApprovalMode &&
+    !isDiscordAutoLogin
 ) {
 
     initializeDiscordApproval()
