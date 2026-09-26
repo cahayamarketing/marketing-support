@@ -124,10 +124,24 @@
                                 <button
                                     id="togglePassword"
                                     type="button"
-                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-red-600"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-red-600"
                                     aria-label="Tampilkan password"
+                                    aria-pressed="false"
                                 >
-                                    Lihat
+                                    <svg
+                                        id="togglePasswordIcon"
+                                        class="h-5 w-5"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/>
+                                        <circle cx="12" cy="12" r="2.5"/>
+                                    </svg>
                                 </button>
                             </div>
 
@@ -150,7 +164,8 @@
                         <button
                             id="loginSubmitButton"
                             type="submit"
-                            class="btn-primary flex w-full items-center justify-center gap-2"
+                            class="btn-primary flex w-full items-center justify-center gap-2 opacity-50 cursor-not-allowed"
+                            disabled
                         >
                             <span>Masuk</span>
                         </button>

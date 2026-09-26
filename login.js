@@ -33,6 +33,39 @@ const loginSubmitButton =
         "loginSubmitButton"
     );
 
+let loginIsLoading = false;
+
+function updateLoginButtonState() {
+    if (!loginSubmitButton) {
+        return;
+    }
+
+    const nik =
+        usernameInput.value.trim();
+
+    const password =
+        passwordInput.value;
+
+    const canSubmit =
+        Boolean(nik) &&
+        Boolean(password) &&
+        navigator.onLine !== false &&
+        !loginIsLoading;
+
+    loginSubmitButton.disabled =
+        !canSubmit;
+
+    loginSubmitButton.classList.toggle(
+        "opacity-50",
+        !canSubmit
+    );
+
+    loginSubmitButton.classList.toggle(
+        "cursor-not-allowed",
+        !canSubmit
+    );
+}
+
 if (
     usernameInput &&
     window.matchMedia(
@@ -60,7 +93,109 @@ const browserCompatibilityTitle =
 const browserCompatibilityMessage =
     document.getElementById(
         "browserCompatibilityMessage"
-    );    
+    );   
+    
+function checkBrowserCompatibility() {
+    if (
+        !browserCompatibilityNotice
+    ) {
+        return;
+    }
+
+    const userAgent =
+        navigator.userAgent || "";
+
+    const missingFeatures = [];
+
+    if (
+        typeof window.fetch !==
+        "function"
+    ) {
+        missingFeatures.push(
+            "Fetch API"
+        );
+    }
+
+    if (
+        typeof window.Promise !==
+        "function"
+    ) {
+        missingFeatures.push(
+            "Promise"
+        );
+    }
+
+    if (
+        typeof window.AbortController !==
+        "function"
+    ) {
+        missingFeatures.push(
+            "AbortController"
+        );
+    }
+
+    if (
+        typeof window.URLSearchParams !==
+        "function"
+    ) {
+        missingFeatures.push(
+            "URLSearchParams"
+        );
+    }
+
+    if (
+        !window.sessionStorage
+    ) {
+        missingFeatures.push(
+            "Session Storage"
+        );
+    }
+
+    if (
+        missingFeatures.length
+    ) {
+        browserCompatibilityNotice.classList.remove(
+            "hidden"
+        );
+
+        browserCompatibilityNotice.classList.remove(
+            "border-amber-200",
+            "bg-amber-50"
+        );
+
+        browserCompatibilityNotice.classList.add(
+            "border-red-200",
+            "bg-red-50"
+        );
+
+        browserCompatibilityTitle.textContent =
+            "Browser mungkin tidak didukung";
+
+        browserCompatibilityMessage.textContent =
+            "Gunakan Google Chrome, Microsoft Edge, atau Firefox versi terbaru.";
+
+        return;
+    }
+
+    const isOpera =
+        /OPR\/|Opera Mini|Opera Mobi/i.test(
+            userAgent
+        );
+
+    if (isOpera) {
+        browserCompatibilityNotice.classList.remove(
+            "hidden"
+        );
+
+        browserCompatibilityTitle.textContent =
+            "Browser terdeteksi: Opera";
+
+        browserCompatibilityMessage.textContent =
+            "Aplikasi tetap dapat digunakan, tetapi Chrome atau Edge direkomendasikan untuk konsistensi tampilan.";
+    }
+}
+
+checkBrowserCompatibility();
 
 function checkBrowserCompatibility() {
 
@@ -237,13 +372,64 @@ loginForm.addEventListener(
 
         hideLoginMessage();
 
-        if (!nik || !password) {
-            showLoginMessage(
-                "NIK dan password wajib diisi."
+        if (!nik) {
+            usernameInput.classList.add(
+                "border-red-300",
+                "bg-red-50"
             );
+
+            usernameInput.setAttribute(
+                "aria-invalid",
+                "true"
+            );
+
+            showLoginMessage(
+                "NIK wajib diisi."
+            );
+
+            usernameInput.focus();
 
             return;
         }
+
+        if (!/^\d+$/.test(nik)) {
+            usernameInput.classList.add(
+                "border-red-300",
+                "bg-red-50"
+            );
+
+            usernameInput.setAttribute(
+                "aria-invalid",
+                "true"
+            );
+
+            showLoginMessage(
+                "NIK hanya boleh berisi angka."
+            );
+
+            usernameInput.focus();
+
+            return;
+        }
+
+        if (!password) {
+            showLoginMessage(
+                "Password wajib diisi."
+            );
+
+            passwordInput.focus();
+
+            return;
+        }
+
+        usernameInput.classList.remove(
+            "border-red-300",
+            "bg-red-50"
+        );
+
+        usernameInput.removeAttribute(
+            "aria-invalid"
+        );
 
         setLoginLoading(true);
 
@@ -311,10 +497,37 @@ if (togglePasswordButton) {
                     ? "text"
                     : "password";
 
-            this.textContent =
+            this.setAttribute(
+                "aria-label",
                 passwordHidden
-                    ? "Tutup"
-                    : "Lihat";
+                    ? "Sembunyikan password"
+                    : "Tampilkan password"
+            );
+
+            this.setAttribute(
+                "aria-pressed",
+                String(passwordHidden)
+            );
+
+            const icon =
+                document.getElementById(
+                    "togglePasswordIcon"
+                );
+
+            if (icon) {
+                icon.innerHTML =
+                    passwordHidden
+                        ? `
+                            <path d="M3 3l18 18"/>
+                            <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/>
+                            <path d="M9.9 5.2A10.5 10.5 0 0 1 12 5c6.5 0 10 7 10 7a17.5 17.5 0 0 1-3.1 3.8"/>
+                            <path d="M6.1 6.1C3.4 8 2 12 2 12s3.5 7 10 7a10.7 10.7 0 0 0 3-.4"/>
+                        `
+                        : `
+                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/>
+                            <circle cx="12" cy="12" r="2.5"/>
+                        `;
+            }
         }
     );
 }
@@ -327,6 +540,18 @@ usernameInput.addEventListener(
                 /\D/g,
                 ""
             );
+
+        this.classList.remove(
+            "border-red-300",
+            "bg-red-50"
+        );
+
+        this.removeAttribute(
+            "aria-invalid"
+        );
+
+        hideLoginMessage();
+        updateLoginButtonState();
     }
 );
 
@@ -508,6 +733,28 @@ function hideLoginMessage() {
     );
 }
 
+const loginReason =
+    new URLSearchParams(
+        window.location.search
+    ).get(
+        "reason"
+    );
+
+if (
+    loginReason ===
+    "session-expired"
+) {
+    showLoginMessage(
+        "Sesi login Anda telah berakhir. Silakan login kembali."
+    );
+
+    window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+    );
+}
+
 window.addEventListener(
     "offline",
     function () {
@@ -520,7 +767,14 @@ window.addEventListener(
 usernameInput.addEventListener(
     "input",
     function () {
+        this.value =
+            this.value.replace(
+                /\D/g,
+                ""
+            );
+
         hideLoginMessage();
+        updateLoginButtonState();
     }
 );
 
@@ -528,6 +782,7 @@ passwordInput.addEventListener(
     "input",
     function () {
         hideLoginMessage();
+        updateLoginButtonState();
     }
 );
 
@@ -746,18 +1001,84 @@ async function callApi(
 */
 
 function getApiErrorMessage(error) {
-    if (!error) {
-        return "Terjadi kesalahan saat login.";
+    if (!navigator.onLine) {
+        return "Tidak ada koneksi internet. Periksa jaringan Anda lalu coba kembali.";
+    }
+
+    const rawMessage =
+        typeof error === "string"
+            ? error
+            : String(
+                error?.message ||
+                ""
+            ).trim();
+
+    const message =
+        rawMessage.toLowerCase();
+
+    if (
+        message.includes(
+            "failed to fetch"
+        ) ||
+        message.includes(
+            "network"
+        ) ||
+        message.includes(
+            "fetch"
+        )
+    ) {
+        return "Tidak dapat terhubung ke server. Periksa koneksi jaringan Anda.";
     }
 
     if (
-        typeof error === "string"
+        message.includes(
+            "timeout"
+        ) ||
+        message.includes(
+            "terlalu lama"
+        ) ||
+        message.includes(
+            "abort"
+        )
     ) {
-        return error;
+        return "Server terlalu lama merespons. Silakan coba kembali.";
     }
 
-    return (
-        error.message ||
-        "Terjadi kesalahan saat login."
-    );
+    if (
+        /http\s+5\d\d/.test(
+            message
+        )
+    ) {
+        return "Server sedang mengalami gangguan. Silakan coba beberapa saat lagi.";
+    }
+
+    if (
+        message.includes(
+            "unauthorized"
+        ) ||
+        message.includes(
+            "http 401"
+        )
+    ) {
+        return "NIK atau password tidak valid.";
+    }
+
+    if (
+        message.includes(
+            "nonaktif"
+        ) ||
+        message.includes(
+            "password"
+        ) ||
+        message.includes(
+            "nik atau"
+        ) ||
+        message.includes(
+            "akun"
+        )
+    ) {
+        return rawMessage;
+    }
+
+    return "Login tidak dapat diproses. Silakan coba kembali.";
 }

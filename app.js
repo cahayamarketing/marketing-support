@@ -1227,6 +1227,91 @@ function abortAllBackendRequests() {
     activeBackendControllers.clear();
 }
 
+let sessionExpiredHandling =
+    false;
+
+function isSessionExpiredResponse(
+    status,
+    message
+) {
+    const text =
+        String(
+            message || ""
+        ).toLowerCase();
+
+    return (
+        status === 401 ||
+        text.includes(
+            "session expired"
+        ) ||
+        text.includes(
+            "session tidak valid"
+        ) ||
+        text.includes(
+            "token tidak valid"
+        ) ||
+        text.includes(
+            "token expired"
+        ) ||
+        text.includes(
+            "sesi telah berakhir"
+        ) ||
+        text.includes(
+            "sesi berakhir"
+        ) ||
+        text.includes(
+            "autentikasi"
+        )
+    );
+}
+
+function handleSessionExpired() {
+    if (
+        sessionExpiredHandling
+    ) {
+        return;
+    }
+
+    sessionExpiredHandling =
+        true;
+
+    const hasUnsavedKpi =
+        typeof window[
+            "crmKpiHasUnsavedChanges"
+        ] ===
+        "function" &&
+        window[
+            "crmKpiHasUnsavedChanges"
+        ]();
+
+    abortAllBackendRequests();
+
+    sessionStorage.removeItem(
+        "currentUser"
+    );
+
+    sessionStorage.removeItem(
+        "sessionToken"
+    );
+
+    const proceed =
+        !hasUnsavedKpi ||
+        window.confirm(
+            "Sesi login Anda telah berakhir.\n\nPerubahan KPI yang belum disimpan akan hilang.\n\nLanjutkan ke halaman login?"
+        );
+
+    if (!proceed) {
+        sessionExpiredHandling =
+            false;
+
+        return;
+    }
+
+    window.location.replace(
+        "login.html?reason=session-expired"
+    );
+}
+
 async function requestBackend(
     action,
     payload = {}
@@ -1367,6 +1452,19 @@ async function requestBackend(
                         ? data.error
                         : ""
                 );
+
+            if (
+                isSessionExpiredResponse(
+                    response.status,
+                    message
+                )
+            ) {
+                handleSessionExpired();
+
+                throw new Error(
+                    "Sesi login telah berakhir."
+                );
+            }
 
             throw new Error(
                 message ||
@@ -3409,6 +3507,17 @@ document
 
             if (!confirmed) {
                 return;
+            }
+
+            const logoutTransition =
+                document.getElementById(
+                    "logoutTransition"
+                );
+
+            if (logoutTransition) {
+                logoutTransition.classList.remove(
+                    "hidden"
+                );
             }
 
             const tokenBeforeLogout =
