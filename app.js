@@ -10318,6 +10318,60 @@ document
         }
     });
 
+const listFilterToggle =
+    document.getElementById(
+        "listFilterToggle"
+    );
+
+const listFilterContent =
+    document.getElementById(
+        "listFilterContent"
+    );
+
+const listFilterChevron =
+    document.getElementById(
+        "listFilterChevron"
+    );
+
+
+if (
+    listFilterToggle &&
+    listFilterContent
+) {
+
+    listFilterToggle.addEventListener(
+        "click",
+        function () {
+
+            const isHidden =
+                listFilterContent.classList.contains(
+                    "hidden"
+                );
+
+            listFilterContent.classList.toggle(
+                "hidden",
+                !isHidden
+            );
+
+            listFilterToggle.setAttribute(
+                "aria-expanded",
+                String(isHidden)
+            );
+
+            if (listFilterChevron) {
+
+                listFilterChevron.classList.toggle(
+                    "rotate-180",
+                    isHidden
+                );
+
+            }
+
+        }
+    );
+
+}
+
 /*
 |--------------------------------------------------------------------------
 | JALANKAN APLIKASI SETELAH SELURUH KONSTANTA DAN LISTENER SIAP

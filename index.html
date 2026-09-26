@@ -5181,27 +5181,347 @@
                         </div>
 
 
-                        <!-- FILTER UTAMA -->
-                        <div class="mt-5 grid gap-4 xl:grid-cols-12">
+                        <div
+                            id="listFilterContent"
+                            class="
+                                hidden
+                                md:block
+                            "
+                        >    
+                            <!-- FILTER UTAMA -->
+                            <div class="mt-5 grid gap-4 xl:grid-cols-12">
 
-                            <!-- SEARCH -->
-                            <div class="xl:col-span-4">
+                                <!-- SEARCH -->
+                                <div class="xl:col-span-4">
 
-                                <label
-                                    for="searchPkm"
-                                    class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
+                                    <label
+                                        for="searchPkm"
+                                        class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
+                                    >
+                                        Pencarian
+                                    </label>
+
+                                    <div class="relative">
+
+                                        <div
+                                            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                class="h-5 w-5"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="m21 21-4.35-4.35m1.35-5.65a7 7 0 11-14 0 7 7 0 0114 0z"
+                                                />
+                                            </svg>
+                                        </div>
+
+                                        <input
+                                            id="searchPkm"
+                                            type="search"
+                                            placeholder="ID, nama, kegiatan, lokasi, people..."
+                                            class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
+                                        >
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- TANGGAL AWAL -->
+                                <div class="xl:col-span-2">
+
+                                    <label
+                                        for="listStartDate"
+                                        class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
+                                    >
+                                        Pelaksanaan awal
+                                    </label>
+
+                                    <div class="relative">
+
+                                        <input
+                                            id="listStartDate"
+                                            type="date"
+                                            class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
+                                        >
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- TANGGAL AKHIR -->
+                                <div class="xl:col-span-2">
+
+                                    <label
+                                        for="listEndDate"
+                                        class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
+                                    >
+                                        Pelaksanaan akhir
+                                    </label>
+
+                                    <input
+                                        id="listEndDate"
+                                        type="date"
+                                        class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
+                                    >
+
+                                </div>
+
+
+                                <!-- JENIS PKM -->
+                                <div class="xl:col-span-2">
+
+                                    <label
+                                        for="listJenisPkm"
+                                        class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
+                                    >
+                                        Jenis PKM
+                                    </label>
+
+                                    <div class="relative">
+
+                                        <select
+                                            id="listJenisPkm"
+                                            class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-11 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
+                                        >
+                                            <option value="ALL">Semua jenis</option>
+                                            <option value="ATL BIASA">ATL BIASA</option>
+                                            <option value="ATL DEALER">ATL DEALER</option>
+                                            <option value="BTL BIASA">BTL BIASA</option>
+                                            <option value="BTL DEALER">BTL DEALER</option>
+                                        </select>
+
+                                        <div
+                                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="m19 9-7 7-7-7"
+                                                />
+                                            </svg>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- STATUS -->
+                                <div class="xl:col-span-2">
+
+                                    <label
+                                        for="statusFilter"
+                                        class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
+                                    >
+                                        Status
+                                    </label>
+
+                                    <div class="relative">
+
+                                        <select
+                                            id="statusFilter"
+                                            class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-11 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
+                                        >
+                                            <option value="ALL">Semua status</option>
+                                            <option value="MENUNGGU">Menunggu</option>
+                                            <option value="ACC">ACC</option>
+                                            <option value="DITOLAK">Ditolak</option>
+                                        </select>
+
+                                        <div
+                                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="m19 9-7 7-7-7"
+                                                />
+                                            </svg>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- APPROVAL + CABANG -->
+                            <div class="mt-4 grid gap-4 lg:grid-cols-2">
+
+                                <!-- STEP APPROVAL -->
+                                <div>
+
+                                    <label
+                                        for="approvalStepFilter"
+                                        class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
+                                    >
+                                        Step approval
+                                    </label>
+
+                                    <div class="relative">
+
+                                        <select
+                                            id="approvalStepFilter"
+                                            class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-11 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
+                                        >
+                                            <option value="ALL">
+                                                Semua step
+                                            </option>
+
+                                            <option value="MY_QUEUE">
+                                                Perlu saya proses
+                                            </option>
+
+                                            <option value="CRM">
+                                                Menunggu CRM
+                                            </option>
+
+                                            <option value="KACAB">
+                                                Menunggu KACAB
+                                            </option>
+
+                                            <option value="MSCM">
+                                                Menunggu MSCM
+                                            </option>
+
+                                            <option value="PIC_H23">
+                                                Menunggu PIC H23
+                                            </option>
+
+                                            <option value="MGR">
+                                                Menunggu Manager
+                                            </option>
+
+                                            <option value="SELESAI">
+                                                Selesai
+                                            </option>
+                                        </select>
+
+                                        <div
+                                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="m19 9-7 7-7-7"
+                                                />
+                                            </svg>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- CABANG -->
+                                <div
+                                    id="listBranchFilterContainer"
+                                    class="relative z-50"
                                 >
-                                    Pencarian
-                                </label>
 
-                                <div class="relative">
+                                    <label
+                                        class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
+                                    >
+                                        Cabang
+                                    </label>
 
                                     <div
-                                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400"
+                                        id="listBranchFilter"
+                                        class="min-h-12"
+                                    ></div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ACTION BAR -->
+                            <div
+                                class="mt-5 flex flex-col gap-4 border-t border-slate-100 pt-5 lg:flex-row lg:items-center lg:justify-between"
+                            >
+
+                                <div>
+                                    <p class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                                        Hasil pencarian
+                                    </p>
+
+                                    <p class="mt-1 text-sm font-semibold text-slate-600">
+                                        Gunakan filter untuk mempersempit data PKM.
+                                    </p>
+                                </div>
+
+
+                                <div class="flex flex-col gap-2 sm:flex-row">
+
+                                    <button
+                                        id="resetPkmFilter"
+                                        type="button"
+                                        class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-200"
                                     >
+
                                         <svg
                                             xmlns="http://www.w3.org/2000/svg"
-                                            class="h-5 w-5"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9M4 9H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2M20 15h-5"
+                                            />
+                                        </svg>
+
+                                        Reset
+
+                                    </button>
+
+
+                                    <button
+                                        id="applyPkmFilter"
+                                        type="button"
+                                        class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-6 text-sm font-black text-white shadow-lg shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-xl hover:shadow-red-600/25 focus:outline-none focus:ring-4 focus:ring-red-500/20 active:translate-y-0"
+                                    >
+
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
                                             fill="none"
                                             viewBox="0 0 24 24"
                                             stroke="currentColor"
@@ -5213,330 +5533,17 @@
                                                 d="m21 21-4.35-4.35m1.35-5.65a7 7 0 11-14 0 7 7 0 0114 0z"
                                             />
                                         </svg>
-                                    </div>
 
-                                    <input
-                                        id="searchPkm"
-                                        type="search"
-                                        placeholder="ID, nama, kegiatan, lokasi, people..."
-                                        class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
-                                    >
+                                        Cari data
 
-                                </div>
-
-                            </div>
-
-
-                            <!-- TANGGAL AWAL -->
-                            <div class="xl:col-span-2">
-
-                                <label
-                                    for="listStartDate"
-                                    class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
-                                >
-                                    Pelaksanaan awal
-                                </label>
-
-                                <div class="relative">
-
-                                    <input
-                                        id="listStartDate"
-                                        type="date"
-                                        class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
-                                    >
-
-                                </div>
-
-                            </div>
-
-
-                            <!-- TANGGAL AKHIR -->
-                            <div class="xl:col-span-2">
-
-                                <label
-                                    for="listEndDate"
-                                    class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
-                                >
-                                    Pelaksanaan akhir
-                                </label>
-
-                                <input
-                                    id="listEndDate"
-                                    type="date"
-                                    class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
-                                >
-
-                            </div>
-
-
-                            <!-- JENIS PKM -->
-                            <div class="xl:col-span-2">
-
-                                <label
-                                    for="listJenisPkm"
-                                    class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
-                                >
-                                    Jenis PKM
-                                </label>
-
-                                <div class="relative">
-
-                                    <select
-                                        id="listJenisPkm"
-                                        class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-11 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
-                                    >
-                                        <option value="ALL">Semua jenis</option>
-                                        <option value="ATL BIASA">ATL BIASA</option>
-                                        <option value="ATL DEALER">ATL DEALER</option>
-                                        <option value="BTL BIASA">BTL BIASA</option>
-                                        <option value="BTL DEALER">BTL DEALER</option>
-                                    </select>
-
-                                    <div
-                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400"
-                                    >
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="m19 9-7 7-7-7"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-
-                            <!-- STATUS -->
-                            <div class="xl:col-span-2">
-
-                                <label
-                                    for="statusFilter"
-                                    class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
-                                >
-                                    Status
-                                </label>
-
-                                <div class="relative">
-
-                                    <select
-                                        id="statusFilter"
-                                        class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-11 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
-                                    >
-                                        <option value="ALL">Semua status</option>
-                                        <option value="MENUNGGU">Menunggu</option>
-                                        <option value="ACC">ACC</option>
-                                        <option value="DITOLAK">Ditolak</option>
-                                    </select>
-
-                                    <div
-                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400"
-                                    >
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="m19 9-7 7-7-7"
-                                            />
-                                        </svg>
-                                    </div>
+                                    </button>
 
                                 </div>
 
                             </div>
 
                         </div>
-
-
-                        <!-- APPROVAL + CABANG -->
-                        <div class="mt-4 grid gap-4 lg:grid-cols-2">
-
-                            <!-- STEP APPROVAL -->
-                            <div>
-
-                                <label
-                                    for="approvalStepFilter"
-                                    class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
-                                >
-                                    Step approval
-                                </label>
-
-                                <div class="relative">
-
-                                    <select
-                                        id="approvalStepFilter"
-                                        class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-11 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
-                                    >
-                                        <option value="ALL">
-                                            Semua step
-                                        </option>
-
-                                        <option value="MY_QUEUE">
-                                            Perlu saya proses
-                                        </option>
-
-                                        <option value="CRM">
-                                            Menunggu CRM
-                                        </option>
-
-                                        <option value="KACAB">
-                                            Menunggu KACAB
-                                        </option>
-
-                                        <option value="MSCM">
-                                            Menunggu MSCM
-                                        </option>
-
-                                        <option value="PIC_H23">
-                                            Menunggu PIC H23
-                                        </option>
-
-                                        <option value="MGR">
-                                            Menunggu Manager
-                                        </option>
-
-                                        <option value="SELESAI">
-                                            Selesai
-                                        </option>
-                                    </select>
-
-                                    <div
-                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400"
-                                    >
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="m19 9-7 7-7-7"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-
-                            <!-- CABANG -->
-                            <div
-                                id="listBranchFilterContainer"
-                                class="relative z-50"
-                            >
-
-                                <label
-                                    class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500"
-                                >
-                                    Cabang
-                                </label>
-
-                                <div
-                                    id="listBranchFilter"
-                                    class="min-h-12"
-                                ></div>
-
-                            </div>
-
-                        </div>
-
-
-                        <!-- ACTION BAR -->
-                        <div
-                            class="mt-5 flex flex-col gap-4 border-t border-slate-100 pt-5 lg:flex-row lg:items-center lg:justify-between"
-                        >
-
-                            <div>
-                                <p class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                                    Hasil pencarian
-                                </p>
-
-                                <p class="mt-1 text-sm font-semibold text-slate-600">
-                                    Gunakan filter untuk mempersempit data PKM.
-                                </p>
-                            </div>
-
-
-                            <div class="flex flex-col gap-2 sm:flex-row">
-
-                                <button
-                                    id="resetPkmFilter"
-                                    type="button"
-                                    class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-200"
-                                >
-
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        class="h-4 w-4"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9M4 9H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2M20 15h-5"
-                                        />
-                                    </svg>
-
-                                    Reset
-
-                                </button>
-
-
-                                <button
-                                    id="applyPkmFilter"
-                                    type="button"
-                                    class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-6 text-sm font-black text-white shadow-lg shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-xl hover:shadow-red-600/25 focus:outline-none focus:ring-4 focus:ring-red-500/20 active:translate-y-0"
-                                >
-
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        class="h-4 w-4"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="m21 21-4.35-4.35m1.35-5.65a7 7 0 11-14 0 7 7 0 0114 0z"
-                                        />
-                                    </svg>
-
-                                    Cari data
-
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
+                    </div>        
 
                     <!-- INFO HASIL -->
                     <div
