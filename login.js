@@ -33,6 +33,144 @@ const loginSubmitButton =
         "loginSubmitButton"
     );
 
+if (
+    usernameInput &&
+    window.matchMedia(
+        "(min-width: 768px)"
+    ).matches
+) {
+    window.setTimeout(
+        function () {
+            usernameInput.focus();
+        },
+        150
+    );
+}
+
+const browserCompatibilityNotice =
+    document.getElementById(
+        "browserCompatibilityNotice"
+    );
+
+const browserCompatibilityTitle =
+    document.getElementById(
+        "browserCompatibilityTitle"
+    );
+
+const browserCompatibilityMessage =
+    document.getElementById(
+        "browserCompatibilityMessage"
+    );    
+
+function checkBrowserCompatibility() {
+
+    if (
+        !browserCompatibilityNotice
+    ) {
+        return;
+    }
+
+    const userAgent =
+        navigator.userAgent || "";
+
+    const unsupportedFeatures = [];
+
+    if (
+        typeof window.fetch !==
+        "function"
+    ) {
+        unsupportedFeatures.push(
+            "Fetch API"
+        );
+    }
+
+    if (
+        typeof window.Promise !==
+        "function"
+    ) {
+        unsupportedFeatures.push(
+            "Promise"
+        );
+    }
+
+    if (
+        typeof window.AbortController !==
+        "function"
+    ) {
+        unsupportedFeatures.push(
+            "AbortController"
+        );
+    }
+
+    if (
+        typeof window.URLSearchParams !==
+        "function"
+    ) {
+        unsupportedFeatures.push(
+            "URLSearchParams"
+        );
+    }
+
+    if (
+        !window.sessionStorage
+    ) {
+        unsupportedFeatures.push(
+            "Session Storage"
+        );
+    }
+
+    if (
+        unsupportedFeatures.length
+    ) {
+        browserCompatibilityNotice.classList.remove(
+            "hidden"
+        );
+
+        browserCompatibilityNotice.classList.remove(
+            "border-amber-200",
+            "bg-amber-50"
+        );
+
+        browserCompatibilityNotice.classList.add(
+            "border-red-200",
+            "bg-red-50"
+        );
+
+        browserCompatibilityTitle.className =
+            "text-xs font-black text-red-800";
+
+        browserCompatibilityMessage.className =
+            "mt-1 text-xs leading-5 text-red-700";
+
+        browserCompatibilityTitle.textContent =
+            "Browser tidak mendukung fitur yang dibutuhkan";
+
+        browserCompatibilityMessage.textContent =
+            "Gunakan Google Chrome, Microsoft Edge, atau Firefox versi terbaru.";
+
+        return;
+    }
+
+    const isOpera =
+        /OPR\/|Opera Mini|Opera Mobi/i.test(
+            userAgent
+        );
+
+    if (
+        isOpera
+    ) {
+        browserCompatibilityNotice.classList.remove(
+            "hidden"
+        );
+
+        browserCompatibilityTitle.textContent =
+            "Browser terdeteksi: Opera";
+
+        browserCompatibilityMessage.textContent =
+            "Aplikasi tetap dapat digunakan, tetapi Google Chrome atau Microsoft Edge direkomendasikan untuk konsistensi tampilan dan perilaku sistem.";
+    }
+}
+
 const loginTransition =
     document.getElementById(
         "loginTransition"
@@ -81,6 +219,16 @@ loginForm.addEventListener(
     async function (event) {
         event.preventDefault();
 
+        if (
+            navigator.onLine === false
+        ) {
+            showLoginMessage(
+                "Tidak ada koneksi internet. Periksa koneksi jaringan Anda lalu coba kembali."
+            );
+
+            return;
+        }        
+
         const nik =
             usernameInput.value.trim();
 
@@ -127,15 +275,6 @@ loginForm.addEventListener(
 
             showLoginTransition(
                 "Menyiapkan dashboard..."
-            );
-
-            await new Promise(
-                function (resolve) {
-                    window.setTimeout(
-                        resolve,
-                        900
-                    );
-                }
             );
 
             window.location.replace(
@@ -368,6 +507,36 @@ function hideLoginMessage() {
         "hidden"
     );
 }
+
+window.addEventListener(
+    "offline",
+    function () {
+        showLoginMessage(
+            "Koneksi internet terputus. Periksa jaringan Anda."
+        );
+    }
+);
+
+usernameInput.addEventListener(
+    "input",
+    function () {
+        hideLoginMessage();
+    }
+);
+
+passwordInput.addEventListener(
+    "input",
+    function () {
+        hideLoginMessage();
+    }
+);
+
+window.addEventListener(
+    "online",
+    function () {
+        hideLoginMessage();
+    }
+);
 
 
 
