@@ -188,6 +188,7 @@ const isDiscordApprovalMode =
         discordApprovalToken
     );
 
+
 function ensureDiscordLoadingStyle() {
     if (
         document.getElementById(
@@ -452,6 +453,8 @@ let sheetPkmData = [];
 let referenceMastersLoaded = false;
 let referenceMastersPromise = null;
 
+let isDiscordAutoLogin = false;
+
 let sheetBranchOptions = [
     { code: "SLO", name: "SOLO YOS" },
     { code: "RJM", name: "RAJIMAN" },
@@ -478,7 +481,6 @@ let currentPkmPage = 1;
 
 let currentUser;
 
-let isDiscordAutoLogin = false;
 
 
 /*
@@ -8050,16 +8052,12 @@ async function openApprovalModal(itemId) {
 
     if (canProcess) {
 
-        if (
-            isDiscordApprovalMode
-        ) {
-            prepareDiscordApprovalSignature();
-        } else {
-            await prepareApprovalSignature();
-        }
+        await prepareApprovalSignature();
 
     } else {
+
         clearSignature();
+
     }
 }
 
@@ -8616,9 +8614,7 @@ async function approvePkmWithSignature() {
                 item.id,
 
             signatureMode:
-                isDiscordApprovalMode
-                    ? "DRAWN"
-                    : approvalSignatureMode,
+                approvalSignatureMode,
 
             signatureData:
                 signatureData
@@ -8641,7 +8637,8 @@ async function approvePkmWithSignature() {
             );
 
         if (
-            isDiscordApprovalMode
+            isDiscordApprovalMode &&
+            !isDiscordAutoLogin
         ) {
             const approvalRole =
                 String(
@@ -11558,6 +11555,10 @@ document
 
 async function initializeDiscordApproval() {
 
+    console.log(
+        "[DISCORD AUTO LOGIN] Membuka link approval..."
+    );
+
     showDiscordApprovalLoading(
         "Memeriksa link approval..."
     );
@@ -11576,6 +11577,11 @@ async function initializeDiscordApproval() {
                 }
             );
 
+        console.log(
+            "[DISCORD AUTO LOGIN] Response:",
+            result
+        );
+
         if (
             !result ||
             !result.pkm
@@ -11585,25 +11591,20 @@ async function initializeDiscordApproval() {
             );
         }
 
-        updateDiscordApprovalLoading(
-            "Menyiapkan data PKM..."
-        );
-
-        const role =
-            String(
-                result.role || ""
-            )
-                .trim()
-                .toUpperCase();
-
         if (
             !result.sessionToken ||
             !result.user
         ) {
             throw new Error(
-                "Session auto-login tidak tersedia."
+                "Auto-login gagal: sessionToken atau user tidak tersedia."
             );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SIMPAN SESSION USER ASLI
+        |--------------------------------------------------------------------------
+        */
 
         sessionToken =
             result.sessionToken;
@@ -11625,6 +11626,39 @@ async function initializeDiscordApproval() {
 
         isDiscordAutoLogin = true;
 
+        console.log(
+            "[DISCORD AUTO LOGIN] LOGIN BERHASIL",
+            {
+                username:
+                    currentUser.username,
+
+                nik:
+                    currentUser.nik,
+
+                name:
+                    currentUser.name,
+
+                role:
+                    currentUser.role,
+
+                jabatan:
+                    currentUser.jabatan,
+
+                branch:
+                    currentUser.branch
+            }
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | DATA PKM
+        |--------------------------------------------------------------------------
+        */
+
+        updateDiscordApprovalLoading(
+            "Menyiapkan data PKM..."
+        );
+
         sheetPkmData = [
             result.pkm
         ];
@@ -11636,14 +11670,14 @@ async function initializeDiscordApproval() {
             "Menyiapkan form tanda tangan..."
         );
 
+        console.log(
+            "[DISCORD AUTO LOGIN] Membuka canvas TTD..."
+        );
+
         await openApprovalModal(
             result.pkm.id
         );
 
-        /*
-        | Beri sedikit jeda agar modal
-        | benar-benar selesai dirender.
-        */
         await new Promise(
             function (resolve) {
                 window.setTimeout(
@@ -11653,9 +11687,23 @@ async function initializeDiscordApproval() {
             }
         );
 
+        console.log(
+            "[DISCORD AUTO LOGIN] Canvas TTD siap."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "[DISCORD AUTO LOGIN] GAGAL:",
+            error
+        );
+
+        throw error;
+
     } finally {
 
         hideDiscordApprovalLoading();
+
     }
 }
 

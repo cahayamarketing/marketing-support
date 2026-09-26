@@ -1133,6 +1133,18 @@ async function optimizePkmPdfSignatures(
 async function createAndStorePkmPdf(
     pkmId
 ) {
+    console.group(
+        "[PDF] CREATE PDF"
+    );
+
+    console.log(
+        "[PDF] Mulai",
+        {
+            pkmId:
+                pkmId
+        }
+    );
+
     if (!pkmId) {
         throw new Error(
             "ID PKM tidak tersedia."
@@ -1155,6 +1167,20 @@ async function createAndStorePkmPdf(
                     pkmId: pkmId
                 }
             );
+    console.log(
+        "[PDF] getPkmPdfData BERHASIL",
+        {
+            pkmId:
+                pkmId,
+
+            hasPkm:
+                Boolean(
+                    pdfData &&
+                    pdfData.pkm
+                )
+        }
+    );
+
     } catch (error) {
         throw new Error(
             "Gagal mengambil data PDF: " +
@@ -1215,6 +1241,21 @@ async function createAndStorePkmPdf(
             headerDataUrl
         );
 
+    console.log(
+        "[PDF] generatePkmPdf BERHASIL",
+        {
+            fileName:
+                generated &&
+                generated.fileName,
+
+            hasDocument:
+                Boolean(
+                    generated &&
+                    generated.doc
+                )
+        }
+    );
+
     if (
         !generated ||
         !generated.doc
@@ -1274,17 +1315,52 @@ async function createAndStorePkmPdf(
     */
 
     try {
-        return await requestBackend(
-            "savePkmPdf",
+        const saveResult =
+            await requestBackend(
+                "savePkmPdf",
+                {
+                    pkmId:
+                        pkmId,
+
+                    fileName:
+                        generated.fileName,
+
+                    pdfBase64:
+                        pdfBase64
+                }
+            );
+
+        console.log(
+            "[PDF] savePkmPdf BERHASIL",
+            saveResult
+        );
+
+        console.log(
+            "[PDF] PDF FINAL SELESAI",
             {
-                pkmId: pkmId,
+                pkmId:
+                    pkmId,
+
                 fileName:
                     generated.fileName,
-                pdfBase64:
-                    pdfBase64
+
+                saveResult:
+                    saveResult
             }
         );
+
+        console.groupEnd();
+
+        return saveResult;
     } catch (error) {
+
+        console.error(
+            "[PDF] savePkmPdf GAGAL",
+            error
+        );
+
+        console.groupEnd();
+
         throw new Error(
             "PDF sudah dibuat tetapi gagal disimpan ke Drive: " +
             (
