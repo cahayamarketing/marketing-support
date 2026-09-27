@@ -2021,9 +2021,38 @@ async function performPkmDataLoad(
             return;
         }
 
-        showToast(
+        const errorMessage =
             error.message ||
-            "Data PKM gagal dimuat."
+            "Data PKM gagal dimuat.";
+
+        const errorContainerId =
+            prefix === "list"
+                ? "listPkmErrorState"
+                : "dashboardPkmErrorState";
+
+        showDataErrorState(
+            errorContainerId,
+            {
+                title:
+                    "Data PKM belum berhasil dimuat",
+
+                message:
+                    errorMessage,
+
+                retryLabel:
+                    "Coba Lagi",
+
+                onRetry:
+                    function () {
+                        return loadPkmData(
+                            prefix
+                        );
+                    }
+            }
+        );
+
+        showToast(
+            errorMessage
         );
     } finally {
         setPkmLoading(false);
@@ -12684,6 +12713,125 @@ function renderSelectedFocusTypes() {
                 `;
             }
         ).join("");
+}
+
+function showDataErrorState(
+    containerId,
+    options = {}
+) {
+    const container =
+        document.getElementById(
+            containerId
+        );
+
+    if (!container) {
+        return;
+    }
+
+    const title =
+        options.title ||
+        "Data belum berhasil dimuat";
+
+    const message =
+        options.message ||
+        "Terjadi kendala saat mengambil data.";
+
+    const retryLabel =
+        options.retryLabel ||
+        "Coba Lagi";
+
+    const retryAction =
+        typeof options.onRetry ===
+        "function"
+            ? options.onRetry
+            : null;
+
+    container.innerHTML = `
+        <div
+            class="data-error-state"
+            role="alert"
+        >
+            <div class="data-error-state-icon">
+                !
+            </div>
+
+            <div class="data-error-state-content">
+                <p class="data-error-state-title">
+                    ${escapeHtml(title)}
+                </p>
+
+                <p class="data-error-state-message">
+                    ${escapeHtml(message)}
+                </p>
+
+                ${
+                    retryAction
+                        ? `
+                            <button
+                                type="button"
+                                class="data-error-state-button"
+                                data-error-retry
+                            >
+                                ${escapeHtml(retryLabel)}
+                            </button>
+                        `
+                        : ""
+                }
+            </div>
+        </div>
+    `;
+
+    if (retryAction) {
+        const retryButton =
+            container.querySelector(
+                "[data-error-retry]"
+            );
+
+        if (retryButton) {
+            retryButton.addEventListener(
+                "click",
+                async function () {
+                    retryButton.disabled = true;
+                    retryButton.innerHTML = `
+                        <span class="ui-spinner"></span>
+                        Memuat ulang...
+                    `;
+
+                    try {
+                        await retryAction();
+                    } catch (error) {
+                        console.error(
+                            "Retry gagal:",
+                            error
+                        );
+                    }
+                }
+            );
+        }
+    }
+}
+
+
+function clearDataErrorState(
+    containerId
+) {
+    const container =
+        document.getElementById(
+            containerId
+        );
+
+    if (!container) {
+        return;
+    }
+
+    const errorState =
+        container.querySelector(
+            ".data-error-state"
+        );
+
+    if (errorState) {
+        errorState.remove();
+    }
 }
 
 function updateAppBootstrapLoader(
