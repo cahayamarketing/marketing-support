@@ -2106,33 +2106,92 @@ async function performPkmDataLoad(
 }
 
 function updateFilterInformation(prefix) {
-    const branches = activePkmFilters.branches || [];
-    const branchText = isHeadOfficeUser()
-        ? (
-            branches.length === sheetBranchOptions.length ||
-            !branches.length
-                ? "Semua cabang"
-                : branches.join(", ")
-        )
-        : `${currentUser.originalBranch || currentUser.branch}`;
+    const branches =
+        activePkmFilters.branches || [];
+
+    const isAllBranches =
+        isHeadOfficeUser() &&
+        (
+            !branches.length ||
+            branches.length === sheetBranchOptions.length
+        );
+
+    const branchText =
+        isHeadOfficeUser()
+            ? (
+                isAllBranches
+                    ? "Semua cabang"
+                    : branches.join(", ")
+            )
+            : (
+                currentUser.originalBranch ||
+                currentUser.branch ||
+                "Cabang"
+            );
+
+    const hasDateFilter =
+        Boolean(
+            activePkmFilters.startDate ||
+            activePkmFilters.endDate
+        );
 
     const dateText =
         activePkmFilters.startDate &&
         activePkmFilters.endDate
-            ? `${activePkmFilters.startDate} s.d. ${activePkmFilters.endDate}`
-            : "Semua tanggal pelaksanaan";
+            ? `${activePkmFilters.startDate} — ${activePkmFilters.endDate}`
+            : activePkmFilters.startDate
+                ? `Mulai ${activePkmFilters.startDate}`
+                : activePkmFilters.endDate
+                    ? `Sampai ${activePkmFilters.endDate}`
+                    : "Semua tanggal";
+
+    const hasJenisFilter =
+        Boolean(
+            activePkmFilters.jenisPkm &&
+            activePkmFilters.jenisPkm !== "ALL"
+        );
+
+    const jenisText =
+        hasJenisFilter
+            ? activePkmFilters.jenisPkm
+            : "Semua jenis PKM";
+
+    const filterCount =
+        Number(hasDateFilter) +
+        Number(hasJenisFilter) +
+        Number(
+            isHeadOfficeUser() &&
+            !isAllBranches
+        );
+
+    const filterCountText =
+        filterCount > 0
+            ? `${filterCount} filter aktif`
+            : "Tanpa filter tambahan";
 
     const message =
-        `${dateText} • ${activePkmFilters.jenisPkm || "ALL"} • ${branchText}`;
+        `${dateText} • ${jenisText} • ${branchText}`;
 
     [
         "dashboardFilterInfo",
         "listFilterInfo"
     ].forEach(function (id) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = message;
+        const element =
+            document.getElementById(id);
+
+        if (!element) {
+            return;
         }
+
+        element.innerHTML = `
+            <span class="font-black text-slate-600">
+                Filter aktif:
+            </span>
+            ${escapeHtml(message)}
+            <span class="ml-1 font-black text-slate-400">
+                • ${filterCountText}
+            </span>
+        `;
     });
 }
 
