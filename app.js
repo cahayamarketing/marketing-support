@@ -1322,8 +1322,17 @@ function handleSessionExpired() {
         return;
     }
 
-    window.location.replace(
-        "login.html?reason=session-expired"
+    showToast(
+        "Sesi login telah berakhir. Mengarahkan ke halaman login..."
+    );
+
+    window.setTimeout(
+        function () {
+            window.location.replace(
+                "login.html?reason=session-expired"
+            );
+        },
+        700
     );
 }
 
@@ -1349,7 +1358,7 @@ async function requestBackend(
 
     const controller =
         new AbortController();
-        
+
     activeBackendControllers.add(
         controller
     );  
