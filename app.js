@@ -2044,6 +2044,8 @@ async function performPkmDataLoad(
 
         activePkmFilters = result.appliedFilters || filters;
 
+        updateDataFreshness();
+
         if (
             isHeadOfficeUser() &&
             !document.querySelector(
@@ -2103,6 +2105,49 @@ async function performPkmDataLoad(
     } finally {
         setPkmLoading(false);
     }
+}
+
+function updateDataFreshness() {
+    const element =
+        document.getElementById(
+            "dashboardDataFreshness"
+        );
+
+    if (!element) {
+        return;
+    }
+
+    const now = new Date();
+
+    const dateText =
+        now.toLocaleDateString(
+            "id-ID",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }
+        );
+
+    const timeText =
+        now.toLocaleTimeString(
+            "id-ID",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+    element.textContent =
+        `Diperbarui ${dateText} ${timeText}`;
+
+    element.classList.remove(
+        "text-slate-400"
+    );
+
+    element.classList.add(
+        "text-emerald-600"
+    );
 }
 
 function updateFilterInformation(prefix) {
