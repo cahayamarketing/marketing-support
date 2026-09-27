@@ -1214,6 +1214,21 @@ function saveStoredPkm(data) {
 |--------------------------------------------------------------------------
 */
 
+const mutationActions = new Set([
+    "createPkm",
+    "approvePkm",
+    "approvePkmFromDiscord",
+    "savePkmPdf",
+    "updateMyProfile",
+    "saveCrmKpi",
+    "verifyCrmKpi",
+    "saveLpj",
+    "createLpj"
+]);
+
+const activeMutationRequests =
+    new Set();
+
 const activeBackendControllers =
     new Set();
 
@@ -1316,12 +1331,28 @@ async function requestBackend(
     action,
     payload = {}
 ) {
+    const isMutation =
+        mutationActions.has(action);
+
+    if (
+        isMutation &&
+        activeMutationRequests.has(action)
+    ) {
+        throw new Error(
+            "Permintaan sedang diproses. Silakan tunggu sampai selesai."
+        );
+    }
+
+    if (isMutation) {
+        activeMutationRequests.add(action);
+    }
+
     const controller =
         new AbortController();
-
+        
     activeBackendControllers.add(
         controller
-    );
+    );  
 
     const longActions = [
         "createPkm",
@@ -1504,6 +1535,12 @@ async function requestBackend(
         activeBackendControllers.delete(
             controller
         );
+
+        if (isMutation) {
+            activeMutationRequests.delete(
+                action
+            );
+        }
     }
 }
 
