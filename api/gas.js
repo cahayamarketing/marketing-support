@@ -116,7 +116,8 @@ export default async function handler(
                 responseText.length /
                 1024 /
                 1024
-            ).toFixed(3)} MB`
+            ).toFixed(3)} MB`,
+            responseText
         );
 
         const jsonStartedAt =
