@@ -2831,6 +2831,18 @@ async function initializeApplication() {
         );
     }
 
+    const systemHealthButton =
+        document.getElementById(
+            "systemHealthButton"
+        );
+
+    if (systemHealthButton) {
+        systemHealthButton.classList.toggle(
+            "hidden",
+            !userIsMaster
+        );
+    }
+
     document.getElementById(
         "sidebarBranch"
     ).textContent =
@@ -4045,6 +4057,13 @@ document.querySelectorAll("[data-page]").forEach(function (button) {
 function showPage(pageId) {
 
     if (
+        pageId === "systemHealthPage" &&
+        !isMasterAccount()
+    ) {
+        return false;
+    }
+
+    if (
         pageId !== "crmKpiPage" &&
         typeof window["crmKpiHasUnsavedChanges"] ===
             "function" &&
@@ -4108,6 +4127,12 @@ function showPage(pageId) {
             title: "KPI SiPede",
             subtitle:
                 "Monitoring performance SiPede"
+        },
+
+        systemHealthPage: {
+            title: "System Health",
+            subtitle:
+                "Monitoring kesehatan sistem dan koneksi backend"
         }
 
     };
@@ -4214,6 +4239,10 @@ function showPage(pageId) {
         renderPkmTable();
     }
 
+    if (pageId === "systemHealthPage") {
+        loadSystemHealth();
+    }
+
     if (pageId === "pdfPkmPage") {
         currentPdfPkmPage = 1;
         renderPkmPdfTable();
@@ -4310,6 +4339,256 @@ function showPage(pageId) {
         behavior: "smooth"
     });
 }
+
+
+async function loadSystemHealth() {
+
+    const refreshButton =
+        document.getElementById(
+            "refreshSystemHealth"
+        );
+
+    const overall =
+        document.getElementById(
+            "systemHealthOverall"
+        );
+
+    const api =
+        document.getElementById(
+            "systemHealthApi"
+        );
+
+    const appsScript =
+        document.getElementById(
+            "systemHealthAppsScript"
+        );
+
+    const sheets =
+        document.getElementById(
+            "systemHealthSheets"
+        );
+
+    const spreadsheet =
+        document.getElementById(
+            "systemHealthSpreadsheet"
+        );
+
+    const checkedAt =
+        document.getElementById(
+            "systemHealthCheckedAt"
+        );
+
+    const badge =
+        document.getElementById(
+            "systemHealthStatusBadge"
+        );
+
+    const details =
+        document.getElementById(
+            "systemHealthDetails"
+        );
+
+    if (!isMasterAccount()) {
+        return;
+    }
+
+    if (refreshButton) {
+        refreshButton.disabled = true;
+        refreshButton.textContent =
+            "Checking...";
+    }
+
+    if (overall) {
+        overall.textContent =
+            "Checking...";
+    }
+
+    if (details) {
+        details.innerHTML =
+            `<div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">
+                Menjalankan health check...
+            </div>`;
+    }
+
+    const startedAt =
+        performance.now();
+
+    try {
+
+        const result =
+            await requestBackend(
+                "getSystemHealth",
+                {}
+            );
+
+        const apiDuration =
+            performance.now() -
+            startedAt;
+
+        const backendDuration =
+            Number(
+                result.executionMs || 0
+            );
+
+        if (overall) {
+            overall.textContent =
+                result.healthy
+                    ? "HEALTHY"
+                    : "WARNING";
+        }
+
+        if (api) {
+            api.textContent =
+                `${(apiDuration / 1000).toFixed(2)}s`;
+        }
+
+        if (appsScript) {
+            appsScript.textContent =
+                `${(backendDuration / 1000).toFixed(2)}s`;
+        }
+
+        if (sheets) {
+            sheets.textContent =
+                result.googleSheets
+                    ? "CONNECTED"
+                    : "ERROR";
+        }
+
+        if (spreadsheet) {
+            spreadsheet.textContent =
+                result.spreadsheetName ||
+                "-";
+        }
+
+        if (checkedAt) {
+            checkedAt.textContent =
+                result.checkedAt ||
+                "-";
+        }
+
+        if (badge) {
+            badge.textContent =
+                result.healthy
+                    ? "Healthy"
+                    : "Warning";
+
+            badge.className =
+                result.healthy
+                    ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-600"
+                    : "rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-600";
+        }
+
+        if (details) {
+
+            details.innerHTML = `
+                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                    <span class="text-sm font-bold text-slate-700">
+                        Vercel / API
+                    </span>
+
+                    <span class="text-sm font-black ${
+                        apiDuration < 3000
+                            ? "text-emerald-600"
+                            : "text-amber-600"
+                    }">
+                        ${(apiDuration / 1000).toFixed(2)}s
+                    </span>
+                </div>
+
+                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                    <span class="text-sm font-bold text-slate-700">
+                        Apps Script
+                    </span>
+
+                    <span class="text-sm font-black text-slate-700">
+                        ${(backendDuration / 1000).toFixed(2)}s
+                    </span>
+                </div>
+
+                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                    <span class="text-sm font-bold text-slate-700">
+                        Google Sheets
+                    </span>
+
+                    <span class="text-sm font-black ${
+                        result.googleSheets
+                            ? "text-emerald-600"
+                            : "text-red-600"
+                    }">
+                        ${
+                            result.googleSheets
+                                ? "CONNECTED"
+                                : "ERROR"
+                        }
+                    </span>
+                </div>
+
+                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                    <span class="text-sm font-bold text-slate-700">
+                        Spreadsheet
+                    </span>
+
+                    <span class="max-w-[60%] truncate text-sm font-black text-slate-700">
+                        ${result.spreadsheetName || "-"}
+                    </span>
+                </div>
+            `;
+        }
+
+    } catch (error) {
+
+        if (overall) {
+            overall.textContent =
+                "ERROR";
+        }
+
+        if (api) {
+            api.textContent =
+                "ERROR";
+        }
+
+        if (appsScript) {
+            appsScript.textContent =
+                "-";
+        }
+
+        if (sheets) {
+            sheets.textContent =
+                "ERROR";
+        }
+
+        if (badge) {
+            badge.textContent =
+                "Error";
+
+            badge.className =
+                "rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600";
+        }
+
+        if (details) {
+            details.innerHTML = `
+                <div class="rounded-2xl border border-red-100 bg-red-50 p-4">
+                    <p class="text-sm font-black text-red-700">
+                        Health check gagal
+                    </p>
+
+                    <p class="mt-1 text-xs text-red-500">
+                        ${error.message || "Terjadi kesalahan."}
+                    </p>
+                </div>
+            `;
+        }
+
+    } finally {
+
+        if (refreshButton) {
+            refreshButton.disabled = false;
+            refreshButton.textContent =
+                "Refresh";
+        }
+    }
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -13483,6 +13762,15 @@ document
     .addEventListener(
         "click",
         openProfileModal
+    );
+
+document
+    .getElementById(
+        "refreshSystemHealth"
+    )
+    ?.addEventListener(
+        "click",
+        loadSystemHealth
     );
 
 
