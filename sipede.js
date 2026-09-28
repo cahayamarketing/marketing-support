@@ -238,6 +238,8 @@ function initializeSipedeKpi() {
         "change",
         function () {
 
+            populateSipedePersons();
+
             updateSipedeIdentity();
 
         }
@@ -975,6 +977,13 @@ function populateSipedePersons() {
 
         sipedeKpiNik.value =
             currentNik;
+
+    } else if (
+        sipedeKpiNik.options.length
+    ) {
+
+        sipedeKpiNik.selectedIndex =
+            0;
 
     }
 
