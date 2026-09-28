@@ -238,7 +238,7 @@ function initializeSipedeKpi() {
         "change",
         function () {
 
-            loadSipedeKpiPage();
+            updateSipedeIdentity();
 
         }
     );
@@ -727,6 +727,18 @@ async function loadSipedeKpiPage() {
 
     sipedeKpiLoading = true;
 
+    loadSipedeKpiButton.disabled =
+        true;
+
+    loadSipedeKpiButton.innerHTML = `
+        <span class="inline-flex items-center gap-2">
+            <span
+                class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+            ></span>
+            <span>Memuat KPI...</span>
+        </span>
+    `;
+
     try {
 
         const result =
@@ -869,6 +881,13 @@ async function loadSipedeKpiPage() {
 
         sipedeKpiLoading =
             false;
+
+        loadSipedeKpiButton.disabled =
+            false;
+
+        loadSipedeKpiButton.innerHTML = `
+            <span>Tampilkan KPI</span>
+        `;
 
     }
 
