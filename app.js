@@ -1634,7 +1634,6 @@ function isHeadOfficeUser() {
 }
 
 function initializePkmFilters() {
-    const range = getCurrentMonthRange();
 
     ["dashboard", "list"].forEach(
         function (prefix) {
@@ -1646,18 +1645,18 @@ function initializePkmFilters() {
             );
 
             if (startInput) {
-                startInput.value = range.startDate;
+                startInput.value = "";
             }
 
             if (endInput) {
-                endInput.value = range.endDate;
+                endInput.value = "";
             }
         }
     );
 
     activePkmFilters = {
-        startDate: range.startDate,
-        endDate: range.endDate,
+        startDate: "",
+        endDate: "",
         jenisPkm: "ALL",
         branches: isHeadOfficeUser()
             ? []
