@@ -1346,7 +1346,7 @@ async function requestBackend(
 
     let performanceStatus =
         "ERROR";
-        
+
     const isMutation =
         mutationActions.has(action);
 
@@ -1418,6 +1418,10 @@ async function requestBackend(
         );
 
     try {
+
+        const apiFetchStartedAt =
+            performance.now();
+
         const response = await fetch(
             "/api/gas",
             {
@@ -1438,6 +1442,20 @@ async function requestBackend(
                 cache: "no-store"
             }
         );
+
+        const apiResponseReceivedAt =
+            performance.now();
+
+        console.log(
+            "[API RESPONSE]",
+            action,
+            `${(
+                (apiResponseReceivedAt -
+                    apiFetchStartedAt) /
+                1000
+            ).toFixed(2)}s`
+        );
+
 
         const responseText =
             await response.text();
