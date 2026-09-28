@@ -716,7 +716,19 @@ async function loadSipedeKpiPage() {
     const period =
         getSelectedSipedePeriod();
 
-    setSipedeKpiLoadButtonBusy(true);
+    sipedeKpiLoading =
+        true;
+
+    setSipedeKpiLoading(
+        true,
+        period.snapshotType === "CLOSING"
+            ? "Memuat laporan closing..."
+            : `Memuat KPI Week ${period.week}...`
+    );
+
+    setSipedeKpiLoadButtonBusy(
+        true
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -746,13 +758,9 @@ async function loadSipedeKpiPage() {
                         period.week,
 
                     snapshotType:
-                        period.snapshotType,
-
-                    nik:
-                        sipedeKpiNik.value
+                        period.snapshotType
                 }
             );
-
         sipedeKpiMaster =
             result.master;
 
@@ -1137,13 +1145,21 @@ function setSipedeKpiLoading(
             8;
 
 
-        loadingElement.classList.remove(
-            "hidden"
-        );
+        if (loadingElement) {
 
-        tableContainer.classList.add(
-            "hidden"
-        );
+            loadingElement.classList.remove(
+                "hidden"
+            );
+
+        }
+
+        if (tableContainer) {
+
+            tableContainer.classList.add(
+                "hidden"
+            );
+
+        }
 
 
         if (emptyElement) {
@@ -1232,14 +1248,21 @@ function setSipedeKpiLoading(
     window.setTimeout(
         function () {
 
-            loadingElement.classList.add(
-                "hidden"
-            );
+            if (loadingElement) {
 
-            tableContainer.classList.remove(
-                "hidden"
-            );
+                loadingElement.classList.add(
+                    "hidden"
+                );
 
+            }
+
+            if (tableContainer) {
+
+                tableContainer.classList.remove(
+                    "hidden"
+                );
+
+            }
             sipedeKpiLoadingValue =
                 0;
 
