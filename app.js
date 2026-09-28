@@ -4334,6 +4334,36 @@ function showPage(pageId) {
             });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | MUAT KPI SIPEDE
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        pageId === "sipedeKpiPage" &&
+        typeof window.loadSipedeKpiPage ===
+            "function"
+    ) {
+
+        window
+            .loadSipedeKpiPage()
+            .catch(function (error) {
+
+                console.error(
+                    "KPI SiPede gagal dibuka:",
+                    error
+                );
+
+                showToast(
+                    error.message ||
+                    "KPI SiPede gagal dimuat."
+                );
+
+            });
+
+    }    
+
     window.scrollTo({
         top: 0,
         behavior: "smooth"
