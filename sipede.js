@@ -240,23 +240,6 @@ function initializeSipedeKpi() {
 
             populateSipedePersons();
 
-            updateSipedeIdentity();
-
-        }
-    );
-
-    sipedeKpiNik.addEventListener(
-        "change",
-        function () {
-
-            updateSipedeIdentity();
-
-            if (
-                sipedeKpiRows.length
-            ) {
-                loadSipedeKpiPage();
-            }
-
         }
     );
 
@@ -729,18 +712,6 @@ async function loadSipedeKpiPage() {
 
     sipedeKpiLoading = true;
 
-    loadSipedeKpiButton.disabled =
-        true;
-
-    loadSipedeKpiButton.innerHTML = `
-        <span class="inline-flex items-center gap-2">
-            <span
-                class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-            ></span>
-            <span>Memuat KPI...</span>
-        </span>
-    `;
-
     try {
 
         const result =
@@ -913,80 +884,58 @@ function populateSipedePersons() {
         return;
     }
 
-    const currentNik =
-        sipedeKpiNik.value;
+    const branch =
+        String(
+            sipedeKpiBranch.value || ""
+        )
+            .trim()
+            .toUpperCase();
 
-    sipedeKpiNik.innerHTML = "";
-
-    sipedeKpiMaster.persons
-        .filter(
+    const persons =
+        sipedeKpiMaster.persons.filter(
             function (person) {
 
                 return (
                     String(
-                        person.status ||
-                        "AKTIF"
+                        person.status || ""
                     )
+                        .trim()
                         .toUpperCase() ===
                     "AKTIF"
-                );
-
-            }
-        )
-        .filter(
-            function (person) {
-
-                return (
-                    sipedeKpiBranch.value ===
-                    person.branch
-                );
-
-            }
-        )
-        .forEach(
-            function (person) {
-
-                const option =
-                    document.createElement(
-                        "option"
-                    );
-
-                option.value =
-                    person.nik;
-
-                option.textContent =
-                    `${person.nik} — ${person.name}`;
-
-                sipedeKpiNik.appendChild(
-                    option
-                );
+                ) &&
+                String(
+                    person.branch || ""
+                )
+                    .trim()
+                    .toUpperCase() ===
+                branch;
 
             }
         );
 
-    if (
-        currentNik &&
-        Array.from(
-            sipedeKpiNik.options
-        ).some(
-            option =>
-                option.value ===
-                currentNik
-        )
-    ) {
+    /*
+     * Jika ada SiPede pada cabang,
+     * ambil SiPede pertama.
+     */
+    const person =
+        persons.length
+            ? persons[0]
+            : null;
 
-        sipedeKpiNik.value =
-            currentNik;
+    sipedeKpiNik.value =
+        person
+            ? person.nik
+            : "";
 
-    } else if (
-        sipedeKpiNik.options.length
-    ) {
+    sipedeKpiName.value =
+        person
+            ? person.name
+            : "";
 
-        sipedeKpiNik.selectedIndex =
-            0;
-
-    }
-
+    sipedeKpiCrmName.value =
+        person
+            ? person.crmName
+            : "";
 }
 
 
