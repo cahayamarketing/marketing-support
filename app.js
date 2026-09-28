@@ -2117,10 +2117,41 @@ function updateDataFreshness() {
         return;
     }
 
-    const now = new Date();
+    const latestSubmission = Array.isArray(sheetPkmData)
+        ? sheetPkmData
+            .filter(function (item) {
+                return item && item.createdAt;
+            })
+            .sort(function (a, b) {
+                return (
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+                );
+            })[0]
+        : null;
+
+    if (!latestSubmission) {
+        element.textContent =
+            "Belum ada pengajuan";
+
+        element.classList.remove(
+            "text-emerald-600"
+        );
+
+        element.classList.add(
+            "text-slate-400"
+        );
+
+        return;
+    }
+
+    const submittedAt =
+        new Date(
+            latestSubmission.createdAt
+        );
 
     const dateText =
-        now.toLocaleDateString(
+        submittedAt.toLocaleDateString(
             "id-ID",
             {
                 day: "2-digit",
@@ -2130,7 +2161,7 @@ function updateDataFreshness() {
         );
 
     const timeText =
-        now.toLocaleTimeString(
+        submittedAt.toLocaleTimeString(
             "id-ID",
             {
                 hour: "2-digit",
