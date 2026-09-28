@@ -857,7 +857,7 @@ async function loadSipedeKpiPage() {
         sipedeKpiPeriodInformation.textContent =
             result.periodLabel ||
             "Periode KPI";
-            
+
     } catch (error) {
 
         console.error(
@@ -1973,9 +1973,6 @@ function renderSipedeKpiSummary() {
         formatSipedePercent(
             score
         );
-
-    sipedeKpiStatusBadge.textContent =
-        status;
 
     sipedeKpiIncentivePerUnit.textContent =
         formatSipedeCurrency(
