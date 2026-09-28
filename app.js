@@ -1341,6 +1341,8 @@ async function requestBackend(
     payload = {}
 ) {
 
+    console.log("[BACKEND TEST] action:", action);
+
     const performanceStartedAt =
         performance.now();
 
