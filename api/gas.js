@@ -2,6 +2,8 @@ export default async function handler(
     request,
     response
 ) {
+    const apiStartedAt =
+        performance.now();
     if (request.method !== "POST") {
         return response.status(405).json({
             success: false,
@@ -32,6 +34,9 @@ export default async function handler(
                 JSON.parse(requestBody);
         }
 
+        const gasRequestStartedAt =
+            performance.now();
+
         const appsScriptResponse =
             await fetch(
                 appsScriptUrl,
@@ -51,6 +56,19 @@ export default async function handler(
                     redirect: "follow"
                 }
             );
+
+        const gasResponseReceivedAt =
+            performance.now();
+
+        console.log(
+            "[VERCEL] GAS RESPONSE",
+            requestBody.action,
+            `${(
+                (gasResponseReceivedAt -
+                    gasRequestStartedAt) /
+                1000
+            ).toFixed(2)}s`
+        );
 
         const responseText =
             await appsScriptResponse.text();
@@ -77,6 +95,18 @@ export default async function handler(
                         "Apps Script gagal memproses data."
                 });
         }
+
+        const apiDuration =
+            performance.now() -
+            apiStartedAt;
+
+        console.log(
+            "[VERCEL] API TOTAL",
+            requestBody.action,
+            `${(
+                apiDuration / 1000
+            ).toFixed(2)}s`
+        );
 
         return response
             .status(200)
