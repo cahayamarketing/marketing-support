@@ -1191,13 +1191,17 @@ function setSipedeKpiLoading(
         sipedeKpiLoadingValue =
             8;
 
-        loadingElement.classList.remove(
-            "hidden"
-        );
+        if (loadingElement) {
+            loadingElement.classList.remove(
+                "hidden"
+            );
+        }
 
-        tableContainer.classList.add(
-            "hidden"
-        );
+        if (tableContainer) {
+            tableContainer.classList.add(
+                "hidden"
+            );
+        }
 
         if (emptyElement) {
 
@@ -1281,13 +1285,17 @@ function setSipedeKpiLoading(
     window.setTimeout(
         function () {
 
-            loadingElement.classList.add(
-                "hidden"
-            );
+            if (loadingElement) {
+                loadingElement.classList.add(
+                    "hidden"
+                );
+            }
 
-            tableContainer.classList.remove(
-                "hidden"
-            );
+            if (tableContainer) {
+                tableContainer.classList.remove(
+                    "hidden"
+                );
+            }
 
         },
         300
