@@ -8,6 +8,8 @@
 
 let sipedeKpiInitialized = false;
 let sipedeKpiLoading = false;
+let sipedeKpiLoadingTimer = null;
+let sipedeKpiLoadingValue = 0;
 let sipedeKpiEditing = false;
 let sipedeKpiDirty = false;
 
@@ -256,6 +258,7 @@ function initializeSipedeKpi() {
     populateSipedeKpiWeeks();
     renderSipedeKpiRules();
 }
+
 
 function handleSipedeSalesInput() {
 
@@ -712,6 +715,22 @@ async function loadSipedeKpiPage() {
 
     sipedeKpiLoading = true;
 
+    /*
+    |--------------------------------------------------------------------------
+    | TOMBOL TETAP "Tampilkan KPI"
+    |--------------------------------------------------------------------------
+    | Loading ditampilkan di dalam kolom tabel,
+    | bukan mengganti isi tombol.
+    */
+
+    setSipedeKpiLoadButtonBusy(true);
+
+    startSipedeKpiTableLoading(
+        sipedeKpiPeriodType.value === "CLOSING"
+            ? "Memuat laporan closing..."
+            : `Memuat KPI Week ${period.week}...`
+    );
+
     try {
 
         const result =
@@ -741,18 +760,26 @@ async function loadSipedeKpiPage() {
         sipedeKpiMaster =
             result.master;
 
-        populateSipedePersons();
+        /*
+        |--------------------------------------------------------------------------
+        | IDENTITAS SIPEDE OTOMATIS
+        |--------------------------------------------------------------------------
+        | NIK diambil dari Salesman / master backend.
+        | Tidak ada lagi dropdown NIK.
+        */
 
         if (
-            !sipedeKpiNik.value &&
             result.defaultNik
         ) {
 
             sipedeKpiNik.value =
-                result.defaultNik;
+                String(
+                    result.defaultNik
+                );
 
         }
 
+        populateSipedePersons();
         updateSipedeIdentity();
 
         sipedeKpiRows =
@@ -811,6 +838,7 @@ async function loadSipedeKpiPage() {
             false;
 
         renderSipedeKpiTable();
+
         renderSipedeKpiSummary(
             result
         );
@@ -855,12 +883,9 @@ async function loadSipedeKpiPage() {
         sipedeKpiLoading =
             false;
 
-        loadSipedeKpiButton.disabled =
-            false;
+        stopSipedeKpiTableLoading();
 
-        loadSipedeKpiButton.innerHTML = `
-            <span>Tampilkan KPI</span>
-        `;
+        setSipedeKpiLoadButtonBusy(false);
 
     }
 
@@ -886,41 +911,78 @@ function populateSipedePersons() {
 
     const branch =
         String(
-            sipedeKpiBranch.value || ""
+            sipedeKpiBranch.value ||
+            ""
         )
             .trim()
             .toUpperCase();
+
+    const currentNik =
+        String(
+            sipedeKpiNik.value ||
+            ""
+        ).trim();
 
     const persons =
         sipedeKpiMaster.persons.filter(
             function (person) {
 
-                return (
+                const personStatus =
                     String(
-                        person.status || ""
+                        person.status ||
+                        ""
                     )
                         .trim()
-                        .toUpperCase() ===
+                        .toUpperCase();
+
+                const personBranch =
+                    String(
+                        person.branch ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                return (
+                    personStatus ===
                     "AKTIF"
-                ) &&
-                String(
-                    person.branch || ""
-                )
-                    .trim()
-                    .toUpperCase() ===
-                branch;
+                ) && (
+                    !branch ||
+                    personBranch ===
+                    branch
+                );
 
             }
         );
 
     /*
-     * Jika ada SiPede pada cabang,
-     * ambil SiPede pertama.
-     */
-    const person =
-        persons.length
-            ? persons[0]
-            : null;
+    |--------------------------------------------------------------------------
+    | NIK BUKAN DROPDOWN
+    |--------------------------------------------------------------------------
+    | Sistem otomatis mengambil SiPede aktif
+    | dari cabang yang sedang dipilih.
+    */
+
+    let person =
+        persons.find(
+            function (item) {
+
+                return String(
+                    item.nik ||
+                    ""
+                ).trim() ===
+                currentNik;
+
+            }
+        );
+
+    if (!person) {
+
+        person =
+            persons[0] ||
+            null;
+
+    }
 
     sipedeKpiNik.value =
         person
@@ -936,43 +998,287 @@ function populateSipedePersons() {
         person
             ? person.crmName
             : "";
+
 }
 
 
 function updateSipedeIdentity() {
 
+    populateSipedePersons();
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| LOADING TABEL
+|--------------------------------------------------------------------------
+| Mengikuti pola KPI CRM:
+| - progress semu 8% → 90% selama request
+| - 100% setelah response selesai
+| - loading berada di kolom/tabel
+| - tombol tetap bertuliskan "Tampilkan KPI"
+|--------------------------------------------------------------------------
+*/
+
+function startSipedeKpiTableLoading(
+    message = "Memuat data KPI..."
+) {
+
+    window.clearInterval(
+        sipedeKpiLoadingTimer
+    );
+
+    sipedeKpiLoadingTimer =
+        null;
+
+    sipedeKpiLoadingValue =
+        8;
+
+    renderSipedeKpiLoadingTable(
+        message,
+        sipedeKpiLoadingValue
+    );
+
+    sipedeKpiLoadingTimer =
+        window.setInterval(
+            function () {
+
+                if (
+                    sipedeKpiLoadingValue >=
+                    90
+                ) {
+                    return;
+                }
+
+                const increment =
+                    sipedeKpiLoadingValue < 50
+                        ? 7
+                        : sipedeKpiLoadingValue < 75
+                            ? 4
+                            : 1;
+
+                sipedeKpiLoadingValue =
+                    Math.min(
+                        sipedeKpiLoadingValue +
+                            increment,
+                        90
+                    );
+
+                renderSipedeKpiLoadingTable(
+                    message,
+                    sipedeKpiLoadingValue
+                );
+
+            },
+            280
+        );
+
+}
+
+
+function stopSipedeKpiTableLoading() {
+
+    window.clearInterval(
+        sipedeKpiLoadingTimer
+    );
+
+    sipedeKpiLoadingTimer =
+        null;
+
+    sipedeKpiLoadingValue =
+        100;
+
+}
+
+
+function renderSipedeKpiLoadingTable(
+    message,
+    progress
+) {
+
     if (
-        !sipedeKpiMaster ||
-        !Array.isArray(
-            sipedeKpiMaster.persons
-        )
+        !sipedeKpiTableBody
     ) {
         return;
     }
 
-    const person =
-        sipedeKpiMaster.persons.find(
-            function (item) {
-
-                return String(
-                    item.nik
-                ) ===
-                    String(
-                        sipedeKpiNik.value
-                    );
-
-            }
+    const safeProgress =
+        Math.max(
+            0,
+            Math.min(
+                Number(
+                    progress || 0
+                ),
+                100
+            )
         );
 
-    sipedeKpiName.value =
-        person
-            ? person.name
-            : "";
+    const progressText =
+        `${Math.round(
+            safeProgress
+        )}%`;
 
-    sipedeKpiCrmName.value =
-        person
-            ? person.crmName
-            : "";
+    const skeleton =
+        `
+        <div class="h-3 w-full animate-pulse rounded-full bg-slate-200"></div>
+        `;
+
+    sipedeKpiTableBody.innerHTML =
+        Array.from(
+            {
+                length: 5
+            }
+        )
+            .map(
+                function (_, index) {
+
+                    return `
+                        <tr>
+
+                            <td class="text-center">
+
+                                <span
+                                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-400"
+                                >
+                                    ${index + 1}
+                                </span>
+
+                            </td>
+
+                            <td class="min-w-[220px]">
+
+                                <div
+                                    class="mb-2 h-3 w-40 animate-pulse rounded bg-slate-200"
+                                ></div>
+
+                                <div
+                                    class="h-2.5 w-20 animate-pulse rounded bg-slate-100"
+                                ></div>
+
+                            </td>
+
+                            <td class="text-right">
+                                ${skeleton}
+                            </td>
+
+                            <td class="text-right">
+                                ${skeleton}
+                            </td>
+
+                            <td class="text-right">
+                                ${skeleton}
+                            </td>
+
+                            <td class="text-right">
+                                ${skeleton}
+                            </td>
+
+                            <td class="text-right">
+                                ${skeleton}
+                            </td>
+
+                            <td class="text-right">
+                                ${skeleton}
+                            </td>
+
+                            <td class="text-right">
+                                ${skeleton}
+                            </td>
+
+                        </tr>
+                    `;
+
+                }
+            )
+            .join("");
+
+    /*
+    |--------------------------------------------------------------------------
+    | BAR LOADING DI BAGIAN KOLOM
+    |--------------------------------------------------------------------------
+    */
+
+    const loadingRow =
+        document.createElement(
+            "tr"
+        );
+
+    loadingRow.innerHTML = `
+        <td
+            colspan="9"
+            class="px-4 py-4"
+        >
+
+            <div
+                class="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+            >
+
+                <div
+                    class="flex items-center justify-between gap-3"
+                >
+
+                    <div
+                        class="flex min-w-0 items-center gap-2"
+                    >
+
+                        <span
+                            class="ui-spinner shrink-0"
+                        ></span>
+
+                        <span
+                            class="truncate text-xs font-bold text-slate-500"
+                        >
+                            ${escapeHtmlSipede(message)}
+                        </span>
+
+                    </div>
+
+                    <span
+                        class="shrink-0 text-xs font-black text-slate-600"
+                    >
+                        ${progressText}
+                    </span>
+
+                </div>
+
+                <div
+                    class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"
+                >
+
+                    <div
+                        class="h-full rounded-full bg-red-500 transition-all duration-300"
+                        style="width:${safeProgress}%"
+                    ></div>
+
+                </div>
+
+            </div>
+
+        </td>
+    `;
+
+    sipedeKpiTableBody.appendChild(
+        loadingRow
+    );
+
+}
+
+
+function setSipedeKpiLoadButtonBusy(
+    loading
+) {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Jangan ubah innerHTML tombol.
+    | Tombol selalu tetap:
+    | "Tampilkan KPI"
+    |--------------------------------------------------------------------------
+    */
+
+    loadSipedeKpiButton.disabled =
+        loading;
 
 }
 
@@ -1036,56 +1342,98 @@ function renderSipedeKpiTable() {
                             step="any"
                             class="form-input !h-9 !min-h-0 !py-1.5 text-right"
                             data-sipede-actual="${index}"
-                            value="${Number.isFinite(actualValue) ? actualValue : ""}"
+                            value="${
+                                Number.isFinite(
+                                    actualValue
+                                )
+                                    ? actualValue
+                                    : ""
+                            }"
                         >
                     `
                     : `
-                        <span class="font-black text-slate-900">
+                        <span
+                            class="font-black text-slate-900"
+                        >
                             ${formatSipedeNumber(actualValue)}
                         </span>
                     `;
 
             tr.innerHTML = `
-                <td class="text-center font-bold text-slate-400">
+                <td
+                    class="text-center font-bold text-slate-400"
+                >
                     ${index + 1}
                 </td>
 
                 <td>
-                    <div class="font-black text-slate-900">
+
+                    <div
+                        class="font-black text-slate-900"
+                    >
                         ${escapeHtmlSipede(row.kpi)}
                     </div>
 
-                    <div class="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <div
+                        class="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"
+                    >
                         ${escapeHtmlSipede(row.code)}
                     </div>
+
                 </td>
 
-                <td class="text-right font-bold text-slate-600">
-                    ${formatSipedeNumber(row.targetMonth)}
+                <td
+                    class="text-right font-bold text-slate-600"
+                >
+                    ${formatSipedeNumber(
+                        row.targetMonth
+                    )}
                 </td>
 
-                <td class="text-right font-bold text-slate-600">
-                    ${formatSipedeNumber(row.targetMtd)}
+                <td
+                    class="text-right font-bold text-slate-600"
+                >
+                    ${formatSipedeNumber(
+                        row.targetMtd
+                    )}
                 </td>
 
                 <td class="text-right">
                     ${actualHtml}
                 </td>
 
-                <td class="text-right font-black ${getSipedePercentClass(row.percentMtd)}">
-                    ${formatSipedePercent(row.percentMtd)}
+                <td
+                    class="text-right font-black ${getSipedePercentClass(
+                        row.percentMtd
+                    )}"
+                >
+                    ${formatSipedePercent(
+                        row.percentMtd
+                    )}
                 </td>
 
-                <td class="text-right font-black text-slate-700">
-                    ${formatSipedePercent(row.percentMonth)}
+                <td
+                    class="text-right font-black text-slate-700"
+                >
+                    ${formatSipedePercent(
+                        row.percentMonth
+                    )}
                 </td>
 
-                <td class="text-right font-bold text-slate-600">
-                    ${formatSipedePercent(row.weight)}
+                <td
+                    class="text-right font-bold text-slate-600"
+                >
+                    ${formatSipedePercent(
+                        row.weight
+                    )}
                 </td>
 
-                <td class="text-right font-black text-slate-900">
-                    ${formatSipedePercent(row.score)}
+                <td
+                    class="text-right font-black text-slate-900"
+                >
+                    ${formatSipedePercent(
+                        row.score
+                    )}
                 </td>
             `;
 
@@ -1124,14 +1472,15 @@ function renderSipedeKpiTable() {
                         sipedeKpiDirty =
                             true;
 
+                        sipedeKpiEditing =
+                            true;
+
                         renderSipedeKpiTable();
+
                         renderSipedeKpiSummary({
                             master:
                                 sipedeKpiMaster
                         });
-
-                        sipedeKpiEditing =
-                            true;
 
                         updateSipedeKpiButtons({});
 
@@ -1341,25 +1690,31 @@ function getSipedeIncentive(
     if (
         score >= 150
     ) {
+
         return Number(
             rules.INSENTIF_150 || 0
         );
+
     }
 
     if (
         score >= 100
     ) {
+
         return Number(
             rules.INSENTIF_100 || 0
         );
+
     }
 
     if (
         score >= 80
     ) {
+
         return Number(
             rules.INSENTIF_80 || 0
         );
+
     }
 
     return Number(
@@ -1402,7 +1757,6 @@ function renderSipedeKpiSummary() {
 
     const totalSales =
         cash + credit;
-        
 
     const totalIncentive =
         totalSales *
@@ -1456,13 +1810,19 @@ function renderSipedeKpiSummary() {
         );
 
     sipedeKpiTotalCash.textContent =
-        formatSipedeNumber(cash);
+        formatSipedeNumber(
+            cash
+        );
 
     sipedeKpiTotalCredit.textContent =
-        formatSipedeNumber(credit);
+        formatSipedeNumber(
+            credit
+        );
 
     sipedeKpiTotalSales.textContent =
-        formatSipedeNumber(totalSales);
+        formatSipedeNumber(
+            totalSales
+        );
 
     sipedeKpiMtdHelper.textContent =
         `Status: ${status}`;
@@ -1471,6 +1831,7 @@ function renderSipedeKpiSummary() {
         score < 80
             ? "Score di bawah 80%: gaji pokok tidak diberikan."
             : "Gaji pokok diberikan sesuai parameter master.";
+
 }
 
 
@@ -1535,14 +1896,22 @@ function sipedeRule(
 ) {
 
     return `
-        <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-            <span class="text-sm font-bold text-slate-600">
+        <div
+            class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
+        >
+
+            <span
+                class="text-sm font-bold text-slate-600"
+            >
                 ${left}
             </span>
 
-            <span class="text-sm font-black text-slate-900">
+            <span
+                class="text-sm font-black text-slate-900"
+            >
                 ${right}
             </span>
+
         </div>
     `;
 
@@ -1609,45 +1978,75 @@ function renderSipedeHo(
                 );
 
             tr.innerHTML = `
-                <td class="text-center font-bold text-slate-400">
+                <td
+                    class="text-center font-bold text-slate-400"
+                >
                     ${index + 1}
                 </td>
 
                 <td>
-                    <div class="font-black text-slate-900">
-                        ${escapeHtmlSipede(row.kpi)}
+
+                    <div
+                        class="font-black text-slate-900"
+                    >
+                        ${escapeHtmlSipede(
+                            row.kpi
+                        )}
                     </div>
+
                 </td>
 
                 <td class="text-right">
-                    ${formatSipedeNumber(row.targetMonth)}
+                    ${formatSipedeNumber(
+                        row.targetMonth
+                    )}
                 </td>
 
                 <td class="text-right">
-                    ${formatSipedeNumber(row.actualMtd)}
+                    ${formatSipedeNumber(
+                        row.actualMtd
+                    )}
                 </td>
 
                 <td>
+
                     <input
                         type="number"
                         min="0"
                         step="any"
                         class="form-input !h-9 !min-h-0 !py-1.5 text-right"
                         data-sipede-ho-index="${index}"
-                        value="${Number.isFinite(actualHo) ? actualHo : ""}"
+                        value="${
+                            Number.isFinite(
+                                actualHo
+                            )
+                                ? actualHo
+                                : ""
+                        }"
                     >
+
                 </td>
 
-                <td class="text-right font-black text-slate-900">
-                    ${formatSipedePercent(scoreHo)}
+                <td
+                    class="text-right font-black text-slate-900"
+                >
+                    ${formatSipedePercent(
+                        scoreHo
+                    )}
                 </td>
 
                 <td>
-                    <span class="text-xs font-black text-slate-500">
+
+                    <span
+                        class="text-xs font-black text-slate-500"
+                    >
                         ${escapeHtmlSipede(
-                            getSipedeStatus(scoreHo)
+                            getSipedeStatus(
+                                scoreHo
+                            )
                         )}
                     </span>
+
                 </td>
             `;
 
@@ -1783,8 +2182,11 @@ function cancelSipedeKpiInput() {
         );
 
     renderSipedeKpiTable();
+
     renderSipedeKpiSummary();
+
     updateSipedeKpiButtons({});
+
 }
 
 
@@ -1823,7 +2225,7 @@ async function saveSipedeKpi() {
     ) {
 
         showToast(
-            "Pilih NIK SiPede terlebih dahulu.",
+            "Identitas SiPede belum tersedia untuk cabang ini.",
             "error"
         );
 
@@ -1841,6 +2243,7 @@ async function saveSipedeKpi() {
                 function (row) {
 
                     return {
+
                         code:
                             row.code,
 
@@ -1848,6 +2251,7 @@ async function saveSipedeKpi() {
                             Number(
                                 row.actualMtd
                             ) || 0
+
                     };
 
                 }
@@ -1856,6 +2260,7 @@ async function saveSipedeKpi() {
         await requestBackend(
             "saveSipedeKpi",
             {
+
                 branch:
                     period.branch,
 
@@ -1886,6 +2291,7 @@ async function saveSipedeKpi() {
 
                 metrics:
                     metrics
+
             }
         );
 
@@ -1975,6 +2381,7 @@ async function verifySipedeKpi() {
         await requestBackend(
             "verifySipedeKpi",
             {
+
                 branch:
                     period.branch,
 
@@ -1998,6 +2405,7 @@ async function verifySipedeKpi() {
 
                 note:
                     sipedeHoNote.value || ""
+
             }
         );
 
