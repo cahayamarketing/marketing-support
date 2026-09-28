@@ -3140,36 +3140,6 @@ function getCrmKpiWeekRange(
     month,
     week
 ) {
-    const firstDate =
-        new Date(
-            year,
-            month - 1,
-            1
-        );
-
-    const firstSunday =
-        new Date(firstDate);
-
-    firstSunday.setDate(
-        firstDate.getDate() -
-        firstDate.getDay()
-    );
-
-    const start =
-        new Date(firstSunday);
-
-    start.setDate(
-        firstSunday.getDate() +
-        ((week - 1) * 7)
-    );
-
-    const end =
-        new Date(start);
-
-    end.setDate(
-        start.getDate() + 6
-    );
-
     const monthStart =
         new Date(
             year,
@@ -3184,6 +3154,50 @@ function getCrmKpiWeekRange(
             0
         );
 
+    /*
+    | Week CRM = Sabtu–Jumat
+    |
+    | JS:
+    | Minggu = 0
+    | Senin  = 1
+    | ...
+    | Jumat  = 5
+    | Sabtu  = 6
+    */
+
+    const daysSinceSaturday =
+        (
+            monthStart.getDay() + 1
+        ) % 7;
+
+    const firstSaturday =
+        new Date(monthStart);
+
+    firstSaturday.setDate(
+        monthStart.getDate() -
+        daysSinceSaturday
+    );
+
+    const start =
+        new Date(firstSaturday);
+
+    start.setDate(
+        firstSaturday.getDate() +
+        ((week - 1) * 7)
+    );
+
+    const end =
+        new Date(start);
+
+    end.setDate(
+        start.getDate() + 6
+    );
+
+    /*
+    | Hanya tampilkan Week yang
+    | bersinggungan dengan bulan acuan.
+    */
+
     if (
         end < monthStart ||
         start > monthEnd
@@ -3192,15 +3206,8 @@ function getCrmKpiWeekRange(
     }
 
     return {
-        start:
-            start < monthStart
-                ? monthStart
-                : start,
-
-        end:
-            end > monthEnd
-                ? monthEnd
-                : end
+        start: start,
+        end: end
     };
 }
 
@@ -3208,23 +3215,40 @@ function getCurrentCrmKpiWeek() {
     const today =
         new Date();
 
-    const firstDate =
+    const monthStart =
         new Date(
             today.getFullYear(),
             today.getMonth(),
             1
         );
 
-    const calculatedWeek =
+    const daysSinceSaturday =
+        (
+            monthStart.getDay() + 1
+        ) % 7;
+
+    const firstSaturday =
+        new Date(monthStart);
+
+    firstSaturday.setDate(
+        monthStart.getDate() -
+        daysSinceSaturday
+    );
+
+    const diffDays =
         Math.floor(
             (
-                today.getDate() +
-                firstDate.getDay() -
-                1
-            ) / 7
-        ) + 1;
+                today -
+                firstSaturday
+            ) /
+            86400000
+        );
 
-    return calculatedWeek;
+    return (
+        Math.floor(
+            diffDays / 7
+        ) + 1
+    );
 }
 
 function populateCrmKpiWeekOptions() {
@@ -3238,6 +3262,16 @@ function populateCrmKpiWeekOptions() {
         crmKpiWeek.value;
 
     crmKpiWeek.innerHTML = "";
+
+    const weeklyGroup =
+        document.createElement("optgroup");
+
+    weeklyGroup.label =
+        "WEEKLY — Sabtu–Jumat";
+
+    crmKpiWeek.appendChild(
+        weeklyGroup
+    );
 
     for (
         let week = 1;
@@ -3274,7 +3308,7 @@ function populateCrmKpiWeekOptions() {
                 )
             }`;
 
-        crmKpiWeek.appendChild(
+        weeklyGroup.appendChild(
             option
         );
     }
@@ -3309,8 +3343,18 @@ function populateCrmKpiWeekOptions() {
             ).format(previousMonth)
         }`;
 
-    crmKpiWeek.appendChild(
+    const closingGroup =
+        document.createElement("optgroup");
+
+    closingGroup.label =
+        "CLOSING — periode final";
+
+    closingGroup.appendChild(
         closingOption
+    );
+
+    crmKpiWeek.appendChild(
+        closingGroup
     );
 
     const availableValues =
@@ -3505,6 +3549,30 @@ crmKpiWeek.addEventListener(
     function () {
         const isClosing =
             this.value === "CLOSING";
+
+        const periodModeHint =
+            document.getElementById(
+                "crmKpiPeriodModeHint"
+            );
+
+        const periodHelper =
+            document.getElementById(
+                "crmKpiPeriodHelper"
+            );
+
+        if (periodModeHint) {
+            periodModeHint.textContent =
+                isClosing
+                    ? "Closing"
+                    : "Weekly";
+        }
+
+        if (periodHelper) {
+            periodHelper.textContent =
+                isClosing
+                    ? "Closing adalah laporan final bulan sebelumnya dan diperbarui setelah bulan berganti."
+                    : "Periode Weekly dihitung Sabtu–Jumat.";
+        }
 
         crmKpiInputMode =
             isClosing

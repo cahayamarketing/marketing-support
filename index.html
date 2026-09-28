@@ -1644,7 +1644,7 @@
                                     for="crmKpiMonth"
                                     class="form-label"
                                 >
-                                    Bulan
+                                    Bulan Acuan
                                 </label>
 
                                 <select
@@ -1667,17 +1667,33 @@
                             </div>
 
                             <div>
-                                <label
-                                    for="crmKpiWeek"
-                                    class="form-label"
-                                >
-                                    Periode
-                                </label>
+                                <div class="mb-2 flex items-center justify-between gap-3">
+                                    <label
+                                        for="crmKpiWeek"
+                                        class="form-label mb-0"
+                                    >
+                                        Periode KPI
+                                    </label>
+
+                                    <span
+                                        id="crmKpiPeriodModeHint"
+                                        class="text-[10px] font-black uppercase tracking-wider text-slate-400"
+                                    >
+                                        Weekly
+                                    </span>
+                                </div>
 
                                 <select
                                     id="crmKpiWeek"
                                     class="form-input"
                                 ></select>
+
+                                <p
+                                    id="crmKpiPeriodHelper"
+                                    class="mt-1.5 text-[11px] font-medium leading-relaxed text-slate-400"
+                                >
+                                    Periode Weekly dihitung Sabtu–Jumat.
+                                </p>
                             </div>
 
                         </div>
