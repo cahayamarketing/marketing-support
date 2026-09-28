@@ -1562,9 +1562,15 @@ async function requestBackend(
         throw error;
         
     } finally {
+        const durationMs =
+            performance.now() -
+            performanceStartedAt;
+
         console.log(
-            "[FINALLY TEST]",
-            action
+            "[PERF]",
+            action,
+            `${(durationMs / 1000).toFixed(2)}s`,
+            performanceStatus
         );
 
         window.clearTimeout(
@@ -1580,11 +1586,7 @@ async function requestBackend(
                 action
             );
         }
-
-        const durationMs =
-            performance.now() -
-            performanceStartedAt;
-
+        
         const performanceMessage =
             `[PERF] ${action} → ` +
             `${(durationMs / 1000).toFixed(2)}s → ` +
