@@ -716,14 +716,7 @@ async function loadSipedeKpiPage() {
     const period =
         getSelectedSipedePeriod();
 
-    sipedeKpiLoading = true;
-
-    setSipedeKpiLoading(
-        true,
-        period.snapshotType === "CLOSING"
-            ? "Memuat laporan closing..."
-            : `Memuat KPI Week ${period.week}...`
-    );
+    setSipedeKpiLoadButtonBusy(true);
 
     /*
     |--------------------------------------------------------------------------
@@ -877,6 +870,10 @@ async function loadSipedeKpiPage() {
             false;
 
         setSipedeKpiLoading(
+            false
+        );
+
+        setSipedeKpiLoadButtonBusy(
             false
         );
 
@@ -1110,10 +1107,21 @@ function setSipedeKpiLoading(
             "emptySipedeKpi"
         );
 
+    const percentageElement =
+        document.getElementById(
+            "sipedeKpiLoadingPercent"
+        );
+
+    const progressElement =
+        document.getElementById(
+            "sipedeKpiLoadingBar"
+        );
+
     const textElement =
         document.getElementById(
             "sipedeKpiLoadingText"
         );
+
 
     window.clearInterval(
         sipedeKpiLoadingTimer
@@ -1122,26 +1130,21 @@ function setSipedeKpiLoading(
     sipedeKpiLoadingTimer =
         null;
 
+
     if (loading) {
 
         sipedeKpiLoadingValue =
             8;
 
-        if (loadingElement) {
 
-            loadingElement.classList.remove(
-                "hidden"
-            );
+        loadingElement.classList.remove(
+            "hidden"
+        );
 
-        }
+        tableContainer.classList.add(
+            "hidden"
+        );
 
-        if (tableContainer) {
-
-            tableContainer.classList.add(
-                "hidden"
-            );
-
-        }
 
         if (emptyElement) {
 
@@ -1151,6 +1154,7 @@ function setSipedeKpiLoading(
 
         }
 
+
         if (textElement) {
 
             textElement.textContent =
@@ -1158,9 +1162,11 @@ function setSipedeKpiLoading(
 
         }
 
+
         updateSipedeKpiLoadingProgress(
             sipedeKpiLoadingValue
         );
+
 
         sipedeKpiLoadingTimer =
             window.setInterval(
@@ -1175,6 +1181,7 @@ function setSipedeKpiLoading(
 
                     }
 
+
                     const increment =
                         sipedeKpiLoadingValue < 50
                             ? 7
@@ -1182,12 +1189,14 @@ function setSipedeKpiLoading(
                                 ? 4
                                 : 1;
 
+
                     sipedeKpiLoadingValue =
                         Math.min(
                             sipedeKpiLoadingValue +
                                 increment,
                             90
                         );
+
 
                     updateSipedeKpiLoadingProgress(
                         sipedeKpiLoadingValue
@@ -1197,44 +1206,45 @@ function setSipedeKpiLoading(
                 280
             );
 
+
         return;
+
     }
+
 
     sipedeKpiLoadingValue =
         100;
+
 
     updateSipedeKpiLoadingProgress(
         100
     );
 
+
     if (textElement) {
 
         textElement.textContent =
-            "Data KPI berhasil dimuat.";
+            "Data KPI berhasil dimuat";
 
     }
+
 
     window.setTimeout(
         function () {
 
-            if (loadingElement) {
+            loadingElement.classList.add(
+                "hidden"
+            );
 
-                loadingElement.classList.add(
-                    "hidden"
-                );
+            tableContainer.classList.remove(
+                "hidden"
+            );
 
-            }
-
-            if (tableContainer) {
-
-                tableContainer.classList.remove(
-                    "hidden"
-                );
-
-            }
+            sipedeKpiLoadingValue =
+                0;
 
         },
-        300
+        250
     );
 
 }

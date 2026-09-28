@@ -2529,78 +2529,158 @@
                         </div>
 
 
-                        <div class="overflow-x-auto">
+                        <!-- ================================================= -->
+                        <!-- LOADING SIPEDE -->
+                        <!-- ================================================= -->
 
-                            <table class="data-table min-w-[1100px]">
+                        <div
+                            id="sipedeKpiLoading"
+                            class="hidden p-8"
+                        >
+                            <div class="mx-auto max-w-md text-center">
 
-                                <thead>
+                                <!-- SPINNER -->
+                                <div class="relative mx-auto h-16 w-16">
 
-                                    <tr>
+                                    <div
+                                        class="absolute inset-0 rounded-full border-4 border-red-100"
+                                    ></div>
 
-                                        <th class="w-12">No</th>
+                                    <div
+                                        class="kpi-loading-spinner absolute inset-0 rounded-full border-4 border-transparent border-t-red-600"
+                                    ></div>
 
-                                        <th class="min-w-[250px]">
-                                            KPI
-                                        </th>
-
-                                        <th class="min-w-[120px]">
-                                            Target Bulan
-                                        </th>
-
-                                        <th class="min-w-[120px]">
-                                            Target MTD
-                                        </th>
-
-                                        <th class="min-w-[140px]">
-                                            Aktual MTD
-                                        </th>
-
-                                        <th class="min-w-[110px]">
-                                            % MTD
-                                        </th>
-
-                                        <th class="min-w-[110px]">
-                                            % Bulan
-                                        </th>
-
-                                        <th class="min-w-[100px]">
-                                            Bobot
-                                        </th>
-
-                                        <th class="min-w-[110px]">
-                                            Skor
-                                        </th>
-
-                                    </tr>
-
-                                </thead>
-
-                                <tbody id="sipedeKpiTableBody"></tbody>
-
-                                <tfoot>
-
-                                    <tr class="bg-slate-900 text-white">
-
-                                        <td
-                                            colspan="8"
-                                            class="px-4 py-4 text-right font-black"
-                                        >
-                                            Total Score
-                                        </td>
-
-                                        <td
-                                            id="sipedeKpiTableTotal"
-                                            class="px-4 py-4 text-lg font-black"
+                                    <div
+                                        class="absolute inset-0 flex items-center justify-center"
+                                    >
+                                        <span
+                                            id="sipedeKpiLoadingPercent"
+                                            class="text-xs font-black text-red-600"
                                         >
                                             0%
-                                        </td>
+                                        </span>
+                                    </div>
 
-                                    </tr>
+                                </div>
 
-                                </tfoot>
+                                <!-- TEXT -->
+                                <p
+                                    id="sipedeKpiLoadingText"
+                                    class="mt-4 text-sm font-black text-slate-700"
+                                >
+                                    Memuat data KPI...
+                                </p>
 
-                            </table>
+                                <p class="mt-1 text-xs text-slate-400">
+                                    Mengambil data dari Google Spreadsheet
+                                </p>
 
+                                <!-- PROGRESS BAR -->
+                                <div
+                                    class="mt-5 h-2 overflow-hidden rounded-full bg-slate-100"
+                                >
+                                    <div
+                                        id="sipedeKpiLoadingBar"
+                                        class="h-full w-0 rounded-full bg-gradient-to-r from-red-700 to-red-500 transition-all duration-300"
+                                    ></div>
+                                </div>
+
+                            </div>
+
+                            <!-- SKELETON -->
+                            <div class="mt-8 space-y-3">
+
+                                <div class="kpi-skeleton h-12 rounded-xl"></div>
+                                <div class="kpi-skeleton h-12 rounded-xl"></div>
+                                <div class="kpi-skeleton h-12 rounded-xl"></div>
+                                <div class="kpi-skeleton h-12 rounded-xl"></div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ================================================= -->
+                        <!-- TABLE SIPEDE -->
+                        <!-- ================================================= -->
+
+                        <div
+                            id="sipedeKpiTableContainer"
+                            class="overflow-hidden"
+                        >
+
+                            <div class="overflow-x-auto">
+
+                                <table class="data-table min-w-[1100px]">
+
+                                    <thead>
+
+                                        <tr>
+
+                                            <th class="w-12">No</th>
+
+                                            <th class="min-w-[250px]">
+                                                KPI
+                                            </th>
+
+                                            <th class="min-w-[120px]">
+                                                Target Bulan
+                                            </th>
+
+                                            <th class="min-w-[120px]">
+                                                Target MTD
+                                            </th>
+
+                                            <th class="min-w-[140px]">
+                                                Aktual MTD
+                                            </th>
+
+                                            <th class="min-w-[110px]">
+                                                % MTD
+                                            </th>
+
+                                            <th class="min-w-[110px]">
+                                                % Bulan
+                                            </th>
+
+                                            <th class="min-w-[100px]">
+                                                Bobot
+                                            </th>
+
+                                            <th class="min-w-[110px]">
+                                                Skor
+                                            </th>
+
+                                        </tr>
+
+                                    </thead>
+
+                                    <tbody id="sipedeKpiTableBody"></tbody>
+
+                                    <tfoot>
+
+                                        <tr class="bg-slate-900 text-white">
+
+                                            <td
+                                                colspan="8"
+                                                class="px-4 py-4 text-right font-black"
+                                            >
+                                                Total Score
+                                            </td>
+
+                                            <td
+                                                id="sipedeKpiTableTotal"
+                                                class="px-4 py-4 text-lg font-black"
+                                            >
+                                                0%
+                                            </td>
+
+                                        </tr>
+
+                                    </tfoot>
+
+                                </table>
+                            </div>
                         </div>
 
                         <div
