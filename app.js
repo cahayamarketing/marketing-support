@@ -1340,6 +1340,13 @@ async function requestBackend(
     action,
     payload = {}
 ) {
+
+    const performanceStartedAt =
+        performance.now();
+
+    let performanceStatus =
+        "ERROR";
+
     const isMutation =
         mutationActions.has(action);
 
@@ -1519,15 +1526,25 @@ async function requestBackend(
                 "result"
             )
         ) {
+            performanceStatus =
+                "SUCCESS";
+
             return data.result;
         }
 
+        performanceStatus =
+            "SUCCESS";
+
         return data;
+
     } catch (error) {
         if (
             error.name ===
             "AbortError"
         ) {
+            performanceStatus =
+                "TIMEOUT";
+
             throw new Error(
                 action === "getPkmData"
                     ? "Pemuatan PKM terlalu lama. Silakan tekan Cari Data untuk mencoba lagi."
@@ -1536,6 +1553,7 @@ async function requestBackend(
         }
 
         throw error;
+        
     } finally {
         window.clearTimeout(
             timeoutId
@@ -1548,6 +1566,28 @@ async function requestBackend(
         if (isMutation) {
             activeMutationRequests.delete(
                 action
+            );
+        }
+
+        const durationMs =
+            performance.now() -
+            performanceStartedAt;
+
+        const performanceMessage =
+            `[PERF] ${action} → ` +
+            `${(durationMs / 1000).toFixed(2)}s → ` +
+            `${performanceStatus}`;
+
+        if (
+            performanceStatus ===
+            "SUCCESS"
+        ) {
+            console.debug(
+                performanceMessage
+            );
+        } else {
+            console.warn(
+                performanceMessage
             );
         }
     }
