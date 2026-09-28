@@ -86,11 +86,33 @@ export default async function handler(
             "[VERCEL] GAS RESPONSE",
             traceId,
             requestBody.action,
+            "STATUS=",
+            appsScriptResponse.status,
+            "OK=",
+            appsScriptResponse.ok,
             `${(
                 (gasResponseReceivedAt -
                     gasRequestStartedAt) /
                 1000
             ).toFixed(2)}s`
+        );
+
+        console.log(
+            "[VERCEL] GAS HEADERS",
+            traceId,
+            requestBody.action,
+            "content-type=",
+            appsScriptResponse.headers.get(
+                "content-type"
+            ),
+            "content-length=",
+            appsScriptResponse.headers.get(
+                "content-length"
+            ),
+            "location=",
+            appsScriptResponse.headers.get(
+                "location"
+            )
         );
 
         const textStartedAt =
