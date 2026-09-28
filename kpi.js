@@ -313,7 +313,7 @@ function initializeCrmKpiPeriod() {
         );
 
     crmKpiPeriodType.value =
-        "WEEKLY";
+        "CLOSING";
 
     populateCrmKpiWeekOptions();
 

@@ -204,7 +204,7 @@ async function initializeSipedeKpi() {
     initializeSipedeKpiBranch();
 
     sipedeKpiPeriodType.value =
-        "WEEKLY";
+        "CLOSING";
 
     updateSipedeKpiPeriodUI();
 
