@@ -27,6 +27,20 @@ export default async function handler(
         let requestBody =
             request.body || {};
 
+        const traceId =
+            `${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 8)}`;
+
+        requestBody._traceId =
+            traceId;
+
+        console.log(
+            "[VERCEL] START",
+            traceId,
+            requestBody.action
+        );
+
         if (
             typeof requestBody === "string"
         ) {
@@ -57,11 +71,9 @@ export default async function handler(
                 }
             );
 
-        const gasResponseReceivedAt =
-            performance.now();
-
         console.log(
             "[VERCEL] GAS RESPONSE",
+            traceId,
             requestBody.action,
             `${(
                 (gasResponseReceivedAt -
@@ -102,6 +114,7 @@ export default async function handler(
 
         console.log(
             "[VERCEL] API TOTAL",
+            traceId,
             requestBody.action,
             `${(
                 apiDuration / 1000
