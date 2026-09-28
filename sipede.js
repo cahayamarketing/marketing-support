@@ -257,45 +257,8 @@ async function initializeSipedeKpi() {
 
     populateSipedeKpiWeeks();
     renderSipedeKpiRules();
+    updateSipedeIdentity();
 
-    /*
-    |--------------------------------------------------------------------------
-    | LOAD MASTER SIPEDE SEJAK AWAL
-    |--------------------------------------------------------------------------
-    */
-
-    try {
-
-        const master =
-            await requestBackend(
-                "getSipedeMaster",
-                {}
-            );
-
-        sipedeKpiMaster =
-            master;
-
-        /*
-        | Langsung isi identitas berdasarkan
-        | cabang yang sedang terpilih.
-        */
-
-        updateSipedeIdentity();
-
-    } catch (error) {
-
-        console.error(
-            "Master SiPede gagal dimuat:",
-            error
-        );
-
-        showToast(
-            error.message ||
-            "Master SiPede gagal dimuat.",
-            "error"
-        );
-
-    }
 
 }
 
@@ -771,13 +734,6 @@ async function loadSipedeKpiPage() {
     */
 
     setSipedeKpiLoadButtonBusy(true);
-
-    startSipedeKpiTableLoading(
-        sipedeKpiPeriodType.value === "CLOSING"
-            ? "Memuat laporan closing..."
-            : `Memuat KPI Week ${period.week}...`
-    );
-
     try {
 
         const result =
@@ -901,17 +857,7 @@ async function loadSipedeKpiPage() {
         sipedeKpiPeriodInformation.textContent =
             result.periodLabel ||
             "Periode KPI";
-
-        sipedeKpiModeBadge.textContent =
-            result.snapshotType ===
-            "CLOSING"
-                ? "CLOSING"
-                : `WEEK ${result.week}`;
-
-        sipedeKpiStatusBadge.textContent =
-            result.status ||
-            "BELUM ADA DATA";
-
+            
     } catch (error) {
 
         console.error(
@@ -1164,16 +1110,6 @@ function setSipedeKpiLoading(
             "emptySipedeKpi"
         );
 
-    const percentageElement =
-        document.getElementById(
-            "sipedeKpiLoadingPercent"
-        );
-
-    const progressElement =
-        document.getElementById(
-            "sipedeKpiLoadingBar"
-        );
-
     const textElement =
         document.getElementById(
             "sipedeKpiLoadingText"
@@ -1192,15 +1128,19 @@ function setSipedeKpiLoading(
             8;
 
         if (loadingElement) {
+
             loadingElement.classList.remove(
                 "hidden"
             );
+
         }
 
         if (tableContainer) {
+
             tableContainer.classList.add(
                 "hidden"
             );
+
         }
 
         if (emptyElement) {
@@ -1221,13 +1161,6 @@ function setSipedeKpiLoading(
         updateSipedeKpiLoadingProgress(
             sipedeKpiLoadingValue
         );
-
-        /*
-        |--------------------------------------------------------------------------
-        | PROGRESS SEMU
-        |--------------------------------------------------------------------------
-        | Sama persis dengan KPI CRM.
-        */
 
         sipedeKpiLoadingTimer =
             window.setInterval(
@@ -1265,7 +1198,6 @@ function setSipedeKpiLoading(
             );
 
         return;
-
     }
 
     sipedeKpiLoadingValue =
@@ -1286,15 +1218,19 @@ function setSipedeKpiLoading(
         function () {
 
             if (loadingElement) {
+
                 loadingElement.classList.add(
                     "hidden"
                 );
+
             }
 
             if (tableContainer) {
+
                 tableContainer.classList.remove(
                     "hidden"
                 );
+
             }
 
         },
