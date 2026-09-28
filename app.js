@@ -1346,6 +1346,11 @@ async function requestBackend(
     const performanceStartedAt =
         performance.now();
 
+    console.log(
+        "[PERF START]",
+        action
+    );
+
     let performanceStatus =
         "ERROR";
 
