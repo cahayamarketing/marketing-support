@@ -1668,8 +1668,9 @@
 
                             <div>
                                 <div class="mb-2 flex items-center justify-between gap-3">
+
                                     <label
-                                        for="crmKpiWeek"
+                                        for="crmKpiPeriodType"
                                         class="form-label mb-0"
                                     >
                                         Periode KPI
@@ -1681,12 +1682,42 @@
                                     >
                                         Weekly
                                     </span>
+
                                 </div>
 
+                                <!-- JENIS PERIODE -->
                                 <select
-                                    id="crmKpiWeek"
+                                    id="crmKpiPeriodType"
                                     class="form-input"
-                                ></select>
+                                >
+                                    <option value="WEEKLY">
+                                        Per Week
+                                    </option>
+
+                                    <option value="CLOSING">
+                                        Closing
+                                    </option>
+                                </select>
+
+                                <!-- WEEK -->
+                                <div
+                                    id="crmKpiWeekWrapper"
+                                    class="mt-3"
+                                >
+
+                                    <label
+                                        for="crmKpiWeek"
+                                        class="mb-1.5 block text-[11px] font-bold text-slate-500"
+                                    >
+                                        Week
+                                    </label>
+
+                                    <select
+                                        id="crmKpiWeek"
+                                        class="form-input"
+                                    ></select>
+
+                                </div>
 
                                 <p
                                     id="crmKpiPeriodHelper"
@@ -1694,6 +1725,7 @@
                                 >
                                     Periode Weekly dihitung Sabtu–Jumat.
                                 </p>
+
                             </div>
 
                         </div>

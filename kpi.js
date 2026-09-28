@@ -197,6 +197,16 @@ const crmKpiMonth =
 const crmKpiWeek =
     document.getElementById("crmKpiWeek");
 
+const crmKpiPeriodType =
+    document.getElementById(
+        "crmKpiPeriodType"
+    );
+
+const crmKpiWeekWrapper =
+    document.getElementById(
+        "crmKpiWeekWrapper"
+    );
+
 const crmKpiTableBody =
     document.getElementById("crmKpiTableBody");
 
@@ -302,12 +312,17 @@ function initializeCrmKpiPeriod() {
             today.getMonth() + 1
         );
 
+    crmKpiPeriodType.value =
+        "WEEKLY";
+
     populateCrmKpiWeekOptions();
 
     crmKpiWeek.value =
         String(
             getCurrentCrmKpiWeek()
         );
+
+    updateCrmKpiPeriodTypeUI();
 }
 
 function initializeCrmKpiBranch() {
@@ -3263,16 +3278,6 @@ function populateCrmKpiWeekOptions() {
 
     crmKpiWeek.innerHTML = "";
 
-    const weeklyGroup =
-        document.createElement("optgroup");
-
-    weeklyGroup.label =
-        "WEEKLY — Sabtu–Jumat";
-
-    crmKpiWeek.appendChild(
-        weeklyGroup
-    );
-
     for (
         let week = 1;
         week <= 6;
@@ -3308,54 +3313,10 @@ function populateCrmKpiWeekOptions() {
                 )
             }`;
 
-        weeklyGroup.appendChild(
+        crmKpiWeek.appendChild(
             option
         );
     }
-
-    /*
-    | Closing selalu untuk bulan sebelumnya.
-    */
-
-    const previousMonth =
-        new Date(
-            year,
-            month - 2,
-            1
-        );
-
-    const closingOption =
-        document.createElement(
-            "option"
-        );
-
-    closingOption.value =
-        "CLOSING";
-
-    closingOption.textContent =
-        `Closing ${
-            new Intl.DateTimeFormat(
-                "id-ID",
-                {
-                    month: "long",
-                    year: "numeric"
-                }
-            ).format(previousMonth)
-        }`;
-
-    const closingGroup =
-        document.createElement("optgroup");
-
-    closingGroup.label =
-        "CLOSING — periode final";
-
-    closingGroup.appendChild(
-        closingOption
-    );
-
-    crmKpiWeek.appendChild(
-        closingGroup
-    );
 
     const availableValues =
         Array.from(
@@ -3371,6 +3332,11 @@ function populateCrmKpiWeekOptions() {
     ) {
         crmKpiWeek.value =
             previousValue;
+    } else if (
+        availableValues.length
+    ) {
+        crmKpiWeek.value =
+            availableValues[0];
     }
 }
 
@@ -3413,44 +3379,41 @@ function getLastCrmKpiWeek(
 
 
 function getSelectedCrmKpiPeriod() {
-    const selectedValue =
-        crmKpiWeek.value;
 
-    let year =
-        Number(crmKpiYear.value);
+    const year =
+        Number(
+            crmKpiYear.value
+        );
 
-    let month =
-        Number(crmKpiMonth.value);
+    const month =
+        Number(
+            crmKpiMonth.value
+        );
+
+    const snapshotType =
+        String(
+            crmKpiPeriodType.value ||
+            "WEEKLY"
+        )
+            .trim()
+            .toUpperCase();
 
     if (
-        selectedValue ===
+        snapshotType ===
         "CLOSING"
     ) {
-        const previousMonth =
-            new Date(
-                year,
-                month - 2,
-                1
-            );
-
-        year =
-            previousMonth.getFullYear();
-
-        month =
-            previousMonth.getMonth() + 1;
-
         return {
             branch:
                 crmKpiBranch.value,
 
-            year: year,
-            month: month,
+            year:
+                year,
+
+            month:
+                month,
 
             week:
-                getLastCrmKpiWeek(
-                    year,
-                    month
-                ),
+                null,
 
             snapshotType:
                 "CLOSING"
@@ -3461,17 +3424,72 @@ function getSelectedCrmKpiPeriod() {
         branch:
             crmKpiBranch.value,
 
-        year: year,
-        month: month,
+        year:
+            year,
+
+        month:
+            month,
 
         week:
-            Number(selectedValue),
+            Number(
+                crmKpiWeek.value
+            ),
 
         snapshotType:
             "WEEKLY"
     };
 }
 
+function updateCrmKpiPeriodTypeUI() {
+
+    const snapshotType =
+        String(
+            crmKpiPeriodType.value ||
+            "WEEKLY"
+        )
+            .trim()
+            .toUpperCase();
+
+    const isClosing =
+        snapshotType ===
+        "CLOSING";
+
+    if (crmKpiWeekWrapper) {
+        crmKpiWeekWrapper.classList.toggle(
+            "hidden",
+            isClosing
+        );
+    }
+
+    crmKpiInputMode =
+        isClosing
+            ? "CLOSING"
+            : "WEEKLY";
+
+    if (crmKpiPeriodModeHint) {
+        crmKpiPeriodModeHint.textContent =
+            isClosing
+                ? "Closing"
+                : "Weekly";
+    }
+
+    if (crmKpiPeriodHelper) {
+        crmKpiPeriodHelper.textContent =
+            isClosing
+                ? "Closing menggunakan bulan yang dipilih sebagai periode KPI."
+                : "Periode Weekly dihitung Sabtu–Jumat.";
+    }
+
+    if (crmKpiSnapshotNote) {
+        crmKpiSnapshotNote.disabled =
+            !isClosing;
+
+        if (!isClosing) {
+            crmKpiSnapshotNote.value =
+                "";
+        }
+    }
+}
 
 crmKpiYear.addEventListener(
     "change",
@@ -3489,6 +3507,18 @@ crmKpiMonth.addEventListener(
     "change",
     function () {
         populateCrmKpiWeekOptions();
+
+        updateCrmKpiPeriodInformation(
+            ""
+        );
+    }
+);
+
+crmKpiPeriodType.addEventListener(
+    "change",
+    function () {
+
+        updateCrmKpiPeriodTypeUI();
 
         updateCrmKpiPeriodInformation(
             ""
@@ -3542,58 +3572,6 @@ if (
         }
     );
 }
-
-
-crmKpiWeek.addEventListener(
-    "change",
-    function () {
-        const isClosing =
-            this.value === "CLOSING";
-
-        const periodModeHint =
-            document.getElementById(
-                "crmKpiPeriodModeHint"
-            );
-
-        const periodHelper =
-            document.getElementById(
-                "crmKpiPeriodHelper"
-            );
-
-        if (periodModeHint) {
-            periodModeHint.textContent =
-                isClosing
-                    ? "Closing"
-                    : "Weekly";
-        }
-
-        if (periodHelper) {
-            periodHelper.textContent =
-                isClosing
-                    ? "Closing adalah laporan final bulan sebelumnya dan diperbarui setelah bulan berganti."
-                    : "Periode Weekly dihitung Sabtu–Jumat.";
-        }
-
-        crmKpiInputMode =
-            isClosing
-                ? "CLOSING"
-                : "WEEKLY";
-
-        if (crmKpiSnapshotNote) {
-            crmKpiSnapshotNote.disabled =
-                !isClosing;
-
-            if (!isClosing) {
-                crmKpiSnapshotNote.value =
-                    "";
-            }
-        }
-
-        updateCrmKpiPeriodInformation(
-            ""
-        );
-    }
-);
 
 document.addEventListener(
     "input",
