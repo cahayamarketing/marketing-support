@@ -59,25 +59,141 @@ export default async function handler(
         const gasRequestStartedAt =
             performance.now();
 
-        const appsScriptResponse =
-            await fetch(
-                appsScriptUrl,
-                {
-                    method: "POST",
+        let appsScriptResponse = null;
+        let responseText = "";
+        let lastError = null;
 
-                    headers: {
-                        "Content-Type":
-                            "text/plain;charset=utf-8"
-                    },
+        const MAX_GAS_RETRY = 3;
 
-                    body:
-                        JSON.stringify(
-                            requestBody
-                        ),
+        for (
+            let attempt = 1;
+            attempt <= MAX_GAS_RETRY;
+            attempt++
+        ) {
 
-                    redirect: "follow"
+            const attemptStartedAt =
+                performance.now();
+
+            try {
+
+                console.log(
+                    "[VERCEL] GAS ATTEMPT",
+                    traceId,
+                    requestBody.action,
+                    attempt
+                );
+
+                appsScriptResponse =
+                    await fetch(
+                        appsScriptUrl,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "text/plain;charset=utf-8"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    requestBody
+                                ),
+
+                            redirect: "follow"
+                        }
+                    );
+
+                const attemptFinishedAt =
+                    performance.now();
+
+                console.log(
+                    "[VERCEL] GAS ATTEMPT RESULT",
+                    traceId,
+                    requestBody.action,
+                    attempt,
+                    "STATUS=",
+                    appsScriptResponse.status,
+                    "OK=",
+                    appsScriptResponse.ok,
+                    `${(
+                        (attemptFinishedAt -
+                            attemptStartedAt) /
+                        1000
+                    ).toFixed(2)}s`
+                );
+
+                responseText =
+                    await appsScriptResponse.text();
+
+                console.log(
+                    "[VERCEL] GAS ATTEMPT TEXT",
+                    traceId,
+                    requestBody.action,
+                    attempt,
+                    `${responseText.length} chars`
+                );
+
+                let parsedTest = null;
+
+                try {
+                    parsedTest =
+                        JSON.parse(responseText);
+                } catch (e) {
+                    parsedTest = null;
                 }
+
+                if (
+                    appsScriptResponse.ok &&
+                    parsedTest &&
+                    parsedTest.success === true
+                ) {
+                    console.log(
+                        "[VERCEL] GAS ATTEMPT SUCCESS",
+                        traceId,
+                        requestBody.action,
+                        attempt
+                    );
+
+                    break;
+                }
+
+                console.warn(
+                    "[VERCEL] GAS ATTEMPT INVALID",
+                    traceId,
+                    requestBody.action,
+                    attempt,
+                    responseText.substring(
+                        0,
+                        200
+                    )
+                );
+
+            } catch (error) {
+
+                lastError = error;
+
+                console.error(
+                    "[VERCEL] GAS ATTEMPT ERROR",
+                    traceId,
+                    requestBody.action,
+                    attempt,
+                    error &&
+                    error.message
+                        ? error.message
+                        : error
+                );
+            }
+        }
+
+        if (!responseText) {
+
+            throw (
+                lastError ||
+                new Error(
+                    "Apps Script tidak memberikan response."
+                )
             );
+        }
 
         const gasResponseReceivedAt =
             performance.now();
@@ -115,31 +231,16 @@ export default async function handler(
             )
         );
 
-        const textStartedAt =
-            performance.now();
-
-        const responseText =
-            await appsScriptResponse.text();
-
-        const textFinishedAt =
-            performance.now();
-
         console.log(
-            "[VERCEL] GAS TEXT",
+            "[VERCEL] GAS TEXT FINAL",
             traceId,
             requestBody.action,
-            `${(
-                (textFinishedAt -
-                    textStartedAt) /
-                1000
-            ).toFixed(2)}s`,
             `${responseText.length} chars`,
             `${(
                 responseText.length /
                 1024 /
                 1024
-            ).toFixed(3)} MB`,
-            responseText
+            ).toFixed(3)} MB`
         );
 
         const jsonStartedAt =
