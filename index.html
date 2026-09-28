@@ -508,23 +508,34 @@
     <main class="lg:ml-72">
 
         <!-- HEADER -->
-        <header class="sticky top-0 z-20 flex h-20 items-center justify-between border-b bg-white/95 px-4 backdrop-blur md:px-8">
+        <header
+            class="app-header sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl md:px-8"
+        >
 
             <div class="flex items-center gap-4">
                 <button
                     id="openSidebar"
-                    class="rounded-xl border p-2.5 lg:hidden"
+                    class="header-menu-button lg:hidden"
                     type="button"
+                    aria-label="Buka menu navigasi"
                 >
-                    ☰
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </button>
 
-                <div>
-                    <h1 id="pageTitle" class="text-xl font-black text-slate-900">
+                <div class="header-page-info">
+                    <h1
+                        id="pageTitle"
+                        class="text-[1.15rem] font-black tracking-tight text-slate-900 md:text-xl"
+                    >
                         Dashboard
                     </h1>
 
-                    <p id="pageSubtitle" class="text-sm text-slate-500">
+                    <p
+                        id="pageSubtitle"
+                        class="mt-0.5 text-xs font-medium text-slate-400 md:text-sm"
+                    >
                         Ringkasan aktivitas marketing
                     </p>
                 </div>
