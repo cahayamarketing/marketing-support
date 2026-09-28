@@ -6,10 +6,16 @@ async function callApi(
     action,
     payload = {}
 ) {
+    const apiStartedAt =
+        performance.now();
+
     const token =
         sessionStorage.getItem(
             "sessionToken"
         ) || "";
+
+    const gasStartedAt =
+        performance.now();
 
     const response = await fetch(
         "/api/gas",
@@ -29,6 +35,16 @@ async function callApi(
         }
     );
 
+    const gasDuration =
+        performance.now() -
+        gasStartedAt;
+
+    console.log(
+        "[API] GAS",
+        action,
+        `${(gasDuration / 1000).toFixed(2)}s`
+    );
+
     let result;
 
     try {
@@ -46,6 +62,16 @@ async function callApi(
             "Permintaan gagal diproses."
         );
     }
+
+    const apiDuration =
+        performance.now() -
+        apiStartedAt;
+
+    console.log(
+        "[API] TOTAL",
+        action,
+        `${(apiDuration / 1000).toFixed(2)}s`
+    );
 
     return result;
 }
