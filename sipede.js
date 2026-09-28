@@ -192,7 +192,7 @@ function canVerifySipedeKpi() {
 |--------------------------------------------------------------------------
 */
 
-function initializeSipedeKpi() {
+async function initializeSipedeKpi() {
 
     if (sipedeKpiInitialized) {
         return;
@@ -240,7 +240,7 @@ function initializeSipedeKpi() {
         "change",
         function () {
 
-            populateSipedePersons();
+            updateSipedeIdentity();
 
         }
     );
@@ -257,6 +257,46 @@ function initializeSipedeKpi() {
 
     populateSipedeKpiWeeks();
     renderSipedeKpiRules();
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD MASTER SIPEDE SEJAK AWAL
+    |--------------------------------------------------------------------------
+    */
+
+    try {
+
+        const master =
+            await requestBackend(
+                "getSipedeMaster",
+                {}
+            );
+
+        sipedeKpiMaster =
+            master;
+
+        /*
+        | Langsung isi identitas berdasarkan
+        | cabang yang sedang terpilih.
+        */
+
+        updateSipedeIdentity();
+
+    } catch (error) {
+
+        console.error(
+            "Master SiPede gagal dimuat:",
+            error
+        );
+
+        showToast(
+            error.message ||
+            "Master SiPede gagal dimuat.",
+            "error"
+        );
+
+    }
+
 }
 
 
@@ -708,12 +748,19 @@ async function loadSipedeKpiPage() {
         return;
     }
 
-    initializeSipedeKpi();
+    await initializeSipedeKpi();
 
     const period =
         getSelectedSipedePeriod();
 
     sipedeKpiLoading = true;
+
+    setSipedeKpiLoading(
+        true,
+        period.snapshotType === "CLOSING"
+            ? "Memuat laporan closing..."
+            : `Memuat KPI Week ${period.week}...`
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -883,9 +930,9 @@ async function loadSipedeKpiPage() {
         sipedeKpiLoading =
             false;
 
-        stopSipedeKpiTableLoading();
-
-        setSipedeKpiLoadButtonBusy(false);
+        setSipedeKpiLoading(
+            false
+        );
 
     }
 
@@ -1004,26 +1051,133 @@ function populateSipedePersons() {
 
 function updateSipedeIdentity() {
 
-    populateSipedePersons();
+    if (
+        !sipedeKpiMaster ||
+        !Array.isArray(
+            sipedeKpiMaster.persons
+        )
+    ) {
+
+        return;
+
+    }
+
+    const branch =
+        String(
+            sipedeKpiBranch.value ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const persons =
+        sipedeKpiMaster.persons.filter(
+            function (person) {
+
+                const personBranch =
+                    String(
+                        person.branch ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const personStatus =
+                    String(
+                        person.status ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                return (
+                    personBranch ===
+                    branch &&
+                    personStatus ===
+                    "AKTIF"
+                );
+
+            }
+        );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ambil SiPede pertama yang aktif
+    |--------------------------------------------------------------------------
+    */
+
+    const person =
+        persons[0] || null;
+
+    if (!person) {
+
+        sipedeKpiNik.value =
+            "";
+
+        sipedeKpiName.value =
+            "";
+
+        sipedeKpiCrmName.value =
+            "";
+
+        return;
+
+    }
+
+    sipedeKpiNik.value =
+        person.nik || "";
+
+    sipedeKpiName.value =
+        person.name || "";
+
+    sipedeKpiCrmName.value =
+        person.crmName || "";
 
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| LOADING TABEL
+| LOADING SIPEDE
 |--------------------------------------------------------------------------
-| Mengikuti pola KPI CRM:
-| - progress semu 8% → 90% selama request
-| - 100% setelah response selesai
-| - loading berada di kolom/tabel
-| - tombol tetap bertuliskan "Tampilkan KPI"
+| SAMA DENGAN KPI CRM
 |--------------------------------------------------------------------------
 */
 
-function startSipedeKpiTableLoading(
+function setSipedeKpiLoading(
+    loading,
     message = "Memuat data KPI..."
 ) {
+
+    const loadingElement =
+        document.getElementById(
+            "sipedeKpiLoading"
+        );
+
+    const tableContainer =
+        document.getElementById(
+            "sipedeKpiTableContainer"
+        );
+
+    const emptyElement =
+        document.getElementById(
+            "emptySipedeKpi"
+        );
+
+    const percentageElement =
+        document.getElementById(
+            "sipedeKpiLoadingPercent"
+        );
+
+    const progressElement =
+        document.getElementById(
+            "sipedeKpiLoadingBar"
+        );
+
+    const textElement =
+        document.getElementById(
+            "sipedeKpiLoadingText"
+        );
 
     window.clearInterval(
         sipedeKpiLoadingTimer
@@ -1032,62 +1186,152 @@ function startSipedeKpiTableLoading(
     sipedeKpiLoadingTimer =
         null;
 
-    sipedeKpiLoadingValue =
-        8;
+    if (loading) {
 
-    renderSipedeKpiLoadingTable(
-        message,
-        sipedeKpiLoadingValue
-    );
+        sipedeKpiLoadingValue =
+            8;
 
-    sipedeKpiLoadingTimer =
-        window.setInterval(
-            function () {
+        loadingElement.classList.remove(
+            "hidden"
+        );
 
-                if (
-                    sipedeKpiLoadingValue >=
-                    90
-                ) {
-                    return;
-                }
+        tableContainer.classList.add(
+            "hidden"
+        );
 
-                const increment =
-                    sipedeKpiLoadingValue < 50
-                        ? 7
-                        : sipedeKpiLoadingValue < 75
-                            ? 4
-                            : 1;
+        if (emptyElement) {
 
-                sipedeKpiLoadingValue =
-                    Math.min(
-                        sipedeKpiLoadingValue +
-                            increment,
+            emptyElement.classList.add(
+                "hidden"
+            );
+
+        }
+
+        if (textElement) {
+
+            textElement.textContent =
+                message;
+
+        }
+
+        updateSipedeKpiLoadingProgress(
+            sipedeKpiLoadingValue
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | PROGRESS SEMU
+        |--------------------------------------------------------------------------
+        | Sama persis dengan KPI CRM.
+        */
+
+        sipedeKpiLoadingTimer =
+            window.setInterval(
+                function () {
+
+                    if (
+                        sipedeKpiLoadingValue >=
                         90
+                    ) {
+
+                        return;
+
+                    }
+
+                    const increment =
+                        sipedeKpiLoadingValue < 50
+                            ? 7
+                            : sipedeKpiLoadingValue < 75
+                                ? 4
+                                : 1;
+
+                    sipedeKpiLoadingValue =
+                        Math.min(
+                            sipedeKpiLoadingValue +
+                                increment,
+                            90
+                        );
+
+                    updateSipedeKpiLoadingProgress(
+                        sipedeKpiLoadingValue
                     );
 
-                renderSipedeKpiLoadingTable(
-                    message,
-                    sipedeKpiLoadingValue
-                );
+                },
+                280
+            );
 
-            },
-            280
-        );
+        return;
+
+    }
+
+    sipedeKpiLoadingValue =
+        100;
+
+    updateSipedeKpiLoadingProgress(
+        100
+    );
+
+    if (textElement) {
+
+        textElement.textContent =
+            "Data KPI berhasil dimuat.";
+
+    }
+
+    window.setTimeout(
+        function () {
+
+            loadingElement.classList.add(
+                "hidden"
+            );
+
+            tableContainer.classList.remove(
+                "hidden"
+            );
+
+        },
+        300
+    );
 
 }
 
 
-function stopSipedeKpiTableLoading() {
+function updateSipedeKpiLoadingProgress(
+    value
+) {
 
-    window.clearInterval(
-        sipedeKpiLoadingTimer
-    );
+    const percentageElement =
+        document.getElementById(
+            "sipedeKpiLoadingPercent"
+        );
 
-    sipedeKpiLoadingTimer =
-        null;
+    const progressElement =
+        document.getElementById(
+            "sipedeKpiLoadingBar"
+        );
 
-    sipedeKpiLoadingValue =
-        100;
+    const percent =
+        Math.max(
+            0,
+            Math.min(
+                Number(value) || 0,
+                100
+            )
+        );
+
+    if (percentageElement) {
+
+        percentageElement.textContent =
+            `${Math.round(percent)}%`;
+
+    }
+
+    if (progressElement) {
+
+        progressElement.style.width =
+            `${percent}%`;
+
+    }
 
 }
 
