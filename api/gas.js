@@ -71,6 +71,20 @@ export default async function handler(
                 }
             );
 
+        const gasResponseReceivedAt =
+            performance.now();
+
+        console.log(
+            "[VERCEL] GAS RESPONSE",
+            traceId,
+            requestBody.action,
+            `${(
+                (gasResponseReceivedAt -
+                    gasRequestStartedAt) /
+                1000
+            ).toFixed(2)}s`
+        );
+
         console.log(
             "[VERCEL] GAS RESPONSE",
             traceId,
