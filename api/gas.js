@@ -41,6 +41,14 @@ export default async function handler(
             requestBody.action
         );
 
+        console.log(
+            "[VERCEL] REQUEST BODY READY",
+            traceId,
+            requestBody.action,
+            JSON.stringify(requestBody).length,
+            "chars"
+        );
+
         if (
             typeof requestBody === "string"
         ) {
