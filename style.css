@@ -207,6 +207,61 @@ textarea {
     backdrop-filter: blur(2px);
 }
 
+/* =========================================================
+   MOBILE SIDEBAR UX
+========================================================= */
+
+@media (max-width: 1023px) {
+
+    .sidebar {
+        width: min(86vw, 340px);
+        box-shadow:
+            12px 0 35px rgba(15, 23, 42, 0.22);
+        transition:
+            transform 240ms cubic-bezier(.22, 1, .36, 1),
+            box-shadow 240ms ease;
+    }
+
+    .sidebar.open {
+        box-shadow:
+            12px 0 45px rgba(15, 23, 42, 0.30);
+    }
+
+    .sidebar-overlay {
+        background: rgba(15, 23, 42, 0.58);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        transition:
+            opacity 200ms ease;
+    }
+
+    .sidebar-brand {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .sidebar-scroll-area {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    .nav-item,
+    .nav-subitem {
+        min-height: 44px;
+    }
+
+    .nav-item {
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
+    }
+
+    .nav-subitem {
+        padding-top: 0.65rem;
+        padding-bottom: 0.65rem;
+    }
+}
+
 .nav-item,
 .nav-subitem {
     display: flex;
