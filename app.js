@@ -1562,6 +1562,11 @@ async function requestBackend(
         throw error;
         
     } finally {
+        console.log(
+            "[FINALLY TEST]",
+            action
+        );
+
         window.clearTimeout(
             timeoutId
         );
