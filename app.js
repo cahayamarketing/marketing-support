@@ -1341,19 +1341,12 @@ async function requestBackend(
     payload = {}
 ) {
 
-    console.log("[BACKEND TEST] action:", action);
-
     const performanceStartedAt =
         performance.now();
 
-    console.log(
-        "[PERF START]",
-        action
-    );
-
     let performanceStatus =
         "ERROR";
-
+        
     const isMutation =
         mutationActions.has(action);
 
@@ -1584,24 +1577,6 @@ async function requestBackend(
         if (isMutation) {
             activeMutationRequests.delete(
                 action
-            );
-        }
-        
-        const performanceMessage =
-            `[PERF] ${action} → ` +
-            `${(durationMs / 1000).toFixed(2)}s → ` +
-            `${performanceStatus}`;
-
-        if (
-            performanceStatus ===
-            "SUCCESS"
-        ) {
-            console.debug(
-                performanceMessage
-            );
-        } else {
-            console.warn(
-                performanceMessage
             );
         }
     }
