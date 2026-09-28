@@ -85,19 +85,34 @@ export default async function handler(
             ).toFixed(2)}s`
         );
 
-        console.log(
-            "[VERCEL] GAS RESPONSE",
-            traceId,
-            requestBody.action,
-            `${(
-                (gasResponseReceivedAt -
-                    gasRequestStartedAt) /
-                1000
-            ).toFixed(2)}s`
-        );
+        const textStartedAt =
+            performance.now();
 
         const responseText =
             await appsScriptResponse.text();
+
+        const textFinishedAt =
+            performance.now();
+
+        console.log(
+            "[VERCEL] GAS TEXT",
+            traceId,
+            requestBody.action,
+            `${(
+                (textFinishedAt -
+                    textStartedAt) /
+                1000
+            ).toFixed(2)}s`,
+            `${responseText.length} chars`,
+            `${(
+                responseText.length /
+                1024 /
+                1024
+            ).toFixed(3)} MB`
+        );
+
+        const jsonStartedAt =
+            performance.now();
 
         let result;
 
@@ -109,6 +124,20 @@ export default async function handler(
                 "Respons Apps Script bukan JSON."
             );
         }
+
+        const jsonFinishedAt =
+            performance.now();
+
+        console.log(
+            "[VERCEL] JSON PARSE",
+            traceId,
+            requestBody.action,
+            `${(
+                (jsonFinishedAt -
+                    jsonStartedAt) /
+                1000
+            ).toFixed(2)}s`
+        );
 
         if (!result.success) {
             return response
@@ -135,9 +164,25 @@ export default async function handler(
             ).toFixed(2)}s`
         );
 
+        const browserResponseStartedAt =
+            performance.now();
+
+        console.log(
+            "[VERCEL] BEFORE BROWSER RESPONSE",
+            traceId,
+            requestBody.action,
+            `${(
+                (browserResponseStartedAt -
+                    apiStartedAt) /
+                1000
+            ).toFixed(2)}s`
+        );
+
         return response
             .status(200)
             .json(result.result);
+
+
     } catch (error) {
         return response
             .status(500)
