@@ -650,65 +650,6 @@ async function loginWithRetry(
 }
 
 
-document.addEventListener(
-    "keydown",
-    function (event) {
-        if (
-            event.key === "Escape" &&
-            forgotModal &&
-            !forgotModal.classList.contains(
-                "hidden"
-            )
-        ) {
-            closeForgotModal();
-        }
-    }
-);
-
-
-if (forgotPasswordForm) {
-    forgotPasswordForm.addEventListener(
-        "submit",
-        function (event) {
-            event.preventDefault();
-
-            const nik =
-                document
-                    .getElementById(
-                        "forgotUsername"
-                    )
-                    .value
-                    .trim();
-
-            forgotMessage.classList.remove(
-                "hidden"
-            );
-
-            if (!nik) {
-                forgotMessage.className =
-                    "mt-3 text-sm font-bold text-red-600";
-
-                forgotMessage.textContent =
-                    "Masukkan NIK terlebih dahulu.";
-
-                return;
-            }
-
-            /*
-            | Tidak memberitahukan apakah NIK ada atau
-            | tidak demi keamanan akun.
-            */
-
-            forgotMessage.className =
-                "mt-3 text-sm font-bold text-emerald-600";
-
-            forgotMessage.textContent =
-                "Silakan hubungi administrator untuk reset password.";
-        }
-    );
-}
-
-
 /*
 |--------------------------------------------------------------------------
 | FUNCTION UI
