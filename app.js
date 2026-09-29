@@ -9269,6 +9269,15 @@ function renderPkmPdfTable() {
                                 ↓ Download PDF
                             </button>
                         </td>
+                        <td class="text-right">
+                            <button
+                                type="button"
+                                onclick="refreshPkmPdf('${pkm.id}', this)"
+                                class="..."
+                            >
+                                ↻ Perbarui TTD & PDF
+                            </button>
+                        </td>
                     </tr>
                 `;
             })

@@ -1131,7 +1131,8 @@ async function optimizePkmPdfSignatures(
 }
 
 async function createAndStorePkmPdf(
-    pkmId
+    pkmId,
+    options = {}
 ) {
     console.group(
         "[PDF] CREATE PDF"
@@ -1164,7 +1165,12 @@ async function createAndStorePkmPdf(
             await requestBackend(
                 "getPkmPdfData",
                 {
-                    pkmId: pkmId
+                    pkmId: pkmId,
+
+                    refreshSignature:
+                        Boolean(
+                            options.refreshSignature
+                        )
                 }
             );
     console.log(
@@ -1472,6 +1478,80 @@ async function downloadStoredPkmPdf(
     }
 }
 
+async function refreshPkmPdf(
+    pkmId,
+    button = null
+) {
+    const originalContent =
+        button
+            ? button.innerHTML
+            : "";
+
+    try {
+        if (button) {
+            button.disabled = true;
+
+            button.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <span class="ui-spinner"></span>
+                    <span>Memperbarui TTD & PDF...</span>
+                </span>
+            `;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 1. Generate ulang menggunakan TTD terbaru
+        |--------------------------------------------------------------------------
+        */
+
+        await createAndStorePkmPdf(
+            pkmId,
+            {
+                refreshSignature: true
+            }
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | 2. Download PDF yang baru saja dibuat
+        |--------------------------------------------------------------------------
+        */
+
+        await downloadStoredPkmPdf(
+            pkmId
+        );
+
+        if (typeof showToast === "function") {
+            showToast(
+                "TTD Manager H1 berhasil diperbarui dan PDF berhasil dibuat ulang."
+            );
+        }
+
+    } catch (error) {
+        console.error(
+            "[PDF] Refresh TTD gagal:",
+            error
+        );
+
+        if (typeof showToast === "function") {
+            showToast(
+                error.message ||
+                "Gagal memperbarui TTD dan PDF."
+            );
+        }
+
+        throw error;
+
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.innerHTML =
+                originalContent;
+        }
+    }
+}
+
 
 window.createAndStorePkmPdf =
     createAndStorePkmPdf;
@@ -1479,6 +1559,8 @@ window.createAndStorePkmPdf =
 window.downloadStoredPkmPdf =
     downloadStoredPkmPdf;
 
+window.refreshPkmPdf =
+    refreshPkmPdf;
 
 window.downloadPkmPdf =
     downloadPkmPdf;
