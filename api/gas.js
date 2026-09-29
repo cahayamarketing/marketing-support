@@ -102,7 +102,7 @@ export default async function handler(
                 function () {
                     controller.abort();
                 },
-                15000
+                30000
             );
 
         let appsScriptResponse;
