@@ -9272,7 +9272,7 @@ function renderPkmPdfTable() {
                         <td class="text-right">
                             <button
                                 type="button"
-                                onclick="refreshPkmPdf('${pkm.id}', this)"
+                                onclick="refreshPkmPdf('${item.id}', this)"
                                 class="..."
                             >
                                 ↻ Perbarui TTD & PDF
