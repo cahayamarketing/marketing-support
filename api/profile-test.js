@@ -2,7 +2,7 @@
 
 import {
     supabaseRequest
-} from "../src/backend/services/supabase.js";
+} from "../src/backend/supabase.js";
 
 export default async function handler(req, res) {
     if (req.method !== "GET") {
