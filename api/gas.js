@@ -4,7 +4,10 @@ export default async function handler(
 ) {
     const apiStartedAt =
         performance.now();
-    if (request.method !== "POST") {
+
+    if (
+        request.method !== "POST"
+    ) {
         return response.status(405).json({
             success: false,
             message:
@@ -23,14 +26,31 @@ export default async function handler(
         });
     }
 
+    const traceId =
+        `${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 8)}`;
+
     try {
+
+        /*
+        |--------------------------------------------------------------------------
+        | REQUEST BODY
+        |--------------------------------------------------------------------------
+        */
+
         let requestBody =
             request.body || {};
 
-        const traceId =
-            `${Date.now()}-${Math.random()
-                .toString(36)
-                .slice(2, 8)}`;
+        if (
+            typeof requestBody ===
+            "string"
+        ) {
+            requestBody =
+                JSON.parse(
+                    requestBody
+                );
+        }
 
         requestBody._traceId =
             traceId;
@@ -45,157 +65,94 @@ export default async function handler(
             "[VERCEL] REQUEST BODY READY",
             traceId,
             requestBody.action,
-            JSON.stringify(requestBody).length,
+            JSON.stringify(
+                requestBody
+            ).length,
             "chars"
         );
 
-        if (
-            typeof requestBody === "string"
-        ) {
-            requestBody =
-                JSON.parse(requestBody);
-        }
 
-        const gasRequestStartedAt =
+        /*
+        |--------------------------------------------------------------------------
+        | APPS SCRIPT REQUEST
+        |--------------------------------------------------------------------------
+        |
+        | Jangan retry 3x secara membabi buta.
+        |
+        | Endpoint Apps Script yang baru sudah terbukti
+        | normal ketika diakses langsung.
+        |
+        */
+
+        const gasStartedAt =
             performance.now();
 
-        let appsScriptResponse = null;
-        let responseText = "";
-        let lastError = null;
+        const controller =
+            new AbortController();
 
-        const MAX_GAS_RETRY = 3;
+        /*
+        | Batas maksimum satu request ke Apps Script.
+        |
+        | Normal PKM sekarang < 3 detik.
+        | Kita beri ruang sampai 15 detik.
+        */
 
-        for (
-            let attempt = 1;
-            attempt <= MAX_GAS_RETRY;
-            attempt++
-        ) {
+        const timeoutId =
+            setTimeout(
+                function () {
+                    controller.abort();
+                },
+                15000
+            );
 
-            const attemptStartedAt =
-                performance.now();
+        let appsScriptResponse;
 
-            try {
+        try {
 
-                console.log(
-                    "[VERCEL] GAS ATTEMPT",
-                    traceId,
-                    requestBody.action,
-                    attempt
+            console.log(
+                "[VERCEL] GAS REQUEST",
+                traceId,
+                requestBody.action
+            );
+
+            appsScriptResponse =
+                await fetch(
+                    appsScriptUrl,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "text/plain;charset=utf-8"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                requestBody
+                            ),
+
+                        redirect: "follow",
+
+                        signal:
+                            controller.signal
+                    }
                 );
 
-                appsScriptResponse =
-                    await fetch(
-                        appsScriptUrl,
-                        {
-                            method: "POST",
+        } finally {
 
-                            headers: {
-                                "Content-Type":
-                                    "text/plain;charset=utf-8"
-                            },
-
-                            body:
-                                JSON.stringify(
-                                    requestBody
-                                ),
-
-                            redirect: "follow"
-                        }
-                    );
-
-                const attemptFinishedAt =
-                    performance.now();
-
-                console.log(
-                    "[VERCEL] GAS ATTEMPT RESULT",
-                    traceId,
-                    requestBody.action,
-                    attempt,
-                    "STATUS=",
-                    appsScriptResponse.status,
-                    "OK=",
-                    appsScriptResponse.ok,
-                    `${(
-                        (attemptFinishedAt -
-                            attemptStartedAt) /
-                        1000
-                    ).toFixed(2)}s`
-                );
-
-                responseText =
-                    await appsScriptResponse.text();
-
-                console.log(
-                    "[VERCEL] GAS ATTEMPT TEXT",
-                    traceId,
-                    requestBody.action,
-                    attempt,
-                    `${responseText.length} chars`
-                );
-
-                let parsedTest = null;
-
-                try {
-                    parsedTest =
-                        JSON.parse(responseText);
-                } catch (e) {
-                    parsedTest = null;
-                }
-
-                if (
-                    appsScriptResponse.ok &&
-                    parsedTest &&
-                    parsedTest.success === true
-                ) {
-                    console.log(
-                        "[VERCEL] GAS ATTEMPT SUCCESS",
-                        traceId,
-                        requestBody.action,
-                        attempt
-                    );
-
-                    break;
-                }
-
-                console.warn(
-                    "[VERCEL] GAS ATTEMPT INVALID",
-                    traceId,
-                    requestBody.action,
-                    attempt,
-                    responseText.substring(
-                        0,
-                        200
-                    )
-                );
-
-            } catch (error) {
-
-                lastError = error;
-
-                console.error(
-                    "[VERCEL] GAS ATTEMPT ERROR",
-                    traceId,
-                    requestBody.action,
-                    attempt,
-                    error &&
-                    error.message
-                        ? error.message
-                        : error
-                );
-            }
-        }
-
-        if (!responseText) {
-
-            throw (
-                lastError ||
-                new Error(
-                    "Apps Script tidak memberikan response."
-                )
+            clearTimeout(
+                timeoutId
             );
         }
 
-        const gasResponseReceivedAt =
+
+        /*
+        |--------------------------------------------------------------------------
+        | GAS RESPONSE TIMING
+        |--------------------------------------------------------------------------
+        */
+
+        const gasResponseAt =
             performance.now();
 
         console.log(
@@ -207,81 +164,134 @@ export default async function handler(
             "OK=",
             appsScriptResponse.ok,
             `${(
-                (gasResponseReceivedAt -
-                    gasRequestStartedAt) /
+                (gasResponseAt -
+                    gasStartedAt) /
                 1000
             ).toFixed(2)}s`
         );
 
-        console.log(
-            "[VERCEL] GAS HEADERS",
-            traceId,
-            requestBody.action,
-            "content-type=",
-            appsScriptResponse.headers.get(
-                "content-type"
-            ),
-            "content-length=",
-            appsScriptResponse.headers.get(
-                "content-length"
-            ),
-            "location=",
-            appsScriptResponse.headers.get(
-                "location"
-            )
-        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPONSE TEXT
+        |--------------------------------------------------------------------------
+        */
+
+        const responseText =
+            await appsScriptResponse.text();
 
         console.log(
-            "[VERCEL] GAS TEXT FINAL",
+            "[VERCEL] GAS TEXT",
             traceId,
             requestBody.action,
-            `${responseText.length} chars`,
-            `${(
-                responseText.length /
-                1024 /
-                1024
-            ).toFixed(3)} MB`
+            `${responseText.length} chars`
         );
 
-        const jsonStartedAt =
-            performance.now();
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDASI HTTP
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !appsScriptResponse.ok
+        ) {
+
+            console.error(
+                "[VERCEL] GAS HTTP ERROR",
+                traceId,
+                requestBody.action,
+                "STATUS=",
+                appsScriptResponse.status,
+                responseText.substring(
+                    0,
+                    500
+                )
+            );
+
+            return response
+                .status(502)
+                .json({
+                    success: false,
+                    message:
+                        `Apps Script mengembalikan HTTP ${appsScriptResponse.status}.`
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PARSE JSON
+        |--------------------------------------------------------------------------
+        */
 
         let result;
 
         try {
+
             result =
-                JSON.parse(responseText);
+                JSON.parse(
+                    responseText
+                );
+
         } catch (error) {
-            throw new Error(
-                "Respons Apps Script bukan JSON."
+
+            console.error(
+                "[VERCEL] GAS INVALID JSON",
+                traceId,
+                requestBody.action,
+                responseText.substring(
+                    0,
+                    500
+                )
             );
+
+            return response
+                .status(502)
+                .json({
+                    success: false,
+                    message:
+                        "Respons Apps Script bukan JSON."
+                });
         }
 
-        const jsonFinishedAt =
-            performance.now();
 
-        console.log(
-            "[VERCEL] JSON PARSE",
-            traceId,
-            requestBody.action,
-            `${(
-                (jsonFinishedAt -
-                    jsonStartedAt) /
-                1000
-            ).toFixed(2)}s`
-        );
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDASI APPS SCRIPT
+        |--------------------------------------------------------------------------
+        */
 
-        if (!result.success) {
+        if (
+            !result ||
+            result.success !== true
+        ) {
+
+            console.error(
+                "[VERCEL] GAS APPLICATION ERROR",
+                traceId,
+                requestBody.action,
+                result
+            );
+
             return response
                 .status(400)
                 .json({
                     success: false,
 
                     message:
-                        result.message ||
+                        result?.message ||
                         "Apps Script gagal memproses data."
                 });
         }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOTAL
+        |--------------------------------------------------------------------------
+        */
 
         const apiDuration =
             performance.now() -
@@ -292,37 +302,85 @@ export default async function handler(
             traceId,
             requestBody.action,
             `${(
-                apiDuration / 1000
+                apiDuration /
+                1000
             ).toFixed(2)}s`
         );
 
-        const browserResponseStartedAt =
-            performance.now();
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPONSE KE BROWSER
+        |--------------------------------------------------------------------------
+        */
 
         console.log(
             "[VERCEL] BEFORE BROWSER RESPONSE",
             traceId,
             requestBody.action,
             `${(
-                (browserResponseStartedAt -
-                    apiStartedAt) /
+                apiDuration /
                 1000
             ).toFixed(2)}s`
         );
 
         return response
             .status(200)
-            .json(result.result);
+            .json(
+                result.result
+            );
 
 
     } catch (error) {
+
+        const apiDuration =
+            performance.now() -
+            apiStartedAt;
+
+        console.error(
+            "[VERCEL] API ERROR",
+            traceId,
+            request.body?.action,
+            error &&
+            error.message
+                ? error.message
+                : error
+        );
+
+        console.error(
+            "[VERCEL] API TOTAL ERROR",
+            traceId,
+            `${(
+                apiDuration /
+                1000
+            ).toFixed(2)}s`
+        );
+
+
+        if (
+            error &&
+            error.name ===
+            "AbortError"
+        ) {
+
+            return response
+                .status(504)
+                .json({
+                    success: false,
+                    message:
+                        "Apps Script terlalu lama merespons."
+                });
+        }
+
+
         return response
             .status(500)
             .json({
                 success: false,
 
                 message:
-                    error && error.message
+                    error &&
+                    error.message
                         ? error.message
                         : "Gagal menghubungi Apps Script."
             });
