@@ -819,10 +819,12 @@ async function callApi(
         );
 
     try {
-        const response =
-            await fetch(
-                "/api/gas",
-                {
+        const apiUrl =
+            action === "login"
+                ? "/api/auth"
+                : "/api/gas";
+
+        const response = await fetch(apiUrl, {
                     method: "POST",
 
                     headers: {
