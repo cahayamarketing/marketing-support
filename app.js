@@ -4147,7 +4147,6 @@ function showPage(pageId) {
         .querySelectorAll(".app-content")
         .forEach(function (page) {
             page.classList.add("hidden");
-            page.style.display = "none";
         });
 
     /*
@@ -4166,7 +4165,6 @@ function showPage(pageId) {
     activePageId = pageId;
 
     selectedPage.classList.remove("hidden");
-    selectedPage.style.display = "block";
 
     /*
     |--------------------------------------------------------------------------
