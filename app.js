@@ -1506,6 +1506,33 @@ async function requestBackend(
             };
         }
 
+        if (action === "getMasterData") {
+
+            const params =
+                new URLSearchParams();
+
+            const type =
+                String(
+                    payload.type || ""
+                ).trim();
+
+            if (type) {
+                params.set(
+                    "type",
+                    type
+                );
+            }
+
+            apiUrl =
+                `/api/master?${params.toString()}`;
+
+            fetchOptions = {
+                method: "GET",
+                signal: controller.signal,
+                cache: "no-store"
+            };
+        }
+
 
         const response = await fetch(
             apiUrl,
