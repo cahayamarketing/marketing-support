@@ -2183,18 +2183,27 @@ async function performPkmDataLoad(
             filters
         );
 
-        sheetPkmData = Array.isArray(result.data)
-            ? result.data
+        const pkmResult =
+            result &&
+            result.data &&
+            !Array.isArray(result.data)
+                ? result.data
+                : result;
+
+        sheetPkmData = Array.isArray(pkmResult.data)
+            ? pkmResult.data
             : [];
 
         if (
-            Array.isArray(result.branches) &&
-            result.branches.length
+            Array.isArray(pkmResult.branches) &&
+            pkmResult.branches.length
         ) {
-            sheetBranchOptions = result.branches;
+            sheetBranchOptions = pkmResult.branches;
         }
 
-        activePkmFilters = result.appliedFilters || filters;
+        activePkmFilters =
+            pkmResult.appliedFilters ||
+            filters;
 
         updateDataFreshness();
 
