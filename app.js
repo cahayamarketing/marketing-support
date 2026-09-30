@@ -1422,25 +1422,81 @@ async function requestBackend(
         const apiFetchStartedAt =
             performance.now();
 
-        const response = await fetch(
-            "/api/gas",
-            {
-                method: "POST",
+        let apiUrl = "/api/gas";
+        let fetchOptions = {
+            method: "POST",
 
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
+            headers: {
+                "Content-Type": "application/json"
+            },
 
-                body: JSON.stringify({
-                    action: action,
-                    token: sessionToken,
-                    payload: payload
-                }),
+            body: JSON.stringify({
+                action: action,
+                token: sessionToken,
+                payload: payload
+            }),
+
+            signal: controller.signal,
+            cache: "no-store"
+        };
+
+
+        /*
+        * PKM sudah dipindahkan ke Supabase.
+        *
+        * getPkmData tidak lagi melalui Google Apps Script.
+        */
+        if (action === "getPkmData") {
+
+            const params = new URLSearchParams();
+
+            if (payload.startDate) {
+                params.set(
+                    "startDate",
+                    payload.startDate
+                );
+            }
+
+            if (payload.endDate) {
+                params.set(
+                    "endDate",
+                    payload.endDate
+                );
+            }
+
+            if (payload.jenisPkm) {
+                params.set(
+                    "jenisPkm",
+                    payload.jenisPkm
+                );
+            }
+
+            if (
+                Array.isArray(payload.branches) &&
+                payload.branches.length
+            ) {
+                params.set(
+                    "branches",
+                    payload.branches.join(",")
+                );
+            }
+
+            apiUrl =
+                `/api/pkm?${params.toString()}`;
+
+            fetchOptions = {
+                method: "GET",
 
                 signal: controller.signal,
+
                 cache: "no-store"
-            }
+            };
+        }
+
+
+        const response = await fetch(
+            apiUrl,
+            fetchOptions
         );
 
         const apiResponseReceivedAt =
