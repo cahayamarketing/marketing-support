@@ -2713,11 +2713,23 @@ async function loadReferenceMasters() {
                 attempt++
             ) {
                 try {
-                    const result =
-                        await requestBackend(
-                            "getReferenceMasters",
-                            {}
+                    const response = await fetch("/api/master");
+
+                    if (!response.ok) {
+                        throw new Error(
+                            `Gagal mengambil master data. HTTP ${response.status}`
                         );
+                    }
+
+                    const json = await response.json();
+
+                    if (!json.success) {
+                        throw new Error(
+                            json.message || "Gagal mengambil master data."
+                        );
+                    }
+
+                    const result = json.data;
 
                     leasingOptions =
                         Array.isArray(
