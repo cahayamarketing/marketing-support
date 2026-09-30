@@ -5,7 +5,7 @@ import {
 } from "../src/backend/supabase.js";
 
 const INITIAL_PASSWORD = "123456";
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 100;
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {
