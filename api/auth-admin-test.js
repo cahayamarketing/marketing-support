@@ -1,4 +1,4 @@
--adm"use strict";
+"use strict";
 
 import {
     supabaseRequest
