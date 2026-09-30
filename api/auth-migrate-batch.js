@@ -2,7 +2,7 @@
 
 import {
     supabaseRequest
-} from "../src/backend/services/supabase.js";
+} from "../src/backend/supabase.js";
 
 const INITIAL_PASSWORD = "123456";
 const BATCH_SIZE = 10;
