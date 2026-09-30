@@ -2651,9 +2651,9 @@ async function loadSalesmanWithRetry() {
 
             salesmanData =
                 Array.isArray(
-                    result.salesmen
+                    result.data
                 )
-                    ? result.salesmen
+                    ? result.data
                     : [];
 
             console.log(
