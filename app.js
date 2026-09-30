@@ -1493,6 +1493,19 @@ async function requestBackend(
             };
         }
 
+        if (action === "getSalesmen") {
+
+            apiUrl = "/api/salesman";
+
+            fetchOptions = {
+                method: "GET",
+
+                signal: controller.signal,
+
+                cache: "no-store"
+            };
+        }
+
 
         const response = await fetch(
             apiUrl,
