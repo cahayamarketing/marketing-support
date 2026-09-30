@@ -1493,6 +1493,16 @@ async function requestBackend(
             };
         }
 
+        if (action === "getManagedAccounts") {
+            apiUrl = `/api/managed-account`;
+
+            fetchOptions = {
+                method: "GET",
+                signal: controller.signal,
+                cache: "no-store"
+            };
+        }
+
         if (action === "getSalesmen") {
 
             apiUrl = "/api/salesman";
