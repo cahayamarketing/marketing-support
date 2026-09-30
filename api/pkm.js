@@ -1,6 +1,6 @@
 "use strict";
 
-import { supabaseRequest } from "../src/backend/services/supabase.js";
+import { supabaseRequest } from "../src/backend/supabase.js";
 
 /**
  * PKM API
