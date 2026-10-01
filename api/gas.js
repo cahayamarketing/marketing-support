@@ -73,7 +73,8 @@ export default async function handler(
             "chars"
         );
 
-                /*
+
+        /*
         |--------------------------------------------------------------------------
         | LPJ → SUPABASE
         |--------------------------------------------------------------------------
@@ -83,7 +84,6 @@ export default async function handler(
             requestBody.action ===
             "getLpjCandidates"
         ) {
-
             console.log(
                 "[VERCEL] LPJ SUPABASE",
                 traceId
@@ -93,31 +93,687 @@ export default async function handler(
                 requestBody.payload ||
                 {};
 
-            const rows =
-                await supabaseRequest(
+            const page =
+                Math.max(
+                    Number(payload.page) || 1,
+                    1
+                );
+
+            const pageSize =
+                Math.max(
+                    Number(payload.pageSize) || 7,
+                    1
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | HELPER: AMBIL DATA SUPABASE > 1000 ROW
+            |--------------------------------------------------------------------------
+            */
+
+            async function fetchAllSupabaseRows(
+                basePath,
+                pageLimit = 1000
+            ) {
+                const allRows = [];
+                let offset = 0;
+
+                while (true) {
+                    const rows =
+                        await supabaseRequest(
+                            basePath +
+                            `&offset=${offset}&limit=${pageLimit}`
+                        );
+
+                    if (
+                        !Array.isArray(rows) ||
+                        rows.length === 0
+                    ) {
+                        break;
+                    }
+
+                    allRows.push(...rows);
+
+                    if (
+                        rows.length < pageLimit
+                    ) {
+                        break;
+                    }
+
+                    offset += pageLimit;
+                }
+
+                return allRows;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 1. AMBIL PKM
+            |--------------------------------------------------------------------------
+            */
+
+            const pkmRows =
+                await fetchAllSupabaseRows(
                     "/rest/v1/pkm" +
                     "?select=*" +
-                    "&order=tanggal_mulai.desc" +
-                    "&limit=5000"
+                    "&order=tanggal_mulai.desc"
                 );
+
+            /*
+            |--------------------------------------------------------------------------
+            | 2. AMBIL LPJ
+            |--------------------------------------------------------------------------
+            */
+
+            const lpjRows =
+                await fetchAllSupabaseRows(
+                    "/rest/v1/lpj" +
+                    "?select=id_lpj,id_pkm"
+                );
+
+            const lpjPkmIds =
+                new Set(
+                    lpjRows
+                        .map(
+                            row =>
+                                String(
+                                    row.id_pkm || ""
+                                ).trim()
+                        )
+                        .filter(Boolean)
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | 3. FILTER DASAR LPJ
+            |--------------------------------------------------------------------------
+            */
+
+            const now =
+                new Date();
+
+            let candidates =
+                pkmRows.filter(
+                    function (row) {
+
+                        const idPkm =
+                            String(
+                                row.id_pkm || ""
+                            ).trim();
+
+                        /*
+                        | Harus punya ID PKM
+                        */
+                        if (!idPkm) {
+                            return false;
+                        }
+
+                        /*
+                        | Sudah punya LPJ → jangan tampil
+                        */
+                        if (
+                            lpjPkmIds.has(idPkm)
+                        ) {
+                            return false;
+                        }
+
+                        /*
+                        | Harus sudah ACC Manager H1
+                        */
+                        if (
+                            !String(
+                                row.acc_manager_h1 ||
+                                ""
+                            ).trim()
+                        ) {
+                            return false;
+                        }
+
+                        /*
+                        | Kegiatan harus sudah selesai
+                        */
+                        if (
+                            !row.tanggal_selesai
+                        ) {
+                            return false;
+                        }
+
+                        const tanggalSelesai =
+                            new Date(
+                                row.tanggal_selesai
+                            );
+
+                        if (
+                            Number.isNaN(
+                                tanggalSelesai.getTime()
+                            )
+                        ) {
+                            return false;
+                        }
+
+                        if (
+                            tanggalSelesai > now
+                        ) {
+                            return false;
+                        }
+
+                        return true;
+                    }
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | 4. FILTER CABANG
+            |--------------------------------------------------------------------------
+            */
+
+            const branches =
+                Array.isArray(
+                    payload.branches
+                )
+                    ? payload.branches
+                        .map(
+                            value =>
+                                String(
+                                    value || ""
+                                )
+                                    .trim()
+                                    .toUpperCase()
+                        )
+                        .filter(Boolean)
+                    : [];
+
+            if (branches.length > 0) {
+                const branchSet =
+                    new Set(branches);
+
+                candidates =
+                    candidates.filter(
+                        function (row) {
+                            return branchSet.has(
+                                String(
+                                    row.cabang || ""
+                                )
+                                    .trim()
+                                    .toUpperCase()
+                            );
+                        }
+                    );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 5. FILTER SEARCH
+            |--------------------------------------------------------------------------
+            */
+
+            const search =
+                String(
+                    payload.search || ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+            if (search) {
+                candidates =
+                    candidates.filter(
+                        function (row) {
+
+                            const text = [
+                                row.id_pkm,
+                                row.nama,
+                                row.cabang,
+                                row.lokasi,
+                                row.kabupaten,
+                                row.kecamatan,
+                                row.kelurahan,
+                                row.jenis_pkm,
+                                row.type_pkm
+                            ]
+                                .map(
+                                    value =>
+                                        String(
+                                            value || ""
+                                        ).toLowerCase()
+                                )
+                                .join(" ");
+
+                            return text.includes(
+                                search
+                            );
+                        }
+                    );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 6. FILTER JENIS PKM
+            |--------------------------------------------------------------------------
+            */
+
+            const jenisPkm =
+                String(
+                    payload.jenisPkm || ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+            if (
+                jenisPkm &&
+                jenisPkm !== "all"
+            ) {
+                candidates =
+                    candidates.filter(
+                        function (row) {
+                            return (
+                                String(
+                                    row.jenis_pkm ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toLowerCase() ===
+                                jenisPkm
+                            );
+                        }
+                    );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 7. FILTER TYPE PKM
+            |--------------------------------------------------------------------------
+            */
+
+            const typePkm =
+                String(
+                    payload.typePkm || ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+            if (
+                typePkm &&
+                typePkm !== "all"
+            ) {
+                candidates =
+                    candidates.filter(
+                        function (row) {
+                            return (
+                                String(
+                                    row.type_pkm ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toLowerCase() ===
+                                typePkm
+                            );
+                        }
+                    );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 8. FILTER TANGGAL
+            |--------------------------------------------------------------------------
+            */
+
+            const startDate =
+                String(
+                    payload.startDate || ""
+                ).trim();
+
+            const endDate =
+                String(
+                    payload.endDate || ""
+                ).trim();
+
+            if (startDate) {
+                const start =
+                    new Date(
+                        startDate +
+                        "T00:00:00"
+                    );
+
+                candidates =
+                    candidates.filter(
+                        function (row) {
+                            if (
+                                !row.tanggal_selesai
+                            ) {
+                                return false;
+                            }
+
+                            return (
+                                new Date(
+                                    row.tanggal_selesai
+                                ) >= start
+                            );
+                        }
+                    );
+            }
+
+            if (endDate) {
+                const end =
+                    new Date(
+                        endDate +
+                        "T23:59:59"
+                    );
+
+                candidates =
+                    candidates.filter(
+                        function (row) {
+                            if (
+                                !row.tanggal_selesai
+                            ) {
+                                return false;
+                            }
+
+                            return (
+                                new Date(
+                                    row.tanggal_selesai
+                                ) <= end
+                            );
+                        }
+                    );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 9. SORT
+            |--------------------------------------------------------------------------
+            */
+
+            candidates.sort(
+                function (a, b) {
+                    return (
+                        new Date(
+                            b.tanggal_mulai || 0
+                        ) -
+                        new Date(
+                            a.tanggal_mulai || 0
+                        )
+                    );
+                }
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | 10. PAGINATION
+            |--------------------------------------------------------------------------
+            */
+
+            const total =
+                candidates.length;
+
+            const totalPages =
+                Math.max(
+                    Math.ceil(
+                        total / pageSize
+                    ),
+                    1
+                );
+
+            const safePage =
+                Math.min(
+                    page,
+                    totalPages
+                );
+
+            const startIndex =
+                (safePage - 1) *
+                pageSize;
+
+            const pageRows =
+                candidates.slice(
+                    startIndex,
+                    startIndex + pageSize
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | 11. AMBIL BUDGET ITEM UNTUK DATA YANG DITAMPILKAN
+            |--------------------------------------------------------------------------
+            */
+
+            const pagePkmIds =
+                pageRows
+                    .map(
+                        row =>
+                            String(
+                                row.id_pkm || ""
+                            ).trim()
+                    )
+                    .filter(Boolean);
+
+            let itemRows = [];
+
+            if (
+                pagePkmIds.length > 0
+            ) {
+                itemRows =
+                    await fetchAllSupabaseRows(
+                        "/rest/v1/pkm_item" +
+                        "?select=*" +
+                        "&limit=1000"
+                    );
+
+                const pagePkmSet =
+                    new Set(
+                        pagePkmIds
+                    );
+
+                itemRows =
+                    itemRows.filter(
+                        function (item) {
+                            return pagePkmSet.has(
+                                String(
+                                    item.link_pkm ||
+                                    ""
+                                ).trim()
+                            );
+                        }
+                    );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 12. BENTUK RESPONSE SESUAI FRONTEND LPJ
+            |--------------------------------------------------------------------------
+            */
+
+            const data =
+                pageRows.map(
+                    function (row) {
+
+                        const idPkm =
+                            String(
+                                row.id_pkm || ""
+                            ).trim();
+
+                        const budgetDetails =
+                            itemRows
+                                .filter(
+                                    function (item) {
+                                        return (
+                                            String(
+                                                item.link_pkm ||
+                                                ""
+                                            ).trim() ===
+                                            idPkm
+                                        );
+                                    }
+                                )
+                                .map(
+                                    function (item) {
+                                        return {
+                                            id:
+                                                item.id,
+                                            jenisItem:
+                                                item.jenis_item,
+                                            namaItem:
+                                                item.nama_item,
+                                            jumlah:
+                                                Number(
+                                                    item.jumlah
+                                                ) || 0,
+                                            hargaTotal:
+                                                Number(
+                                                    item.harga_total
+                                                ) || 0,
+                                            hargaRealisasi:
+                                                Number(
+                                                    item.harga_realisasi
+                                                ) || 0,
+                                            gambarDesain:
+                                                item.gambar_desain ||
+                                                "",
+                                            foto:
+                                                item.foto ||
+                                                "",
+                                            keterangan:
+                                                item.keterangan ||
+                                                ""
+                                        };
+                                    }
+                                );
+
+                        return {
+                            id:
+                                idPkm,
+
+                            name:
+                                row.nama || "",
+
+                            branch:
+                                row.cabang || "",
+
+                            type:
+                                row.type_pkm || "",
+
+                            jenisPkm:
+                                row.jenis_pkm || "",
+
+                            startDate:
+                                row.tanggal_mulai || "",
+
+                            endDate:
+                                row.tanggal_selesai || "",
+
+                            location:
+                                row.lokasi || "",
+
+                            kabupaten:
+                                row.kabupaten || "",
+
+                            kecamatan:
+                                row.kecamatan || "",
+
+                            kelurahan:
+                                row.kelurahan || "",
+
+                            people:
+                                row.people || "",
+
+                            focusType:
+                                row.fokus_type || "",
+
+                            programH1:
+                                row.program_h1 || "",
+
+                            programH23:
+                                row.program_h23 || "",
+
+                            publikasi:
+                                row.publikasi || "",
+
+                            leasing:
+                                row.leasing || "",
+
+                            danaLs:
+                                Number(
+                                    row.dana_ls
+                                ) || 0,
+
+                            danaMd:
+                                Number(
+                                    row.dana_md
+                                ) || 0,
+
+                            danaCsm:
+                                Number(
+                                    row.dana_csm
+                                ) || 0,
+
+                            danaLl:
+                                Number(
+                                    row.dana_ll
+                                ) || 0,
+
+                            targetDb:
+                                Number(
+                                    row.target_db
+                                ) || 0,
+
+                            targetDeal:
+                                Number(
+                                    row.target_deal
+                                ) || 0,
+
+                            targetUe:
+                                Number(
+                                    row.target_ue
+                                ) || 0,
+
+                            status:
+                                row.status ||
+                                "Belum LPJ",
+
+                            budgetDetails:
+                                budgetDetails
+                        };
+                    }
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | RESPONSE
+            |--------------------------------------------------------------------------
+            */
+
+            console.log(
+                "[VERCEL] LPJ SUPABASE RESULT",
+                traceId,
+                "PKM=",
+                pkmRows.length,
+                "LPJ=",
+                lpjRows.length,
+                "CANDIDATES=",
+                total,
+                "PAGE=",
+                safePage
+            );
 
             return response
                 .status(200)
                 .json({
                     success: true,
-                    data:
-                        Array.isArray(rows)
-                            ? rows
-                            : [],
-                    page:
-                        Number(
-                            payload.page
-                        ) || 1,
-                    totalPages: 1,
-                    total:
-                        Array.isArray(rows)
-                            ? rows.length
-                            : 0
+                    data: data,
+                    page: safePage,
+                    pageSize: pageSize,
+                    totalPages: totalPages,
+                    total: total,
+                    branches: [
+                        ...new Set(
+                            candidates
+                                .map(
+                                    row =>
+                                        row.cabang
+                                )
+                                .filter(Boolean)
+                        )
+                    ],
+                    isHeadOffice:
+                        branches.length === 0
                 });
         }
 
