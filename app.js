@@ -13058,6 +13058,7 @@ function compressDrawnSignature() {
     return canvas.toDataURL(
         "image/webp",
         0.75
+    );
 }
 
 function renderFocusTypeOptions() {
