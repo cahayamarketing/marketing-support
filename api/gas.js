@@ -531,7 +531,7 @@ export default async function handler(
 
             /*
             |--------------------------------------------------------------------------
-            | 11. AMBIL BUDGET ITEM UNTUK DATA YANG DITAMPILKAN
+            | 11. AMBIL BUDGET ITEM HANYA UNTUK PKM DI HALAMAN AKTIF
             |--------------------------------------------------------------------------
             */
 
@@ -550,28 +550,21 @@ export default async function handler(
             if (
                 pagePkmIds.length > 0
             ) {
+                const itemFilter =
+                    pagePkmIds
+                        .map(
+                            id =>
+                                encodeURIComponent(id)
+                        )
+                        .join(",");
+
                 itemRows =
-                    await fetchAllSupabaseRows(
+                    await supabaseRequest(
                         "/rest/v1/pkm_item" +
                         "?select=*" +
-                        "&limit=1000"
-                    );
-
-                const pagePkmSet =
-                    new Set(
-                        pagePkmIds
-                    );
-
-                itemRows =
-                    itemRows.filter(
-                        function (item) {
-                            return pagePkmSet.has(
-                                String(
-                                    item.link_pkm ||
-                                    ""
-                                ).trim()
-                            );
-                        }
+                        "&link_pkm=in.(" +
+                        itemFilter +
+                        ")"
                     );
             }
 
