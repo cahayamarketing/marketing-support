@@ -1504,14 +1504,21 @@ async function requestBackend(
         }
 
         if (action === "getSalesmen") {
+            const params = new URLSearchParams();
 
-            apiUrl = "/api/salesman";
+            if (payload.branch) {
+                params.set(
+                    "branch",
+                    payload.branch
+                );
+            }
+
+            apiUrl =
+                `/api/salesman?${params.toString()}`;
 
             fetchOptions = {
                 method: "GET",
-
                 signal: controller.signal,
-
                 cache: "no-store"
             };
         }
