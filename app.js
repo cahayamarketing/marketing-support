@@ -12984,9 +12984,9 @@ function compressSignatureImage(file) {
 
                 const compressedData =
                     canvas.toDataURL(
-                        "image/png",
+                        "image/webp",
+                        0.75
                     );
-
                 resolve(
                     compressedData
                 );
@@ -13056,8 +13056,8 @@ function compressDrawnSignature() {
     );
 
     return canvas.toDataURL(
-        "image/png",
-    );
+        "image/webp",
+        0.75
 }
 
 function renderFocusTypeOptions() {

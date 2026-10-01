@@ -199,6 +199,184 @@ export default async function handler(
 
         /*
         |--------------------------------------------------------------------------
+        | UPDATE PROFILE TTD → SUPABASE STORAGE
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            requestBody.action ===
+            "updateMyProfile"
+        ) {
+            try {
+
+                const payload =
+                    requestBody.payload || {};
+
+                const nik =
+                    String(
+                        payload.nik ||
+                        requestBody.userNik ||
+                        ""
+                    ).trim();
+
+                if (!nik) {
+                    return response.status(400).json({
+                        success: false,
+                        message:
+                            "NIK user tidak ditemukan."
+                    });
+                }
+
+                const signatureData =
+                    String(
+                        payload.signatureData ||
+                        ""
+                    ).trim();
+
+                if (!signatureData) {
+                    return response.status(400).json({
+                        success: false,
+                        message:
+                            "Data TTD tidak ditemukan."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | VALIDASI DATA URL
+                |--------------------------------------------------------------------------
+                */
+
+                const match =
+                    signatureData.match(
+                        /^data:(image\/(?:webp|png|jpeg|jpg));base64,(.+)$/i
+                    );
+
+                if (!match) {
+                    return response.status(400).json({
+                        success: false,
+                        message:
+                            "Format TTD tidak valid."
+                    });
+                }
+
+                const mimeType =
+                    match[1].toLowerCase();
+
+                const base64Data =
+                    match[2];
+
+                /*
+                |--------------------------------------------------------------------------
+                | BATASI UKURAN
+                |--------------------------------------------------------------------------
+                |
+                | TTD seharusnya kecil.
+                | Kita batasi hasil upload maksimal 1 MB.
+                |
+                */
+
+                const estimatedSize =
+                    Math.ceil(
+                        (base64Data.length * 3) / 4
+                    );
+
+                if (
+                    estimatedSize >
+                    1024 * 1024
+                ) {
+                    return response.status(400).json({
+                        success: false,
+                        message:
+                            "Ukuran TTD terlalu besar. Maksimal 1 MB."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | USER HARUS ADA
+                |--------------------------------------------------------------------------
+                */
+
+                const userRows =
+                    await supabaseRequest(
+                        "/rest/v1/salesman" +
+                        "?select=nik,nama_marketing" +
+                        "&nik=eq." +
+                        encodeURIComponent(nik) +
+                        "&limit=1"
+                    );
+
+                if (
+                    !Array.isArray(userRows) ||
+                    !userRows.length
+                ) {
+                    return response.status(404).json({
+                        success: false,
+                        message:
+                            "Data salesman tidak ditemukan."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | KONVERSI BASE64 → BINARY
+                |--------------------------------------------------------------------------
+                */
+
+                const binaryString =
+                    Buffer.from(
+                        base64Data,
+                        "base64"
+                    );
+
+                /*
+                |--------------------------------------------------------------------------
+                | PATH FILE
+                |--------------------------------------------------------------------------
+                */
+
+                const storagePath =
+                    `ttd/${nik}/signature.webp`;
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPLOAD KE SUPABASE STORAGE
+                |--------------------------------------------------------------------------
+                */
+
+                const storageResponse =
+                    await supabaseRequest(
+                        "/storage/v1/object/" +
+                        encodeURIComponent("ttd") +
+                        "/" +
+                        `signature-placeholder`,
+                        {
+                            method: "POST"
+                        }
+                    );
+
+            } catch (error) {
+
+                console.error(
+                    "[VERCEL] UPDATE PROFILE TTD ERROR",
+                    traceId,
+                    error
+                );
+
+                return response.status(
+                    error.status || 500
+                ).json({
+                    success: false,
+                    message:
+                        error.message ||
+                        "Gagal menyimpan TTD."
+                });
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
         | CREATE PKM → SUPABASE
         |--------------------------------------------------------------------------
         | Untuk sementara hanya action createPkm yang
