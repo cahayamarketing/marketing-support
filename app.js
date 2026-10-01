@@ -1935,12 +1935,15 @@ function getSelectedBranches(prefix) {
     |--------------------------------------------------------------------------
     */
 
-    window.renderBranchFilter =
+
+}
+
+
+window.renderBranchFilter =
         renderBranchFilter;
 
-    window.getSelectedBranches =
+window.getSelectedBranches =
         getSelectedBranches;
-}
 
 function readPkmFilters(prefix) {
     return {
@@ -12500,7 +12503,10 @@ async function loadCurrentProfileSignature() {
     try {
         const result =
             await requestBackend(
-                "getMyProfile"
+                "getMyProfile",
+                {
+                    nik: currentUser.nik
+                }
             );
 
         if (
@@ -14079,6 +14085,10 @@ document
                 await requestBackend(
                     "updateMyProfile",
                     {
+                        nik: 
+                            currentUser.nik,
+                        name: 
+                            profileName,
                         newPassword:
                             newPassword,
 
