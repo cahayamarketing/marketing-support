@@ -73,6 +73,661 @@ export default async function handler(
             "chars"
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | CREATE PKM → SUPABASE
+        |--------------------------------------------------------------------------
+        | Untuk sementara hanya action createPkm yang
+        | dibypass dari Apps Script.
+        */
+
+        if (
+            requestBody.action ===
+            "createPkm"
+        ) {
+            try {
+                const payload =
+                    requestBody.payload ||
+                    {};
+
+                const pkmId =
+                    String(
+                        payload.id ||
+                        ""
+                    ).trim();
+
+                if (!pkmId) {
+                    return response.status(400).json({
+                        success: false,
+                        message:
+                            "ID PKM tidak ditemukan."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | USER
+                |--------------------------------------------------------------------------
+                */
+
+                const userNik =
+                    String(
+                        requestBody.userNik ||
+                        payload.createdBy ||
+                        ""
+                    ).trim();
+
+                if (!userNik) {
+                    return response.status(401).json({
+                        success: false,
+                        message:
+                            "User pembuat PKM tidak ditemukan."
+                    });
+                }
+
+                const userRows =
+                    await supabaseRequest(
+                        "/rest/v1/salesman" +
+                        "?select=nik,nama_marketing,cab,jab,role_pkm,status" +
+                        "&nik=eq." +
+                        encodeURIComponent(
+                            userNik
+                        ) +
+                        "&limit=1"
+                    );
+
+                const user =
+                    Array.isArray(userRows)
+                        ? userRows[0]
+                        : null;
+
+                if (!user) {
+                    return response.status(401).json({
+                        success: false,
+                        message:
+                            "User tidak ditemukan."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | ROLE CRM
+                |--------------------------------------------------------------------------
+                */
+
+                const rolePkm =
+                    String(
+                        user.role_pkm ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const jabatan =
+                    String(
+                        user.jab ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const isCrm =
+                    rolePkm === "CRM" ||
+                    jabatan.includes("PIC CRM") ||
+                    jabatan.includes("CRM");
+
+                if (!isCrm) {
+                    return response.status(403).json({
+                        success: false,
+                        message:
+                            "Hanya CRM yang dapat membuat pengajuan PKM."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | STATUS USER
+                |--------------------------------------------------------------------------
+                */
+
+                const userStatus =
+                    String(
+                        user.status ||
+                        "AKTIF"
+                    )
+                        .trim()
+                        .toUpperCase()
+                        .replace(
+                            /\s+/g,
+                            ""
+                        );
+
+                if (
+                    ![
+                        "AKTIF",
+                        "ACTIVE"
+                    ].includes(
+                        userStatus
+                    )
+                ) {
+                    return response.status(403).json({
+                        success: false,
+                        message:
+                            "Akun ini berstatus nonaktif."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | CABANG
+                |--------------------------------------------------------------------------
+                */
+
+                const branch =
+                    String(
+                        user.cab ||
+                        ""
+                    ).trim();
+
+                if (
+                    !branch ||
+                    branch === "ALL" ||
+                    branch === "HO"
+                ) {
+                    return response.status(400).json({
+                        success: false,
+                        message:
+                            "Cabang pengajuan tidak valid."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | VALIDASI NAMA
+                |--------------------------------------------------------------------------
+                */
+
+                const name =
+                    String(
+                        payload.name ||
+                        ""
+                    ).trim();
+
+                if (!name) {
+                    return response.status(400).json({
+                        success: false,
+                        message:
+                            "Nama PKM wajib diisi."
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | CEK ID DUPLIKAT
+                |--------------------------------------------------------------------------
+                */
+
+                const existingRows =
+                    await supabaseRequest(
+                        "/rest/v1/pkm" +
+                        "?select=id,id_pkm" +
+                        "&id_pkm=eq." +
+                        encodeURIComponent(
+                            pkmId
+                        ) +
+                        "&limit=1"
+                    );
+
+                if (
+                    Array.isArray(
+                        existingRows
+                    ) &&
+                    existingRows.length
+                ) {
+                    return response.status(200).json({
+                        success: true,
+                        message:
+                            "PKM sudah tersimpan. Melanjutkan proses TTD CRM.",
+                        pkmId: pkmId,
+                        status:
+                            "MENUNGGU CRM",
+                        alreadyExists:
+                            true
+                    });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | HELPER ARRAY → TEXT
+                |--------------------------------------------------------------------------
+                */
+
+                const arrayToText =
+                    function (value) {
+                        if (
+                            !Array.isArray(
+                                value
+                            )
+                        ) {
+                            return String(
+                                value ||
+                                ""
+                            ).trim();
+                        }
+
+                        return value
+                            .map(
+                                function (
+                                    item
+                                ) {
+                                    if (
+                                        item &&
+                                        typeof item ===
+                                            "object"
+                                    ) {
+                                        return String(
+                                            item.name ||
+                                            ""
+                                        ).trim();
+                                    }
+
+                                    return String(
+                                        item ||
+                                        ""
+                                    ).trim();
+                                }
+                            )
+                            .filter(Boolean)
+                            .join(
+                                " , "
+                            );
+                    };
+
+                /*
+                |--------------------------------------------------------------------------
+                | PEOPLE
+                |--------------------------------------------------------------------------
+                */
+
+                const people =
+                    Array.isArray(
+                        payload.people
+                    )
+                        ? payload.people
+                            .map(
+                                function (
+                                    person
+                                ) {
+                                    const personName =
+                                        String(
+                                            person?.name ||
+                                            ""
+                                        ).trim();
+
+                                    const personNik =
+                                        String(
+                                            person?.nik ||
+                                            ""
+                                        ).trim();
+
+                                    if (
+                                        !personName &&
+                                        !personNik
+                                    ) {
+                                        return "";
+                                    }
+
+                                    return (
+                                        `${personName} - ${personNik}`
+                                    );
+                                }
+                            )
+                            .filter(Boolean)
+                            .join(
+                                " , "
+                            )
+                        : "";
+
+                /*
+                |--------------------------------------------------------------------------
+                | INSERT PKM
+                |--------------------------------------------------------------------------
+                */
+
+                const pkmRecord = {
+                    id_pkm:
+                        pkmId,
+
+                    nama:
+                        name,
+
+                    cabang:
+                        branch,
+
+                    type_pkm:
+                        arrayToText(
+                            payload.type
+                        ),
+
+                    jenis_pkm:
+                        String(
+                            payload.jenisPkm ||
+                            ""
+                        ).trim(),
+
+                    jenis_kegiatan:
+                        String(
+                            payload.kegiatan ||
+                            ""
+                        ).trim(),
+
+                    tanggal_mulai:
+                        payload.startDate ||
+                        null,
+
+                    tanggal_selesai:
+                        payload.endDate ||
+                        null,
+
+                    tanggal_pengajuan:
+                        new Date().toISOString(),
+
+                    lokasi:
+                        String(
+                            payload.location ||
+                            ""
+                        ).trim(),
+
+                    kabupaten:
+                        String(
+                            payload.kabupaten ||
+                            ""
+                        ).trim(),
+
+                    kecamatan:
+                        String(
+                            payload.kecamatan ||
+                            ""
+                        ).trim(),
+
+                    kelurahan:
+                        String(
+                            payload.kelurahan ||
+                            ""
+                        ).trim(),
+
+                    alasan:
+                        String(
+                            payload.alasan ||
+                            ""
+                        ).trim(),
+
+                    konsep:
+                        String(
+                            payload.konsep ||
+                            ""
+                        ).trim(),
+
+                    people:
+                        people,
+
+                    fokus_type:
+                        arrayToText(
+                            payload.focusType
+                        ),
+
+                    program_h1:
+                        String(
+                            payload.programH1 ||
+                            ""
+                        ).trim(),
+
+                    program_h23:
+                        String(
+                            payload.programH23 ||
+                            ""
+                        ).trim(),
+
+                    publikasi:
+                        arrayToText(
+                            payload.publication
+                        ),
+
+                    leasing:
+                        arrayToText(
+                            payload.leasing
+                        ),
+
+                    dana_ls:
+                        Number(
+                            payload.danaLeasing
+                        ) || 0,
+
+                    dana_md:
+                        Number(
+                            payload.danaMd
+                        ) || 0,
+
+                    dana_csm:
+                        Number(
+                            payload.danaCsm
+                        ) || 0,
+
+                    dana_ll:
+                        Number(
+                            payload.danaLain
+                        ) || 0,
+
+                    target_db:
+                        Number(
+                            payload.targetDb
+                        ) || 0,
+
+                    target_deal:
+                        Number(
+                            payload.targetDeal
+                        ) || 0,
+
+                    target_ue:
+                        Number(
+                            payload.targetUe
+                        ) || 0,
+
+                    pengajuan:
+                        "DIAJUKAN",
+
+                    status:
+                        "MENUNGGU CRM",
+
+                    source:
+                        "WEB",
+
+                    created_at:
+                        new Date().toISOString(),
+
+                    updated_at:
+                        new Date().toISOString(),
+
+                    synced_at:
+                        new Date().toISOString(),
+
+                    raw_data:
+                        payload
+                };
+
+                await supabaseRequest(
+                    "/rest/v1/pkm",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Prefer":
+                                "return=minimal"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                pkmRecord
+                            )
+                    }
+                );
+
+                /*
+                |--------------------------------------------------------------------------
+                | INSERT PKM ITEM
+                |--------------------------------------------------------------------------
+                */
+
+                const budgetDetails =
+                    Array.isArray(
+                        payload.budgetDetails
+                    )
+                        ? payload.budgetDetails
+                        : [];
+
+                if (
+                    budgetDetails.length
+                ) {
+                    const itemRows =
+                        budgetDetails
+                            .map(
+                                function (
+                                    item
+                                ) {
+                                    return {
+                                        id:
+                                            String(
+                                                item.id ||
+                                                crypto.randomUUID()
+                                            ).trim(),
+
+                                        link_pkm:
+                                            pkmId,
+
+                                        link_lpj:
+                                            null,
+
+                                        jenis_item:
+                                            String(
+                                                item.itemType ||
+                                                ""
+                                            ).trim(),
+
+                                        nama_item:
+                                            String(
+                                                item.itemName ||
+                                                ""
+                                            ).trim(),
+
+                                        jumlah:
+                                            Number(
+                                                item.quantity
+                                            ) || 0,
+
+                                        harga_total:
+                                            Number(
+                                                item.totalPrice
+                                            ) || 0,
+
+                                        harga_realisasi:
+                                            0,
+
+                                        gambar_desain:
+                                            "",
+
+                                        foto:
+                                            "",
+
+                                        keterangan:
+                                            "",
+
+                                        source:
+                                            "WEB",
+
+                                        created_at:
+                                            new Date().toISOString(),
+
+                                        updated_at:
+                                            new Date().toISOString(),
+
+                                        synced_at:
+                                            new Date().toISOString(),
+
+                                        raw_data:
+                                            item
+                                    };
+                                }
+                            );
+
+                    await supabaseRequest(
+                        "/rest/v1/pkm_item",
+                        {
+                            method:
+                                "POST",
+
+                            headers: {
+                                "Prefer":
+                                    "return=minimal"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    itemRows
+                                )
+                        }
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | RESPONSE SAMA SEPERTI CREATE PKM LAMA
+                |--------------------------------------------------------------------------
+                */
+
+                console.log(
+                    "[VERCEL] CREATE PKM SUPABASE SUCCESS",
+                    traceId,
+                    pkmId
+                );
+
+                return response
+                    .status(200)
+                    .json({
+                        success: true,
+
+                        message:
+                            "Pengajuan PKM berhasil disimpan.",
+
+                        pkmId:
+                            pkmId,
+
+                        status:
+                            "MENUNGGU CRM"
+                    });
+
+            } catch (error) {
+
+                console.error(
+                    "[VERCEL] CREATE PKM SUPABASE ERROR",
+                    traceId,
+                    error
+                );
+
+                return response
+                    .status(
+                        error.status ||
+                        500
+                    )
+                    .json({
+                        success: false,
+
+                        message:
+                            error.message ||
+                            "Gagal menyimpan PKM ke Supabase."
+                    });
+            }
+        }
+
 
         /*
         |--------------------------------------------------------------------------
