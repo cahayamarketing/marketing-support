@@ -9713,7 +9713,10 @@ async function prepareApprovalSignature() {
     try {
         const profile =
             await requestBackend(
-                "getMyProfile"
+                "getMyProfile",
+                {
+                    nik: currentUser.nik
+                }
             );
 
         if (

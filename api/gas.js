@@ -73,6 +73,130 @@ export default async function handler(
             "chars"
         );
 
+
+        if (requestBody.action === "getMyProfile") {
+            try {
+                const token =
+                    String(
+                        requestBody.token ||
+                        ""
+                    ).trim();
+
+                if (!token) {
+                    return response.status(401).json({
+                        success: false,
+                        message: "Session token tidak ditemukan."
+                    });
+                }
+
+                /*
+                * Untuk sementara identitas user diambil
+                * dari session frontend yang sekarang.
+                *
+                * Nanti bisa kita perketat dengan
+                * Supabase Auth.
+                */
+                const payload =
+                    requestBody.payload || {};
+
+                const nik =
+                    String(
+                        payload.nik ||
+                        requestBody.userNik ||
+                        ""
+                    ).trim();
+
+                if (!nik) {
+                    return response.status(400).json({
+                        success: false,
+                        message: "NIK user tidak ditemukan."
+                    });
+                }
+
+                const rows =
+                    await supabaseRequest(
+                        "/rest/v1/salesman" +
+                        "?select=nik,nama_marketing,ttd_file_id,ttd_url,source_updated_at" +
+                        "&nik=eq." +
+                        encodeURIComponent(nik) +
+                        "&limit=1"
+                    );
+
+                if (
+                    !Array.isArray(rows) ||
+                    !rows.length
+                ) {
+                    return response.status(404).json({
+                        success: false,
+                        message: "Data salesman tidak ditemukan."
+                    });
+                }
+
+                const user =
+                    rows[0];
+
+                const ttdFileId =
+                    String(
+                        user.ttd_file_id ||
+                        ""
+                    ).trim();
+
+                const ttdUrl =
+                    String(
+                        user.ttd_url ||
+                        ""
+                    ).trim();
+
+                return response.status(200).json({
+                    success: true,
+
+                    nik:
+                        String(
+                            user.nik || ""
+                        ).trim(),
+
+                    name:
+                        String(
+                            user.nama_marketing || ""
+                        ).trim(),
+
+                    hasSignature:
+                        Boolean(
+                            ttdFileId ||
+                            ttdUrl
+                        ),
+
+                    signatureData:
+                        ttdUrl,
+
+                    signatureUrl:
+                        ttdUrl,
+
+                    signatureUpdatedAt:
+                        String(
+                            user.source_updated_at ||
+                            ""
+                        ).trim()
+                });
+
+            } catch (error) {
+
+                console.error(
+                    "GET MY PROFILE SUPABASE ERROR:",
+                    error
+                );
+
+                return response.status(
+                    error.status || 500
+                ).json({
+                    success: false,
+                    message:
+                        error.message ||
+                        "Gagal mengambil profil user."
+                });
+            }
+        }
+
         /*
         |--------------------------------------------------------------------------
         | CREATE PKM → SUPABASE
