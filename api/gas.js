@@ -155,7 +155,35 @@ export default async function handler(
             const pkmRows =
                 await fetchAllSupabaseRows(
                     "/rest/v1/pkm" +
-                    "?select=*" +
+                    "?select=" +
+                    [
+                        "id_pkm",
+                        "nama",
+                        "cabang",
+                        "type_pkm",
+                        "jenis_pkm",
+                        "tanggal_mulai",
+                        "tanggal_selesai",
+                        "lokasi",
+                        "kabupaten",
+                        "kecamatan",
+                        "kelurahan",
+                        "people",
+                        "fokus_type",
+                        "program_h1",
+                        "program_h23",
+                        "publikasi",
+                        "leasing",
+                        "dana_ls",
+                        "dana_md",
+                        "dana_csm",
+                        "dana_ll",
+                        "target_db",
+                        "target_deal",
+                        "target_ue",
+                        "status",
+                        "acc_manager_h1"
+                    ].join(",") +
                     "&order=tanggal_mulai.desc"
                 );
 
