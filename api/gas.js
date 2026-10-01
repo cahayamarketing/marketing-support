@@ -1,3 +1,5 @@
+import { supabaseRequest } from "../src/backend/supabase.js";
+
 export default async function handler(
     request,
     response
@@ -70,6 +72,54 @@ export default async function handler(
             ).length,
             "chars"
         );
+
+                /*
+        |--------------------------------------------------------------------------
+        | LPJ → SUPABASE
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            requestBody.action ===
+            "getLpjCandidates"
+        ) {
+
+            console.log(
+                "[VERCEL] LPJ SUPABASE",
+                traceId
+            );
+
+            const payload =
+                requestBody.payload ||
+                {};
+
+            const rows =
+                await supabaseRequest(
+                    "/rest/v1/pkm" +
+                    "?select=*" +
+                    "&order=tanggal_mulai.desc" +
+                    "&limit=5000"
+                );
+
+            return response
+                .status(200)
+                .json({
+                    success: true,
+                    data:
+                        Array.isArray(rows)
+                            ? rows
+                            : [],
+                    page:
+                        Number(
+                            payload.page
+                        ) || 1,
+                    totalPages: 1,
+                    total:
+                        Array.isArray(rows)
+                            ? rows.length
+                            : 0
+                });
+        }
 
 
         /*
