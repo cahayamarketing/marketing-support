@@ -441,18 +441,39 @@ function dateRangesOverlap(
 
 async function getPkmRows() {
 
-    /*
-     * Supabase REST default limit bisa membatasi jumlah row.
-     *
-     * Kita ambil sampai 5000 karena data PKM sekarang
-     * sekitar 3216 row.
-     */
-    return await supabaseRequest(
-        "/rest/v1/pkm" +
-        "?select=*" +
-        "&order=tanggal_mulai.desc" +
-        "&limit=5000"
-    );
+    const pageSize = 1000;
+    const allRows = [];
+
+    let offset = 0;
+
+    while (true) {
+
+        const rows = await supabaseRequest(
+            "/rest/v1/pkm" +
+            "?select=*" +
+            "&order=tanggal_mulai.desc,id.desc" +
+            "&offset=" + offset +
+            "&limit=" + pageSize
+        );
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            break;
+        }
+
+        allRows.push(...rows);
+
+        console.log(
+            `PKM pagination: offset=${offset}, rows=${rows.length}, total=${allRows.length}`
+        );
+
+        if (rows.length < pageSize) {
+            break;
+        }
+
+        offset += pageSize;
+    }
+
+    return allRows;
 }
 
 
