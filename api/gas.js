@@ -116,7 +116,7 @@ export default async function handler(
                 const rows =
                     await supabaseRequest(
                         "/rest/v1/salesman" +
-                        "?select=nik,nama_marketing,ttd_file_id,ttd_url,source_updated_at" +
+                        "?select=nik,nama_marketing,ttd_file_id,ttd_url,ttd_storage_path,source_updated_at" +
                         "&nik=eq." +
                         encodeURIComponent(nik) +
                         "&limit=1"
@@ -147,6 +147,123 @@ export default async function handler(
                         ""
                     ).trim();
 
+                const ttdStoragePath =
+                    String(
+                        user.ttd_storage_path ||
+                        ""
+                    ).trim();
+
+                let signatureUrl = "";
+
+                /*
+                |--------------------------------------------------------------------------
+                | PRIORITAS:
+                | 1. Supabase Storage
+                | 2. Google Drive lama
+                |--------------------------------------------------------------------------
+                */
+
+                if (ttdStoragePath) {
+
+                    const SUPABASE_URL =
+                        process.env.SUPABASE_URL;
+
+                    const SUPABASE_SERVICE_ROLE_KEY =
+                        process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+                    if (
+                        !SUPABASE_URL ||
+                        !SUPABASE_SERVICE_ROLE_KEY
+                    ) {
+                        throw new Error(
+                            "Konfigurasi Supabase belum lengkap."
+                        );
+                    }
+
+                    const signResponse =
+                        await fetch(
+                            `${SUPABASE_URL}/storage/v1/object/sign/ttd/${encodeURIComponent(ttdStoragePath)}`,
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Authorization":
+                                        `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+
+                                    "apikey":
+                                        SUPABASE_SERVICE_ROLE_KEY,
+
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body:
+                                    JSON.stringify({
+                                        expiresIn: 3600
+                                    })
+                            }
+                        );
+
+                    const signText =
+                        await signResponse.text();
+
+                    let signResult = null;
+
+                    if (signText) {
+                        try {
+                            signResult =
+                                JSON.parse(
+                                    signText
+                                );
+                        } catch (error) {
+                            signResult = {
+                                raw:
+                                    signText
+                            };
+                        }
+                    }
+
+                    if (!signResponse.ok) {
+
+                        console.error(
+                            "[VERCEL] STORAGE SIGN ERROR",
+                            traceId,
+                            signResponse.status,
+                            signResult
+                        );
+
+                        throw new Error(
+                            signResult?.message ||
+                            signResult?.error ||
+                            `Gagal membuat signed URL TTD (${signResponse.status}).`
+                        );
+                    }
+
+                    const signedPath =
+                        signResult?.signedURL ||
+                        signResult?.signedUrl ||
+                        "";
+
+                    if (signedPath) {
+
+                        signatureUrl =
+                            signedPath.startsWith("http")
+                                ? signedPath
+                                : `${SUPABASE_URL}/storage/v1${signedPath}`;
+                    }
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | FALLBACK KE GOOGLE DRIVE LAMA
+                |--------------------------------------------------------------------------
+                */
+
+                if (!signatureUrl) {
+                    signatureUrl =
+                        ttdUrl;
+                }
+
                 return response.status(200).json({
                     success: true,
 
@@ -162,15 +279,16 @@ export default async function handler(
 
                     hasSignature:
                         Boolean(
+                            ttdStoragePath ||
                             ttdFileId ||
                             ttdUrl
                         ),
 
                     signatureData:
-                        ttdUrl,
+                        signatureUrl,
 
                     signatureUrl:
-                        ttdUrl,
+                        signatureUrl,
 
                     signatureUpdatedAt:
                         String(
