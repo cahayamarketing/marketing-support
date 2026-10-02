@@ -182,7 +182,7 @@ export default async function handler(
 
                     const signResponse =
                         await fetch(
-                            `${SUPABASE_URL}/storage/v1/object/sign/ttd/${encodeURIComponent(ttdStoragePath)}`,
+                            `${SUPABASE_URL}/storage/v1/object/sign/ttd/${encodeURIComponent(ttdStoragePath).replace(/%2F/g, "/")}`
                             {
                                 method: "POST",
 
@@ -238,7 +238,7 @@ export default async function handler(
                             `Gagal membuat signed URL TTD (${signResponse.status}).`
                         );
                     }
-                    
+
                     const signedPath =
                         signResult?.signedURL ||
                         signResult?.signedUrl ||
