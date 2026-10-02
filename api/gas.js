@@ -238,7 +238,7 @@ export default async function handler(
                             `Gagal membuat signed URL TTD (${signResponse.status}).`
                         );
                     }
-
+                    
                     const signedPath =
                         signResult?.signedURL ||
                         signResult?.signedUrl ||
@@ -246,10 +246,55 @@ export default async function handler(
 
                     if (signedPath) {
 
-                        signatureUrl =
-                            signedPath.startsWith("http")
-                                ? signedPath
-                                : `${SUPABASE_URL}/storage/v1${signedPath}`;
+                        if (
+                            signedPath.startsWith("http://") ||
+                            signedPath.startsWith("https://")
+                        ) {
+
+                            signatureUrl =
+                                signedPath;
+
+                        } else {
+
+                            let normalizedPath =
+                                String(
+                                    signedPath
+                                ).trim();
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | Supabase bisa mengembalikan:
+                            |
+                            | /storage/v1/object/sign/ttd/...
+                            | atau
+                            | /object/sign/ttd/...
+                            |--------------------------------------------------------------------------
+                            */
+
+                            if (
+                                normalizedPath.startsWith(
+                                    "/storage/v1/"
+                                )
+                            ) {
+
+                                signatureUrl =
+                                    `${SUPABASE_URL}${normalizedPath}`;
+
+                            } else if (
+                                normalizedPath.startsWith(
+                                    "/object/"
+                                )
+                            ) {
+
+                                signatureUrl =
+                                    `${SUPABASE_URL}/storage/v1${normalizedPath}`;
+
+                            } else {
+
+                                signatureUrl =
+                                    `${SUPABASE_URL}/storage/v1/${normalizedPath.replace(/^\/+/, "")}`;
+                            }
+                        }
                     }
                 }
 
