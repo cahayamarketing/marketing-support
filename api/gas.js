@@ -199,7 +199,7 @@ export default async function handler(
 
         /*
         |--------------------------------------------------------------------------
-        | UPDATE PROFILE TTD → SUPABASE STORAGE
+        | UPDATE PROFILE → NAMA + PASSWORD + TTD
         |--------------------------------------------------------------------------
         */
 
@@ -227,81 +227,58 @@ export default async function handler(
                     });
                 }
 
+                /*
+                |--------------------------------------------------------------------------
+                | DATA PROFILE
+                |--------------------------------------------------------------------------
+                */
+
+                const name =
+                    String(
+                        payload.name ||
+                        ""
+                    ).trim();
+
+                const newPassword =
+                    String(
+                        payload.newPassword ||
+                        ""
+                    ).trim();
+
                 const signatureData =
                     String(
                         payload.signatureData ||
                         ""
                     ).trim();
 
-                if (!signatureData) {
-                    return response.status(400).json({
-                        success: false,
-                        message:
-                            "Data TTD tidak ditemukan."
-                    });
-                }
-
                 /*
                 |--------------------------------------------------------------------------
-                | VALIDASI DATA URL
+                | HARUS ADA MINIMAL SATU PERUBAHAN
                 |--------------------------------------------------------------------------
                 */
-
-                const match =
-                    signatureData.match(
-                        /^data:(image\/(?:webp|png|jpeg|jpg));base64,(.+)$/i
-                    );
-
-                if (!match) {
-                    return response.status(400).json({
-                        success: false,
-                        message:
-                            "Format TTD tidak valid."
-                    });
-                }
-
-                const mimeType =
-                    match[1].toLowerCase();
-
-                const base64Data =
-                    match[2];
-
-                /*
-                |--------------------------------------------------------------------------
-                | BATASI UKURAN
-                |--------------------------------------------------------------------------
-                |
-                | TTD seharusnya kecil.
-                | Kita batasi hasil upload maksimal 1 MB.
-                |
-                */
-
-                const estimatedSize =
-                    Math.ceil(
-                        (base64Data.length * 3) / 4
-                    );
 
                 if (
-                    estimatedSize >
-                    1024 * 1024
+                    !name &&
+                    !newPassword &&
+                    !signatureData
                 ) {
                     return response.status(400).json({
                         success: false,
                         message:
-                            "Ukuran TTD terlalu besar. Maksimal 1 MB."
+                            "Tidak ada perubahan profile."
                     });
                 }
 
                 /*
                 |--------------------------------------------------------------------------
-                | USER HARUS ADA
+                | AMBIL USER
                 |--------------------------------------------------------------------------
                 */
 
                 const userRows =
                     await supabaseRequest(
                         "/rest/v1/salesman" +
-                        "?select=nik,nama_marketing" +
+                        "?select=nik,nama_marketing,auth_user_id,ttd_storage_path" +
                         "&nik=eq." +
                         encodeURIComponent(nik) +
                         "&limit=1"
@@ -318,60 +295,455 @@ export default async function handler(
                     });
                 }
 
-                /*
-                |--------------------------------------------------------------------------
-                | KONVERSI BASE64 → BINARY
-                |--------------------------------------------------------------------------
-                */
+                const user =
+                    userRows[0];
 
-                const binaryString =
-                    Buffer.from(
-                        base64Data,
-                        "base64"
-                    );
+                const authUserId =
+                    String(
+                        user.auth_user_id ||
+                        ""
+                    ).trim();
 
                 /*
                 |--------------------------------------------------------------------------
-                | PATH FILE
+                | AUTH USER WAJIB ADA UNTUK UPDATE PASSWORD
                 |--------------------------------------------------------------------------
                 */
 
-                const storagePath =
-                    `ttd/${nik}/signature.webp`;
+                if (
+                    newPassword &&
+                    !authUserId
+                ) {
+                    return response.status(400).json({
+                        success: false,
+                        message:
+                            "Akun ini belum terhubung ke Supabase Auth."
+                    });
+                }
 
                 /*
                 |--------------------------------------------------------------------------
-                | UPLOAD KE SUPABASE STORAGE
+                | VALIDASI PASSWORD
                 |--------------------------------------------------------------------------
                 */
 
-                const storageResponse =
+                if (newPassword) {
+
+                    if (
+                        newPassword.length < 6
+                    ) {
+                        return response.status(400).json({
+                            success: false,
+                            message:
+                                "Password minimal 6 karakter."
+                        });
+                    }
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPDATE NAMA
+                |--------------------------------------------------------------------------
+                */
+
+                if (name) {
+
                     await supabaseRequest(
-                        "/storage/v1/object/" +
-                        encodeURIComponent("ttd") +
-                        "/" +
-                        `signature-placeholder`,
+                        "/rest/v1/salesman?nik=eq." +
+                        encodeURIComponent(nik),
                         {
-                            method: "POST"
+                            method: "PATCH",
+
+                            headers: {
+                                "Prefer":
+                                    "return=minimal"
+                            },
+
+                            body:
+                                JSON.stringify({
+                                    nama_marketing:
+                                        name,
+
+                                    source_updated_at:
+                                        new Date().toISOString()
+                                })
                         }
                     );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPDATE PASSWORD → SUPABASE AUTH
+                |--------------------------------------------------------------------------
+                */
+
+                if (newPassword) {
+
+                    const SUPABASE_URL =
+                        process.env.SUPABASE_URL;
+
+                    const SUPABASE_SERVICE_ROLE_KEY =
+                        process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+                    if (
+                        !SUPABASE_URL ||
+                        !SUPABASE_SERVICE_ROLE_KEY
+                    ) {
+                        throw new Error(
+                            "Konfigurasi Supabase belum lengkap."
+                        );
+                    }
+
+                    const authResponse =
+                        await fetch(
+                            `${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(authUserId)}`,
+                            {
+                                method: "PUT",
+
+                                headers: {
+                                    "Authorization":
+                                        `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+
+                                    "apikey":
+                                        SUPABASE_SERVICE_ROLE_KEY,
+
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body:
+                                    JSON.stringify({
+                                        password:
+                                            newPassword
+                                    })
+                            }
+                        );
+
+                    const authText =
+                        await authResponse.text();
+
+                    let authResult = null;
+
+                    if (authText) {
+                        try {
+                            authResult =
+                                JSON.parse(
+                                    authText
+                                );
+                        } catch (error) {
+                            authResult = {
+                                raw:
+                                    authText
+                            };
+                        }
+                    }
+
+                    if (
+                        !authResponse.ok
+                    ) {
+
+                        console.error(
+                            "[VERCEL] AUTH PASSWORD UPDATE ERROR",
+                            traceId,
+                            authResponse.status,
+                            authResult
+                        );
+
+                        throw new Error(
+                            authResult?.message ||
+                            authResult?.msg ||
+                            authResult?.error_description ||
+                            `Gagal mengubah password (${authResponse.status}).`
+                        );
+                    }
+
+                    console.log(
+                        "[VERCEL] PASSWORD UPDATED",
+                        traceId,
+                        nik
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPDATE TTD → SUPABASE STORAGE
+                |--------------------------------------------------------------------------
+                */
+
+                if (signatureData) {
+
+                    const match =
+                        signatureData.match(
+                            /^data:(image\/(?:webp|png|jpeg|jpg));base64,(.+)$/i
+                        );
+
+                    if (!match) {
+                        return response.status(400).json({
+                            success: false,
+                            message:
+                                "Format TTD tidak valid."
+                        });
+                    }
+
+                    const mimeType =
+                        match[1].toLowerCase();
+
+                    const base64Data =
+                        match[2];
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | BATAS UKURAN TTD
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const estimatedSize =
+                        Math.ceil(
+                            (base64Data.length * 3) / 4
+                        );
+
+                    if (
+                        estimatedSize >
+                        1024 * 1024
+                    ) {
+                        return response.status(400).json({
+                            success: false,
+                            message:
+                                "Ukuran TTD terlalu besar. Maksimal 1 MB."
+                        });
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | KONVERSI BASE64 → BINARY
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const binaryString =
+                        Buffer.from(
+                            base64Data,
+                            "base64"
+                        );
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | SUPABASE CONFIG
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const SUPABASE_URL =
+                        process.env.SUPABASE_URL;
+
+                    const SUPABASE_SERVICE_ROLE_KEY =
+                        process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+                    if (
+                        !SUPABASE_URL ||
+                        !SUPABASE_SERVICE_ROLE_KEY
+                    ) {
+                        throw new Error(
+                            "Konfigurasi Supabase belum lengkap."
+                        );
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | EXTENSION
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const extension =
+                        mimeType === "image/png"
+                            ? "png"
+                            : mimeType === "image/jpeg" ||
+                            mimeType === "image/jpg"
+                                ? "jpg"
+                                : "webp";
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | PATH
+                    |--------------------------------------------------------------------------
+                    |
+                    | Contoh:
+                    | 911227/signature.webp
+                    |
+                    */
+
+                    const storagePath =
+                        `${nik}/signature.${extension}`;
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | UPLOAD / REPLACE TTD
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const uploadResponse =
+                        await fetch(
+                            `${SUPABASE_URL}/storage/v1/object/ttd/${encodeURIComponent(storagePath)}`,
+                            {
+                                method: "PUT",
+
+                                headers: {
+                                    "Authorization":
+                                        `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+
+                                    "apikey":
+                                        SUPABASE_SERVICE_ROLE_KEY,
+
+                                    "Content-Type":
+                                        mimeType,
+
+                                    "x-upsert":
+                                        "true",
+
+                                    "cache-control":
+                                        "3600"
+                                },
+
+                                body:
+                                    binaryString
+                            }
+                        );
+
+                    const uploadText =
+                        await uploadResponse.text();
+
+                    let uploadResult =
+                        null;
+
+                    if (uploadText) {
+                        try {
+                            uploadResult =
+                                JSON.parse(
+                                    uploadText
+                                );
+                        } catch (error) {
+                            uploadResult = {
+                                raw:
+                                    uploadText
+                            };
+                        }
+                    }
+
+                    if (
+                        !uploadResponse.ok
+                    ) {
+
+                        console.error(
+                            "[VERCEL] STORAGE UPLOAD ERROR",
+                            traceId,
+                            uploadResponse.status,
+                            uploadResult
+                        );
+
+                        throw new Error(
+                            uploadResult?.message ||
+                            uploadResult?.error ||
+                            uploadResult?.statusCode ||
+                            `Upload TTD gagal (${uploadResponse.status}).`
+                        );
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | SIMPAN PATH TTD
+                    |--------------------------------------------------------------------------
+                    */
+
+                    await supabaseRequest(
+                        "/rest/v1/salesman?nik=eq." +
+                        encodeURIComponent(nik),
+                        {
+                            method: "PATCH",
+
+                            headers: {
+                                "Prefer":
+                                    "return=minimal"
+                            },
+
+                            body:
+                                JSON.stringify({
+                                    ttd_storage_path:
+                                        storagePath,
+
+                                    source_updated_at:
+                                        new Date().toISOString()
+                                })
+                        }
+                    );
+
+                    console.log(
+                        "[VERCEL] TTD UPDATED",
+                        traceId,
+                        nik,
+                        storagePath
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | RESPONSE
+                |--------------------------------------------------------------------------
+                */
+
+                console.log(
+                    "[VERCEL] UPDATE PROFILE SUCCESS",
+                    traceId,
+                    nik,
+                    {
+                        nameUpdated:
+                            Boolean(name),
+
+                        passwordUpdated:
+                            Boolean(newPassword),
+
+                        signatureUpdated:
+                            Boolean(signatureData)
+                    }
+                );
+
+                return response
+                    .status(200)
+                    .json({
+                        success: true,
+
+                        message:
+                            "Profile berhasil diperbarui.",
+
+                        nik:
+                            nik,
+
+                        nameUpdated:
+                            Boolean(name),
+
+                        passwordUpdated:
+                            Boolean(newPassword),
+
+                        signatureUpdated:
+                            Boolean(signatureData)
+                    });
 
             } catch (error) {
 
                 console.error(
-                    "[VERCEL] UPDATE PROFILE TTD ERROR",
+                    "[VERCEL] UPDATE PROFILE ERROR",
                     traceId,
                     error
                 );
 
-                return response.status(
-                    error.status || 500
-                ).json({
-                    success: false,
-                    message:
-                        error.message ||
-                        "Gagal menyimpan TTD."
-                });
+                return response
+                    .status(
+                        error.status || 500
+                    )
+                    .json({
+                        success: false,
+
+                        message:
+                            error.message ||
+                            "Gagal memperbarui profile."
+                    });
             }
         }
 
