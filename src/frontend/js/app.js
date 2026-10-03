@@ -1368,7 +1368,7 @@ async function requestBackend(
 
     activeBackendControllers.add(
         controller
-    );  
+    );
 
     const longActions = [
         "createPkm",
@@ -1395,7 +1395,7 @@ async function requestBackend(
     const dataActions = [
         "getSalesmen",
         "getReferenceMasters",
-        "getCrmKpiInputAvailability"    
+        "getCrmKpiInputAvailability"
     ];
 
     const timeoutDuration =
@@ -1422,23 +1422,102 @@ async function requestBackend(
         const apiFetchStartedAt =
             performance.now();
 
-        let apiUrl = "/api/gas";
+
+        // ==========================================
+        // DEFAULT BACKEND
+        // ==========================================
+
+        let apiUrl =
+            "/api/gas";
+
         let fetchOptions = {
             method: "POST",
 
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type":
+                    "application/json"
             },
 
             body: JSON.stringify({
-                action: action,
-                token: sessionToken,
-                payload: payload
+                action:
+                    action,
+
+                token:
+                    sessionToken,
+
+                payload:
+                    payload
             }),
 
-            signal: controller.signal,
-            cache: "no-store"
+            signal:
+                controller.signal,
+
+            cache:
+                "no-store"
         };
+
+
+        // ==========================================
+        // PKM APPROVAL
+        // ==========================================
+        //
+        // Approval TIDAK lagi melalui GAS.
+        //
+        // approvePkm
+        //      ↓
+        // /api/backend?action=approvePkm
+        //
+        // approvePkmFromDiscord
+        //      ↓
+        // /api/backend?action=approvePkmFromDiscord
+        //
+        // ==========================================
+
+        if (
+            action === "approvePkm" ||
+            action === "approvePkmFromDiscord"
+        ) {
+
+            const backendAction =
+                action === "approvePkm"
+                    ? "approvePkm"
+                    : "approvePkmFromDiscord";
+
+
+            apiUrl =
+                `/api/backend?action=${backendAction}`;
+
+
+            fetchOptions = {
+
+                method:
+                    "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    action:
+                        backendAction,
+
+                    token:
+                        sessionToken,
+
+                    payload:
+                        payload
+
+                }),
+
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
+            };
+        }
 
 
         /*
@@ -1446,25 +1525,38 @@ async function requestBackend(
         *
         * getPkmData tidak lagi melalui Google Apps Script.
         */
-        if (action === "getPkmData") {
 
-            const params = new URLSearchParams();
+        if (
+            action === "getPkmData"
+        ) {
 
-            if (payload.startDate) {
+            const params =
+                new URLSearchParams();
+
+            if (
+                payload.startDate
+            ) {
+
                 params.set(
                     "startDate",
                     payload.startDate
                 );
             }
 
-            if (payload.endDate) {
+            if (
+                payload.endDate
+            ) {
+
                 params.set(
                     "endDate",
                     payload.endDate
                 );
             }
 
-            if (payload.jenisPkm) {
+            if (
+                payload.jenisPkm
+            ) {
+
                 params.set(
                     "jenisPkm",
                     payload.jenisPkm
@@ -1472,9 +1564,12 @@ async function requestBackend(
             }
 
             if (
-                Array.isArray(payload.branches) &&
+                Array.isArray(
+                    payload.branches
+                ) &&
                 payload.branches.length
             ) {
+
                 params.set(
                     "branches",
                     payload.branches.join(",")
@@ -1485,28 +1580,59 @@ async function requestBackend(
                 `/api/pkm?${params.toString()}`;
 
             fetchOptions = {
-                method: "GET",
 
-                signal: controller.signal,
+                method:
+                    "GET",
 
-                cache: "no-store"
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
             };
         }
 
-        if (action === "getManagedAccounts") {
-            apiUrl = `/api/managed-account`;
+
+        // ==========================================
+        // MANAGED ACCOUNT
+        // ==========================================
+
+        if (
+            action === "getManagedAccounts"
+        ) {
+
+            apiUrl =
+                "/api/managed-account";
 
             fetchOptions = {
-                method: "GET",
-                signal: controller.signal,
-                cache: "no-store"
+
+                method:
+                    "GET",
+
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
             };
         }
 
-        if (action === "getSalesmen") {
-            const params = new URLSearchParams();
 
-            if (payload.branch) {
+        // ==========================================
+        // SALESMEN
+        // ==========================================
+
+        if (
+            action === "getSalesmen"
+        ) {
+
+            const params =
+                new URLSearchParams();
+
+            if (
+                payload.branch
+            ) {
+
                 params.set(
                     "branch",
                     payload.branch
@@ -1517,23 +1643,38 @@ async function requestBackend(
                 `/api/salesman?${params.toString()}`;
 
             fetchOptions = {
-                method: "GET",
-                signal: controller.signal,
-                cache: "no-store"
+
+                method:
+                    "GET",
+
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
             };
         }
 
-        if (action === "getMasterData") {
+
+        // ==========================================
+        // MASTER DATA
+        // ==========================================
+
+        if (
+            action === "getMasterData"
+        ) {
 
             const params =
                 new URLSearchParams();
 
             const type =
                 String(
-                    payload.type || ""
+                    payload.type ||
+                    ""
                 ).trim();
 
             if (type) {
+
                 params.set(
                     "type",
                     type
@@ -1544,18 +1685,34 @@ async function requestBackend(
                 `/api/master?${params.toString()}`;
 
             fetchOptions = {
-                method: "GET",
-                signal: controller.signal,
-                cache: "no-store"
+
+                method:
+                    "GET",
+
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
             };
         }
 
-        if (action === "getPkmPdfData") {
+
+        // ==========================================
+        // PKM PDF DATA
+        // ==========================================
+
+        if (
+            action === "getPkmPdfData"
+        ) {
 
             const params =
                 new URLSearchParams();
 
-            if (payload.pkmId) {
+            if (
+                payload.pkmId
+            ) {
+
                 params.set(
                     "pkmId",
                     payload.pkmId
@@ -1566,53 +1723,86 @@ async function requestBackend(
                 `/api/pkm-download?${params.toString()}`;
 
             fetchOptions = {
-                method: "GET",
-                signal: controller.signal,
-                cache: "no-store"
+
+                method:
+                    "GET",
+
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
             };
         }
 
 
-        const response = await fetch(
-            apiUrl,
-            fetchOptions
-        );
+        // ==========================================
+        // FETCH
+        // ==========================================
+
+        const response =
+            await fetch(
+                apiUrl,
+                fetchOptions
+            );
+
 
         const apiResponseReceivedAt =
             performance.now();
+
 
         console.log(
             "[API RESPONSE]",
             action,
             `${(
-                (apiResponseReceivedAt -
-                    apiFetchStartedAt) /
+                (
+                    apiResponseReceivedAt -
+                    apiFetchStartedAt
+                ) /
                 1000
             ).toFixed(2)}s`
         );
 
 
+        // ==========================================
+        // RESPONSE TEXT
+        // ==========================================
+
         const responseText =
             await response.text();
 
-        if (!responseText.trim()) {
+
+        if (
+            !responseText.trim()
+        ) {
+
             throw new Error(
                 `Server tidak memberikan respons untuk "${action}".`
             );
         }
 
+
         let data;
 
+
         try {
-            data = JSON.parse(
-                responseText
-            );
+
+            data =
+                JSON.parse(
+                    responseText
+                );
+
         } catch (error) {
+
             console.error(
                 "Respons backend bukan JSON:",
                 {
-                    action: action,
-                    status: response.status,
+                    action:
+                        action,
+
+                    status:
+                        response.status,
+
                     response:
                         responseText.slice(
                             0,
@@ -1626,23 +1816,36 @@ async function requestBackend(
             );
         }
 
+
+        // ==========================================
+        // ERROR RESPONSE
+        // ==========================================
+
         if (
             !response.ok ||
             data.success === false
         ) {
+
             console.error(
                 "Backend gagal:",
                 {
-                    action: action,
-                    status: response.status,
+                    action:
+                        action,
+
+                    status:
+                        response.status,
+
                     message:
                         data.message ||
                         data.error?.message ||
                         "",
-                    response: data
+
+                    response:
+                        data
                 }
             );
-        
+
+
             const message =
                 data.message ||
                 data.error?.message ||
@@ -1653,12 +1856,14 @@ async function requestBackend(
                         : ""
                 );
 
+
             if (
                 isSessionExpiredResponse(
                     response.status,
                     message
                 )
             ) {
+
                 handleSessionExpired();
 
                 throw new Error(
@@ -1666,11 +1871,17 @@ async function requestBackend(
                 );
             }
 
+
             throw new Error(
                 message ||
                 `Permintaan "${action}" gagal. HTTP ${response.status}.`
             );
         }
+
+
+        // ==========================================
+        // RESPONSE FORMAT { result: ... }
+        // ==========================================
 
         if (
             data.success === true &&
@@ -1679,22 +1890,27 @@ async function requestBackend(
                 "result"
             )
         ) {
+
             performanceStatus =
                 "SUCCESS";
 
             return data.result;
         }
 
+
         performanceStatus =
             "SUCCESS";
 
         return data;
 
+
     } catch (error) {
+
         if (
             error.name ===
             "AbortError"
         ) {
+
             performanceStatus =
                 "TIMEOUT";
 
@@ -1706,28 +1922,38 @@ async function requestBackend(
         }
 
         throw error;
-        
+
+
     } finally {
+
         const durationMs =
             performance.now() -
             performanceStartedAt;
 
+
         console.log(
             "[PERF]",
             action,
-            `${(durationMs / 1000).toFixed(2)}s`,
+            `${(
+                durationMs /
+                1000
+            ).toFixed(2)}s`,
             performanceStatus
         );
+
 
         window.clearTimeout(
             timeoutId
         );
 
+
         activeBackendControllers.delete(
             controller
         );
 
+
         if (isMutation) {
+
             activeMutationRequests.delete(
                 action
             );
