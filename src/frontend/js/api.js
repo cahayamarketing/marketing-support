@@ -1,9 +1,5 @@
 "use strict";
 
-
-
-"use strict";
-
 async function callApi(
     action,
     payload = {}
@@ -143,21 +139,6 @@ async function callApi(
     );
 
     return result;
-}
-
-
-function getApiErrorMessage(error) {
-    if (!error) {
-        return "Terjadi kesalahan.";
-    }
-
-    return (
-        error.message ||
-        String(error)
-    ).replace(
-        /^Exception:\s*/i,
-        ""
-    );
 }
 
 

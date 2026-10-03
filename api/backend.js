@@ -1,6 +1,668 @@
-import { supabaseRequest } from "../src/backend/supabase.js";
+"use strict";
 
-export default async function handler(
+const { google } = require("googleapis");
+
+// Supabase helper kept inside the single Vercel Function.
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+function getSupabaseConfig() {
+  if (!SUPABASE_URL) throw new Error("SUPABASE_URL belum diatur di Vercel.");
+  if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY belum diatur di Vercel.");
+  return { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY };
+}
+
+async function supabaseRequest(path, options = {}) {
+  const config = getSupabaseConfig();
+  const headers = {
+    "Content-Type": "application/json",
+    "apikey": config.key,
+    "Authorization": `Bearer ${config.key}`,
+    ...(options.headers || {})
+  };
+  const response = await fetch(`${config.url}${path}`, { ...options, headers });
+  const responseText = await response.text();
+  let data = null;
+  if (responseText) { try { data = JSON.parse(responseText); } catch { data = { raw: responseText }; } }
+  if (!response.ok) {
+    const message = data?.message || data?.error_description || data?.msg || `Supabase HTTP ${response.status}`;
+    const error = new Error(message); error.status = response.status; error.data = data; throw error;
+  }
+  return data;
+}
+
+// ===== auth =====
+const authHandler = (() => {
+
+
+
+const SUPABASE_URL =
+    process.env.SUPABASE_URL;
+
+const SUPABASE_SERVICE_ROLE_KEY =
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+async function loginSupabase(email, password) {
+    const response = await fetch(
+        `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_SERVICE_ROLE_KEY
+            },
+            body: JSON.stringify({
+                email,
+                password
+            })
+        }
+    );
+
+    const text = await response.text();
+
+    let data = null;
+
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch {
+        data = {
+            raw: text
+        };
+    }
+
+    if (!response.ok) {
+        const error = new Error(
+            data?.msg ||
+            data?.message ||
+            "Login Supabase gagal."
+        );
+
+        error.status = response.status;
+        error.data = data;
+
+        throw error;
+    }
+
+    return data;
+}
+
+return async function handler(req, res) {
+
+    if (req.method !== "POST") {
+        return res.status(405).json({
+            success: false,
+            message: "Method tidak diizinkan."
+        });
+    }
+
+    try {
+
+        const body =
+            req.body || {};
+
+        const payload =
+            body.payload || {};
+
+        const nik =
+            String(
+                payload.nik || ""
+            ).trim();
+
+        const password =
+            String(
+                payload.password || ""
+            );
+
+        if (!nik || !password) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "NIK dan password wajib diisi."
+            });
+        }
+
+        // ==========================================
+        // 1. CARI PROFILE USER
+        // ==========================================
+
+        const profileRows =
+            await supabaseRequest(
+                `/rest/v1/v_user_profile?nik=eq.${encodeURIComponent(nik)}&select=*`,
+                {
+                    method: "GET"
+                }
+            );
+
+        if (
+            !Array.isArray(profileRows) ||
+            profileRows.length === 0
+        ) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Profile user tidak ditemukan."
+            });
+        }
+
+        const profile =
+            profileRows[0];
+
+        // ==========================================
+        // 2. CEK LOGIN
+        // ==========================================
+
+        if (
+            profile.login_allowed === false
+        ) {
+            return res.status(403).json({
+                success: false,
+                message:
+                    "Akun ini tidak diizinkan untuk login."
+            });
+        }
+
+        // ==========================================
+        // 3. USER SUDAH MIGRASI?
+        // ==========================================
+
+        if (profile.auth_user_id) {
+
+            // ======================================
+            // SUPABASE AUTH
+            // ======================================
+
+            const email =
+                `${nik}@pkm-auth.local`;
+
+            const auth =
+                await loginSupabase(
+                    email,
+                    password
+                );
+
+            const user = {
+                id: profile.nik,
+                nik: profile.nik,
+                username: profile.nik,
+
+                name:
+                    profile.nama_marketing || "",
+
+                jabatan:
+                    profile.jab || "",
+
+                pos:
+                    profile.pos || "",
+
+                originalBranch:
+                    profile.cab || "",
+
+                branch:
+                    String(
+                        profile.cab || ""
+                    )
+                        .trim()
+                        .toUpperCase() === "HO"
+                        ? "ALL"
+                        : String(
+                            profile.cab || ""
+                        )
+                            .trim()
+                            .toUpperCase(),
+
+                branchName:
+                    String(
+                        profile.cab || ""
+                    )
+                        .trim()
+                        .toUpperCase() === "HO"
+                        ? "SEMUA CABANG"
+                        : profile.cab || "",
+
+                role:
+                    profile.approval_role ||
+                    "USER",
+
+                approvalRole:
+                    profile.approval_role ||
+                    "USER",
+
+                canApprove:
+                    profile.can_approve === true,
+
+                loginAllowed:
+                    profile.login_allowed !== false,
+
+                access:
+                    String(
+                        profile.sebagai ||
+                        "USER"
+                    ).toUpperCase(),
+
+                leaderId:
+                    profile.id_tl || "",
+
+                leaderName:
+                    profile.tl || "",
+
+                status:
+                    String(
+                        profile.status ||
+                        "AKTIF"
+                    ).toUpperCase(),
+
+                rolePkm:
+                    profile.role_pkm || "",
+
+                authUserId:
+                    profile.auth_user_id
+            };
+
+            return res.status(200).json({
+                success: true,
+
+                result: {
+                    success: true,
+
+                    message:
+                        "Login berhasil.",
+
+                    token:
+                        auth.access_token,
+
+                    refreshToken:
+                        auth.refresh_token,
+
+                    expiresIn:
+                        auth.expires_in,
+
+                    user
+                }
+            });
+        }
+
+        // ==========================================
+        // 4. BELUM MIGRASI → GAS FALLBACK
+        // ==========================================
+
+        const gasUrl =
+            process.env.GAS_WEB_APP_URL;
+
+        if (!gasUrl) {
+            return res.status(500).json({
+                success: false,
+                message:
+                    "GAS_WEB_APP_URL belum tersedia."
+            });
+        }
+
+        const gasResponse =
+            await fetch(
+                gasUrl,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "text/plain;charset=utf-8"
+                    },
+                    body: JSON.stringify({
+                        action: "login",
+                        payload
+                    }),
+                    redirect: "follow"
+                }
+            );
+
+        const gasText =
+            await gasResponse.text();
+
+        let gasResult;
+
+        try {
+            gasResult =
+                JSON.parse(gasText);
+        } catch {
+            return res.status(502).json({
+                success: false,
+                message:
+                    "Response dari GAS bukan JSON."
+            });
+        }
+
+        if (
+            !gasResult ||
+            gasResult.success !== true
+        ) {
+            return res.status(
+                gasResponse.status || 401
+            ).json(gasResult);
+        }
+
+        const gasUser =
+            gasResult.result?.user ||
+            gasResult.user ||
+            {};
+
+        const user = {
+            ...gasUser,
+
+            id: profile.nik,
+            nik: profile.nik,
+            username: profile.nik,
+
+            name:
+                profile.nama_marketing ||
+                gasUser.name ||
+                "",
+
+            jabatan:
+                profile.jab ||
+                gasUser.jabatan ||
+                "",
+
+            pos:
+                profile.pos ||
+                gasUser.pos ||
+                "",
+
+            originalBranch:
+                profile.cab || "",
+
+            branch:
+                String(
+                    profile.cab || ""
+                )
+                    .trim()
+                    .toUpperCase() === "HO"
+                    ? "ALL"
+                    : String(
+                        profile.cab || ""
+                    )
+                        .trim()
+                        .toUpperCase(),
+
+            branchName:
+                String(
+                    profile.cab || ""
+                )
+                    .trim()
+                    .toUpperCase() === "HO"
+                    ? "SEMUA CABANG"
+                    : profile.cab || "",
+
+            role:
+                profile.approval_role ||
+                "USER",
+
+            approvalRole:
+                profile.approval_role ||
+                "USER",
+
+            canApprove:
+                profile.can_approve === true,
+
+            loginAllowed:
+                profile.login_allowed !== false,
+
+            access:
+                String(
+                    profile.sebagai ||
+                    gasUser.access ||
+                    "USER"
+                ).toUpperCase(),
+
+            leaderId:
+                profile.id_tl || "",
+
+            leaderName:
+                profile.tl || "",
+
+            status:
+                String(
+                    profile.status ||
+                    "AKTIF"
+                ).toUpperCase(),
+
+            rolePkm:
+                profile.role_pkm || "",
+
+            authUserId:
+                profile.auth_user_id || null
+        };
+
+        return res.status(200).json({
+            success: true,
+
+            result: {
+                success: true,
+
+                message:
+                    gasResult.message ||
+                    "Login berhasil.",
+
+                token:
+                    gasResult.result?.token ||
+                    gasResult.token ||
+                    null,
+
+                user
+            }
+        });
+
+    } catch (error) {
+
+        console.error(
+            "AUTH ERROR:",
+            error
+        );
+
+        return res.status(
+            error.status || 500
+        ).json({
+            success: false,
+            message:
+                error.message ||
+                "Login gagal."
+        });
+    }
+}
+})();
+
+// ===== authMigrate =====
+const authMigrateHandler = (() => {
+
+
+
+const INITIAL_PASSWORD = "123456";
+const BATCH_SIZE = 100;
+
+return async function handler(req, res) {
+    if (req.method !== "POST") {
+        return res.status(405).json({
+            success: false,
+            message: "Method tidak diizinkan."
+        });
+    }
+
+    try {
+        // ==========================================
+        // 1. AMBIL USER YANG BELUM PUNYA AUTH
+        // ==========================================
+
+        const users = await supabaseRequest(
+            `/rest/v1/salesman?auth_user_id=is.null&select=nik,nama_marketing,auth_user_id&limit=${BATCH_SIZE}`,
+            {
+                method: "GET"
+            }
+        );
+
+        if (!Array.isArray(users) || users.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "Tidak ada user yang perlu dimigrasikan.",
+                processed: 0,
+                successCount: 0,
+                failedCount: 0
+            });
+        }
+
+        const results = [];
+
+        // ==========================================
+        // 2. PROSES SATU PER SATU
+        // ==========================================
+
+        for (const user of users) {
+
+            const nik =
+                String(user.nik || "").trim();
+
+            const nama =
+                String(
+                    user.nama_marketing || ""
+                ).trim();
+
+            if (!nik) {
+                results.push({
+                    nik: "",
+                    nama,
+                    status: "FAILED",
+                    message: "NIK kosong."
+                });
+
+                continue;
+            }
+
+            try {
+
+                // ----------------------------------
+                // Buat Supabase Auth User
+                // ----------------------------------
+
+                const email =
+                    `${nik}@pkm-auth.local`;
+
+                const authUser =
+                    await supabaseRequest(
+                        "/auth/v1/admin/users",
+                        {
+                            method: "POST",
+
+                            body: JSON.stringify({
+                                email,
+                                password:
+                                    INITIAL_PASSWORD,
+
+                                email_confirm: true,
+
+                                user_metadata: {
+                                    nik,
+                                    nama_marketing:
+                                        nama
+                                }
+                            })
+                        }
+                    );
+
+                const authUserId =
+                    authUser?.id;
+
+                if (!authUserId) {
+                    throw new Error(
+                        "Supabase Auth tidak mengembalikan user ID."
+                    );
+                }
+
+                // ----------------------------------
+                // Simpan auth_user_id
+                // ----------------------------------
+
+                await supabaseRequest(
+                    `/rest/v1/salesman?nik=eq.${encodeURIComponent(nik)}`,
+                    {
+                        method: "PATCH",
+
+                        headers: {
+                            "Prefer":
+                                "return=minimal"
+                        },
+
+                        body: JSON.stringify({
+                            auth_user_id:
+                                authUserId
+                        })
+                    }
+                );
+
+                results.push({
+                    nik,
+                    nama,
+                    status: "SUCCESS",
+                    authUserId
+                });
+
+            } catch (error) {
+
+                results.push({
+                    nik,
+                    nama,
+                    status: "FAILED",
+                    message:
+                        error.message ||
+                        "Gagal membuat Auth user."
+                });
+            }
+        }
+
+        const successCount =
+            results.filter(
+                x => x.status === "SUCCESS"
+            ).length;
+
+        const failedCount =
+            results.filter(
+                x => x.status === "FAILED"
+            ).length;
+
+        return res.status(200).json({
+            success: true,
+
+            message:
+                "Batch migrasi selesai.",
+
+            processed:
+                results.length,
+
+            successCount,
+
+            failedCount,
+
+            results
+        });
+
+    } catch (error) {
+
+        console.error(
+            "AUTH BATCH MIGRATION ERROR:",
+            error
+        );
+
+        return res.status(
+            error.status || 500
+        ).json({
+            success: false,
+            message:
+                error.message ||
+                "Migrasi batch gagal."
+        });
+    }
+}
+})();
+
+// ===== gas =====
+const gasHandler = (() => {
+
+return async function handler(
     request,
     response
 ) {
@@ -2710,3 +3372,2076 @@ export default async function handler(
             });
     }
 }
+})();
+
+// ===== managed =====
+const managedHandler = (() => {
+
+
+
+function clean(value) {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value).trim();
+}
+
+function isMasterNik(nik) {
+    return clean(nik) === "910000";
+}
+
+return async function handler(req, res) {
+    if (req.method !== "GET") {
+        return res.status(405).json({
+            success: false,
+            message: "Method tidak diizinkan."
+        });
+    }
+
+    try {
+        const rows = await supabaseRequest(
+            "/rest/v1/salesman" +
+            "?select=" +
+            [
+                "nik",
+                "nama_marketing",
+                "cab",
+                "jab",
+                "role_pkm",
+                "status",
+                "ttd_file_id",
+                "ttd_url"
+            ].join(",") +
+            "&order=nama_marketing.asc" +
+            "&limit=2000"
+        );
+
+        const accounts = Array.isArray(rows)
+            ? rows
+                .filter(function (row) {
+                    return clean(row.nik);
+                })
+                .map(function (row) {
+                    const nik = clean(row.nik);
+
+                    return {
+                        nik: nik,
+
+                        name: clean(
+                            row.nama_marketing
+                        ),
+
+                        branch: clean(
+                            row.cab
+                        ),
+
+                        jabatan: clean(
+                            row.jab
+                        ),
+
+                        role: clean(
+                            row.role_pkm
+                        ).toUpperCase(),
+
+                        status: (
+                            clean(row.status) ||
+                            "AKTIF"
+                        )
+                            .toUpperCase()
+                            .replace(/\s+/g, ""),
+
+                        hasSignature: Boolean(
+                            clean(row.ttd_file_id) ||
+                            clean(row.ttd_url)
+                        ),
+
+                        isMaster: isMasterNik(nik)
+                    };
+                })
+                .sort(function (a, b) {
+                    return a.name.localeCompare(
+                        b.name,
+                        "id"
+                    );
+                })
+            : [];
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Data akun berhasil diambil dari Supabase.",
+            accounts: accounts,
+            total: accounts.length
+        });
+
+    } catch (error) {
+        console.error(
+            "MANAGED ACCOUNTS API ERROR:",
+            error
+        );
+
+        return res.status(
+            error.status || 500
+        ).json({
+            success: false,
+            message:
+                error.message ||
+                "Gagal mengambil data akun dari Supabase."
+        });
+    }
+}
+})();
+
+// ===== master =====
+const masterHandler = (() => {
+
+
+
+return async function handler(req, res) {
+
+    if (req.method !== "GET") {
+        return res.status(405).json({
+            success: false,
+            message: "Method tidak diizinkan."
+        });
+    }
+
+    try {
+
+        const type =
+            String(
+                req.query?.type || ""
+            ).trim().toUpperCase();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MODE GET MASTER DATA TABLE
+        |--------------------------------------------------------------------------
+        |
+        | Dipakai oleh:
+        | loadMasterDataTable()
+        |
+        | Contoh:
+        | /api/master?type=PKM
+        | /api/master?type=EVENT
+        | /api/master?type=KPI_CRM
+        |
+        |--------------------------------------------------------------------------
+        */
+
+        if (type) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | MASTER PKM
+            |--------------------------------------------------------------------------
+            */
+
+            if (type === "PKM") {
+
+                const rows =
+                    await supabaseRequest(
+                        "/rest/v1/master_pkm" +
+                        "?select=id,pkm,jenis_pkm" +
+                        "&order=id.asc"
+                    );
+
+                const headers = [
+                    "ID PKM",
+                    "PKM",
+                    "JENIS PKM"
+                ];
+
+                const data =
+                    Array.isArray(rows)
+                        ? rows.map(function (row) {
+                            return {
+                                "ID PKM":
+                                    String(
+                                        row.id ?? ""
+                                    ).trim(),
+
+                                "PKM":
+                                    String(
+                                        row.pkm ?? ""
+                                    ).trim(),
+
+                                "JENIS PKM":
+                                    String(
+                                        row.jenis_pkm ?? ""
+                                    ).trim()
+                            };
+                        })
+                        : [];
+
+                return res.status(200).json({
+                    success: true,
+                    type: type,
+                    headers: headers,
+                    data: data
+                });
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | MASTER EVENT
+            |--------------------------------------------------------------------------
+            */
+
+            if (type === "EVENT") {
+
+                const rows =
+                    await supabaseRequest(
+                        "/rest/v1/master_activity" +
+                        "?select=id_event,kode_event,nama_event,nama_event_md,jenis_event" +
+                        "&order=id_event.asc"
+                    );
+
+                const headers = [
+                    "ID EVENT",
+                    "KODE EVENT",
+                    "NAMA EVENT",
+                    "NAMA EVENT MD",
+                    "JENIS EVENT"
+                ];
+
+                const data =
+                    Array.isArray(rows)
+                        ? rows.map(function (row) {
+                            return {
+                                "ID EVENT":
+                                    String(
+                                        row.id_event ?? ""
+                                    ).trim(),
+
+                                "KODE EVENT":
+                                    String(
+                                        row.kode_event ?? ""
+                                    ).trim(),
+
+                                "NAMA EVENT":
+                                    String(
+                                        row.nama_event ?? ""
+                                    ).trim(),
+
+                                "NAMA EVENT MD":
+                                    String(
+                                        row.nama_event_md ?? ""
+                                    ).trim(),
+
+                                "JENIS EVENT":
+                                    String(
+                                        row.jenis_event ?? ""
+                                    ).trim()
+                            };
+                        })
+                        : [];
+
+                return res.status(200).json({
+                    success: true,
+                    type: type,
+                    headers: headers,
+                    data: data
+                });
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | MASTER KPI CRM
+            |--------------------------------------------------------------------------
+            */
+
+            if (type === "KPI_CRM") {
+
+                const rows =
+                    await supabaseRequest(
+                        "/rest/v1/master_kpi_crm" +
+                        "?select=id,pilar_utama,indikator_kpi,target,target_persen,bobot,jenis_target,under_target" +
+                        "&order=id.asc"
+                    );
+
+                const headers = [
+                    "ID",
+                    "PILAR UTAMA",
+                    "INDIKATOR KPI",
+                    "TARGET",
+                    "%",
+                    "BOBOT",
+                    "JENIS TARGET",
+                    "UNDER TARGET"
+                ];
+
+                const data =
+                    Array.isArray(rows)
+                        ? rows.map(function (row) {
+                            return {
+                                "ID":
+                                    row.id,
+
+                                "PILAR UTAMA":
+                                    String(
+                                        row.pilar_utama ?? ""
+                                    ).trim(),
+
+                                "INDIKATOR KPI":
+                                    String(
+                                        row.indikator_kpi ?? ""
+                                    ).trim(),
+
+                                "TARGET":
+                                    row.target ?? "",
+
+                                "%":
+                                    row.target_persen ?? "",
+
+                                "BOBOT":
+                                    row.bobot ?? "",
+
+                                "JENIS TARGET":
+                                    String(
+                                        row.jenis_target ?? ""
+                                    ).trim(),
+
+                                "UNDER TARGET":
+                                    String(
+                                        row.under_target ?? ""
+                                    ).trim()
+                            };
+                        })
+                        : [];
+
+                return res.status(200).json({
+                    success: true,
+                    type: type,
+                    headers: headers,
+                    data: data
+                });
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | LEASING
+            |--------------------------------------------------------------------------
+            */
+
+            if (type === "LEASING") {
+
+                return res.status(200).json({
+                    success: true,
+                    type: type,
+                    headers: [
+                        "INIT",
+                        "KODE",
+                        "NAMA"
+                    ],
+                    data: [],
+                    message:
+                        "Master Leasing belum dimigrasikan ke Supabase."
+                });
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | TYPE TIDAK DIKENAL
+            |--------------------------------------------------------------------------
+            */
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    `Jenis master "${type}" tidak tersedia.`
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MODE REFERENCE MASTER LAMA
+        |--------------------------------------------------------------------------
+        |
+        | /api/master
+        |
+        | Jangan diubah bentuk responsenya karena app.js
+        | loadReferenceMasters() sudah bergantung pada format ini.
+        |
+        |--------------------------------------------------------------------------
+        */
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MASTER PKM
+        |--------------------------------------------------------------------------
+        */
+
+        const pkmTypes =
+            await supabaseRequest(
+                "/rest/v1/master_pkm" +
+                "?select=id,pkm,jenis_pkm" +
+                "&order=id.asc"
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MASTER ACTIVITY / EVENT
+        |--------------------------------------------------------------------------
+        */
+
+        const events =
+            await supabaseRequest(
+                "/rest/v1/master_activity" +
+                "?select=id_event,kode_event,nama_event,nama_event_md,jenis_event" +
+                "&order=id_event.asc"
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MASTER UNIT / GAB
+        |--------------------------------------------------------------------------
+        */
+
+        const unitRows =
+            await supabaseRequest(
+                "/rest/v1/master_unit" +
+                "?select=gab" +
+                "&order=gab.asc"
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | FORMAT LAMA
+        |--------------------------------------------------------------------------
+        */
+
+        const result = {
+
+            leasing: [],
+
+            focusTypes:
+                unitRows
+                    .map(function (row) {
+                        return String(
+                            row.gab || ""
+                        ).trim();
+                    })
+                    .filter(Boolean),
+
+            pkmTypes:
+                pkmTypes
+                    .map(function (row) {
+                        return {
+                            id:
+                                String(
+                                    row.id || ""
+                                ).trim(),
+
+                            category:
+                                String(
+                                    row.pkm || ""
+                                ).trim(),
+
+                            name:
+                                String(
+                                    row.jenis_pkm || ""
+                                ).trim()
+                        };
+                    })
+                    .filter(function (item) {
+                        return Boolean(
+                            item.name
+                        );
+                    }),
+
+            events:
+                events
+                    .map(function (row) {
+                        return {
+                            id:
+                                String(
+                                    row.id_event || ""
+                                ).trim(),
+
+                            code:
+                                String(
+                                    row.kode_event || ""
+                                ).trim(),
+
+                            name:
+                                String(
+                                    row.nama_event || ""
+                                ).trim(),
+
+                            mdName:
+                                String(
+                                    row.nama_event_md || ""
+                                ).trim(),
+
+                            category:
+                                String(
+                                    row.jenis_event || ""
+                                ).trim()
+                        };
+                    })
+                    .filter(function (item) {
+                        return Boolean(
+                            item.name
+                        );
+                    })
+        };
+
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Master data berhasil diambil dari Supabase.",
+            data: result
+        });
+
+    } catch (error) {
+
+        console.error(
+            "MASTER API ERROR:",
+            error
+        );
+
+        return res.status(
+            error.status || 500
+        ).json({
+            success: false,
+            message:
+                error.message ||
+                "Gagal mengambil master data dari Supabase."
+        });
+    }
+}
+})();
+
+// ===== salesman =====
+const salesmanHandler = (() => {
+
+
+
+function clean(value) {
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
+    }
+
+    return String(value).trim();
+}
+
+return async function handler(req, res) {
+
+    if (req.method !== "GET") {
+        return res.status(405).json({
+            success: false,
+            message: "Method tidak diizinkan."
+        });
+    }
+
+    try {
+
+        const branch =
+            clean(req.query?.branch);
+
+        let query =
+            "/rest/v1/salesman" +
+            "?select=nik,gab,nama_marketing,id_tl,tl,jab,pos,cab,sebagai,status,role_pkm,ttd_file_id,ttd_url,source_updated_at" +
+            "&order=nama_marketing.asc" +
+            "&limit=2000";
+
+        /*
+        |--------------------------------------------------------------------------
+        | FILTER CABANG
+        |--------------------------------------------------------------------------
+        |
+        | Jika branch kosong / ALL:
+        |   ambil semua salesman
+        |
+        | Jika branch tertentu:
+        |   hanya salesman dengan cab yang sama
+        |
+        */
+
+        if (
+            branch &&
+            branch.toUpperCase() !== "ALL"
+        ) {
+            query +=
+                "&cab=eq." +
+                encodeURIComponent(branch);
+        }
+
+        const rows =
+            await supabaseRequest(query);
+
+        const data =
+            Array.isArray(rows)
+                ? rows.map(function (row) {
+
+                    const name =
+                        clean(
+                            row.nama_marketing
+                        );
+
+                    return {
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | FIELD LAMA / FRONTEND
+                        |--------------------------------------------------------------------------
+                        */
+
+                        nik:
+                            clean(row.nik),
+
+                        name:
+                            name,
+
+                        branch:
+                            clean(row.cab),
+
+                        gab:
+                            clean(row.gab),
+
+                        idTl:
+                            clean(row.id_tl),
+
+                        tl:
+                            clean(row.tl),
+
+                        jab:
+                            clean(row.jab),
+
+                        pos:
+                            clean(row.pos),
+
+                        cab:
+                            clean(row.cab),
+
+                        sebagai:
+                            clean(row.sebagai),
+
+                        status:
+                            clean(row.status),
+
+                        rolePkm:
+                            clean(row.role_pkm),
+
+                        ttdFileId:
+                            clean(row.ttd_file_id),
+
+                        ttdUrl:
+                            clean(row.ttd_url),
+
+                        updatedAt:
+                            clean(row.source_updated_at),
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | FIELD SUPABASE
+                        |--------------------------------------------------------------------------
+                        |
+                        | Tetap dikirim agar kode baru bisa
+                        | memakai nama field yang lebih jelas.
+                        |
+                        */
+
+                        namaMarketing:
+                            name
+                    };
+                })
+                : [];
+
+        return res.status(200).json({
+
+            success:
+                true,
+
+            message:
+                "Data salesman berhasil diambil dari Supabase.",
+
+            data:
+                data,
+
+            branch:
+                branch || "ALL",
+
+            total:
+                data.length
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "SALESMAN API ERROR:",
+            error
+        );
+
+        return res.status(
+            error.status || 500
+        ).json({
+
+            success:
+                false,
+
+            message:
+                error.message ||
+                "Gagal mengambil data salesman dari Supabase."
+        });
+    }
+}
+})();
+
+// ===== pkm =====
+const pkmHandler = (() => {
+
+
+
+/**
+ * PKM API
+ *
+ * Sumber data:
+ *   Supabase -> public.pkm
+ *
+ * Belum mengubah app.js.
+ * Endpoint ini hanya untuk testing migrasi getPkmData.
+ */
+
+function textValue(value) {
+    return String(value ?? "").trim();
+}
+
+function numberValue(value) {
+    if (value === null || value === undefined || value === "") {
+        return 0;
+    }
+
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+}
+
+function splitTextValue(value) {
+    const text = textValue(value);
+
+    if (!text) {
+        return [];
+    }
+
+    return text
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean);
+}
+
+function normalizeBranch(value) {
+    return textValue(value).toUpperCase();
+}
+
+function formatDate(value) {
+    if (!value) {
+        return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return textValue(value);
+    }
+
+    return date.toISOString().slice(0, 10);
+}
+
+
+/**
+ * Untuk sementara branchName mengikuti branch.
+ *
+ * Nanti bisa kita ambil dari master_unit jika memang
+ * ada mapping kode -> nama cabang yang dibutuhkan UI.
+ */
+function getBranchName(branch) {
+    return branch;
+}
+
+
+/**
+ * Menghitung status berdasarkan data approval,
+ * mengikuti logic getPkmData lama.
+ */
+function getApprovalStep(row) {
+
+    const typePkm = textValue(row.type_pkm)
+        .replace(/\s+/g, "")
+        .toUpperCase();
+
+    const needsPicH23 =
+        typePkm === "H23" ||
+        typePkm === "H123";
+
+    const accCrm =
+        textValue(row.acc_crm);
+
+    const accKacab =
+        textValue(row.acc_kacab);
+
+    const accMsmc =
+        textValue(row.acc_msmc);
+
+    const accManagerH1 =
+        textValue(row.acc_manager_h1);
+
+    const accManagerH23 =
+        textValue(row.acc_manager_h23);
+
+    /*
+     * H23 / H123
+     */
+    if (needsPicH23) {
+
+        if (!accCrm) {
+            return "CRM";
+        }
+
+        if (!accKacab) {
+            return "KACAB";
+        }
+
+        if (!accMsmc) {
+            return "MSMC";
+        }
+
+        if (!accManagerH23) {
+            return "MGR_H23";
+        }
+
+        return "SELESAI";
+    }
+
+    /*
+     * H1
+     */
+    if (!accCrm) {
+        return "CRM";
+    }
+
+    if (!accKacab) {
+        return "KACAB";
+    }
+
+    if (!accMsmc) {
+        return "MSMC";
+    }
+
+    if (!accManagerH1) {
+        return "MGR_H1";
+    }
+
+    return "SELESAI";
+}
+
+
+function getStatus(row) {
+
+    const savedStatus = textValue(
+        row.status || row.pengajuan
+    ).toUpperCase();
+
+    if (savedStatus.includes("TOLAK")) {
+        return "DITOLAK";
+    }
+
+    const approvalStep = getApprovalStep(row);
+
+    return approvalStep === "SELESAI"
+        ? "ACC"
+        : `MENUNGGU ${approvalStep}`;
+}
+
+
+function mapPkmRecord(row) {
+
+    const branch =
+        normalizeBranch(row.cabang);
+
+    const danaLeasing =
+        numberValue(row.dana_ls);
+
+    const danaMd =
+        numberValue(row.dana_md);
+
+    const danaCsm =
+        numberValue(row.dana_csm);
+
+    const danaLain =
+        numberValue(row.dana_ll);
+
+    const status =
+        getStatus(row);
+
+    const approvalStep =
+        getApprovalStep(row);
+
+    return {
+
+        id:
+            textValue(row.id_pkm),
+
+        name:
+            textValue(row.nama),
+
+        branch:
+            branch,
+
+        branchName:
+            getBranchName(branch),
+
+        type:
+            splitTextValue(row.type_pkm),
+
+        jenisPkm:
+            textValue(row.jenis_pkm),
+
+        kegiatan:
+            textValue(row.jenis_kegiatan),
+
+        startDate:
+            formatDate(row.tanggal_mulai),
+
+        endDate:
+            formatDate(row.tanggal_selesai),
+
+        createdAt:
+            formatDate(row.tanggal_pengajuan),
+
+        location:
+            textValue(row.lokasi),
+
+        kabupaten:
+            textValue(row.kabupaten),
+
+        kecamatan:
+            textValue(row.kecamatan),
+
+        kelurahan:
+            textValue(row.kelurahan),
+
+        alasan:
+            textValue(row.alasan),
+
+        konsep:
+            textValue(row.konsep),
+
+        people:
+            splitTextValue(row.people),
+
+        fokusType:
+            splitTextValue(row.fokus_type),
+
+        programH1:
+            splitTextValue(row.program_h1),
+
+        programH23:
+            splitTextValue(row.program_h23),
+
+        publikasi:
+            splitTextValue(row.publikasi),
+
+        leasing:
+            splitTextValue(row.leasing),
+
+        danaLeasing:
+            danaLeasing,
+
+        danaMd:
+            danaMd,
+
+        danaCsm:
+            danaCsm,
+
+        danaLain:
+            danaLain,
+
+        totalFund:
+            danaLeasing +
+            danaMd +
+            danaCsm +
+            danaLain,
+
+        targetDb:
+            numberValue(row.target_db),
+
+        targetDeal:
+            numberValue(row.target_deal),
+
+        targetUe:
+            numberValue(row.target_ue),
+
+        status:
+            status,
+
+        approvalStep:
+            approvalStep,
+
+        source:
+            textValue(row.source) || "SUPABASE",
+
+        pengajuan:
+            textValue(row.pengajuan),
+
+        approvals: {
+            crm:
+                textValue(row.acc_crm),
+
+            kacab:
+                textValue(row.acc_kacab),
+
+            msmc:
+                textValue(row.acc_msmc),
+
+            managerH1:
+                textValue(row.acc_manager_h1),
+
+            managerH23:
+                textValue(row.acc_manager_h23)
+        },
+
+        pdf:
+            textValue(row.pdf),
+
+        print:
+            textValue(row.print)
+    };
+}
+
+
+function createSummary(records) {
+
+    const pending =
+        records.filter(item =>
+            String(item.status)
+                .startsWith("MENUNGGU")
+        ).length;
+
+    const approved =
+        records.filter(item =>
+            ["ACC", "DISETUJUI"]
+                .includes(item.status)
+        ).length;
+
+    const totalFund =
+        records.reduce(
+            (total, item) =>
+                total + numberValue(item.totalFund),
+            0
+        );
+
+    return {
+        totalSubmission:
+            records.length,
+
+        pendingSubmission:
+            pending,
+
+        approvedSubmission:
+            approved,
+
+        totalFund:
+            totalFund
+    };
+}
+
+
+function createAppliedFilters(query) {
+
+    const startDate =
+        textValue(query.startDate);
+
+    const endDate =
+        textValue(query.endDate);
+
+    const jenisPkm =
+        textValue(query.jenisPkm || "ALL")
+            .toUpperCase();
+
+    let branches = [];
+
+    if (query.branches) {
+
+        branches = String(query.branches)
+            .split(",")
+            .map(normalizeBranch)
+            .filter(Boolean);
+    }
+
+    return {
+        startDate,
+        endDate,
+        jenisPkm,
+        branches
+    };
+}
+
+
+function dateRangesOverlap(
+    eventStart,
+    eventEnd,
+    filterStart,
+    filterEnd
+) {
+
+    if (!filterStart && !filterEnd) {
+        return true;
+    }
+
+    const start =
+        eventStart
+            ? new Date(eventStart)
+            : null;
+
+    const end =
+        eventEnd
+            ? new Date(eventEnd)
+            : start;
+
+    if (!start || Number.isNaN(start.getTime())) {
+        return false;
+    }
+
+    if (!end || Number.isNaN(end.getTime())) {
+        return false;
+    }
+
+    if (filterStart) {
+
+        const filterStartDate =
+            new Date(`${filterStart}T00:00:00`);
+
+        if (end < filterStartDate) {
+            return false;
+        }
+    }
+
+    if (filterEnd) {
+
+        const filterEndDate =
+            new Date(`${filterEnd}T23:59:59`);
+
+        if (start > filterEndDate) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+async function getPkmRows() {
+
+    const pageSize = 1000;
+    const allRows = [];
+
+    let offset = 0;
+
+    while (true) {
+
+        const rows = await supabaseRequest(
+            "/rest/v1/pkm" +
+            "?select=*" +
+            "&order=tanggal_mulai.desc,id.desc" +
+            "&offset=" + offset +
+            "&limit=" + pageSize
+        );
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            break;
+        }
+
+        allRows.push(...rows);
+
+        console.log(
+            `PKM pagination: offset=${offset}, rows=${rows.length}, total=${allRows.length}`
+        );
+
+        if (rows.length < pageSize) {
+            break;
+        }
+
+        offset += pageSize;
+    }
+
+    return allRows;
+}
+
+
+return async function handler(req, res) {
+
+    if (req.method !== "GET") {
+
+        return res.status(405).json({
+            success: false,
+            message: "Method tidak diizinkan."
+        });
+    }
+
+    try {
+
+        const filters =
+            createAppliedFilters(req.query || {});
+
+        const rows =
+            await getPkmRows();
+
+        let records =
+            rows
+                .filter(row => {
+
+                    const branch =
+                        normalizeBranch(row.cabang);
+
+                    /*
+                     * Kalau branches dikirim,
+                     * filter berdasarkan branch.
+                     */
+                    if (
+                        filters.branches.length &&
+                        !filters.branches.includes(branch)
+                    ) {
+                        return false;
+                    }
+
+                    /*
+                     * Filter jenis PKM.
+                     */
+                    const jenisPkm =
+                        textValue(row.jenis_pkm)
+                            .toUpperCase();
+
+                    if (
+                        filters.jenisPkm !== "ALL" &&
+                        jenisPkm !== filters.jenisPkm
+                    ) {
+                        return false;
+                    }
+
+                    /*
+                     * Filter tanggal menggunakan
+                     * tanggal pelaksanaan.
+                     */
+                    return dateRangesOverlap(
+                        row.tanggal_mulai,
+                        row.tanggal_selesai ||
+                            row.tanggal_mulai,
+                        filters.startDate,
+                        filters.endDate
+                    );
+                })
+                .map(mapPkmRecord);
+
+        /*
+         * Pastikan terbaru berada di atas.
+         */
+        records.sort((a, b) => {
+
+            const dateA =
+                new Date(a.startDate || 0).getTime();
+
+            const dateB =
+                new Date(b.startDate || 0).getTime();
+
+            return dateB - dateA;
+        });
+
+
+        /*
+         * Ambil daftar branch dari data PKM.
+         *
+         * Untuk tahap test ini kita tidak memakai
+         * getBranchOptions_() dari GAS.
+         */
+        const branchSet =
+            new Set(
+                rows
+                    .map(row =>
+                        normalizeBranch(row.cabang)
+                    )
+                    .filter(Boolean)
+            );
+
+        const branches =
+            Array.from(branchSet)
+                .sort()
+                .map(code => ({
+                    code,
+                    name: getBranchName(code)
+                }));
+
+
+        const summary =
+            createSummary(records);
+
+
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                "Data PKM berhasil diambil dari Supabase.",
+
+            data: {
+                data: records,
+
+                summary,
+
+                branches,
+
+                isHeadOffice: true,
+
+                appliedFilters:
+                    filters,
+
+                totalRows:
+                    records.length
+            }
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "PKM API ERROR:",
+            error
+        );
+
+        return res.status(
+            error.status || 500
+        ).json({
+
+            success: false,
+
+            message:
+                error.message ||
+                "Gagal mengambil data PKM dari Supabase."
+
+        });
+    }
+}
+})();
+
+// ===== pkmDownload =====
+const pkmDownloadHandler = (() => {
+
+
+
+
+const GOOGLE_SERVICE_ACCOUNT_EMAIL =
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+
+const GOOGLE_PRIVATE_KEY =
+    process.env.GOOGLE_PRIVATE_KEY;
+
+const PKM_DRIVE_FOLDER_ID =
+    process.env.PKM_DRIVE_FOLDER_ID;
+
+
+/*
+|--------------------------------------------------------------------------
+| GOOGLE DRIVE AUTH
+|--------------------------------------------------------------------------
+*/
+
+function getDriveClient() {
+
+    if (
+        !GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+        !GOOGLE_PRIVATE_KEY ||
+        !PKM_DRIVE_FOLDER_ID
+    ) {
+        throw new Error(
+            "Google Drive environment variable belum lengkap."
+        );
+    }
+
+
+    const auth =
+        new google.auth.GoogleAuth({
+
+            credentials: {
+
+                client_email:
+                    GOOGLE_SERVICE_ACCOUNT_EMAIL,
+
+                private_key:
+                    GOOGLE_PRIVATE_KEY.replace(
+                        /\\n/g,
+                        "\n"
+                    )
+            },
+
+            scopes: [
+                "https://www.googleapis.com/auth/drive.readonly"
+            ]
+        });
+
+
+    return google.drive({
+        version: "v3",
+        auth
+    });
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AMBIL DATA PKM
+|--------------------------------------------------------------------------
+*/
+
+async function getPkm(
+    pkmId
+) {
+
+    const rows =
+        await supabaseRequest(
+            "/rest/v1/pkm" +
+            "?select=id_pkm,pdf,print,link" +
+            "&id_pkm=eq." +
+            encodeURIComponent(
+                pkmId
+            ) +
+            "&limit=1"
+        );
+
+
+    if (
+        !rows ||
+        !rows.length
+    ) {
+        return null;
+    }
+
+
+    return rows[0];
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AMBIL NAMA FILE DARI PRINT
+|--------------------------------------------------------------------------
+*/
+
+function getFileNameFromPrint(
+    printPath
+) {
+
+    return String(
+        printPath || ""
+    )
+        .replace(
+            /\\/g,
+            "/"
+        )
+        .split("/")
+        .pop()
+        .trim();
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CARI FILE DI GOOGLE DRIVE
+|--------------------------------------------------------------------------
+*/
+
+async function findDriveFile(
+    drive,
+    fileName
+) {
+
+    const escapedName =
+        String(
+            fileName
+        )
+            .replace(
+                /\\/g,
+                "\\\\"
+            )
+            .replace(
+                /'/g,
+                "\\'"
+            );
+
+
+    const escapedFolder =
+        String(
+            PKM_DRIVE_FOLDER_ID
+        )
+            .replace(
+                /\\/g,
+                "\\\\"
+            )
+            .replace(
+                /'/g,
+                "\\'"
+            );
+
+
+    const result =
+        await drive.files.list({
+
+            q:
+                `'${escapedFolder}' in parents` +
+                ` and name = '${escapedName}'` +
+                ` and trashed = false`,
+
+            fields:
+                "files(id,name,mimeType,modifiedTime)",
+
+            pageSize:
+                20,
+
+            orderBy:
+                "modifiedTime desc"
+        });
+
+
+    return (
+        result.data.files &&
+        result.data.files.length
+            ? result.data.files[0]
+            : null
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| HANDLER
+|--------------------------------------------------------------------------
+*/
+
+return async function handler(
+    req,
+    res
+) {
+
+    try {
+
+        if (
+            req.method !== "GET"
+        ) {
+
+            res.setHeader(
+                "Allow",
+                "GET"
+            );
+
+            return res
+                .status(405)
+                .json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Method tidak diizinkan."
+                });
+        }
+
+
+        const pkmId =
+            String(
+                req.query?.pkmId ||
+                ""
+            ).trim();
+
+
+        if (!pkmId) {
+
+            return res
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
+                    message:
+                        "pkmId wajib diisi."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUPABASE
+        |--------------------------------------------------------------------------
+        */
+
+        const pkm =
+            await getPkm(
+                pkmId
+            );
+
+
+        if (!pkm) {
+
+            return res
+                .status(404)
+                .json({
+
+                    success:
+                        false,
+
+                    found:
+                        false,
+
+                    message:
+                        "Data PKM tidak ditemukan."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LINK SUDAH ADA
+        |--------------------------------------------------------------------------
+        */
+
+        const existingLink =
+            String(
+                pkm.link ||
+                ""
+            ).trim();
+
+
+        if (existingLink) {
+
+            return res
+                .status(200)
+                .json({
+
+                    success:
+                        true,
+
+                    found:
+                        true,
+
+                    source:
+                        "supabase",
+
+                    pkmId:
+                        pkmId,
+
+                    pdfUrl:
+                        existingLink
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PDF LAMA
+        |--------------------------------------------------------------------------
+        */
+
+        const fileName =
+            getFileNameFromPrint(
+                pkm.print
+            );
+
+
+        if (!fileName) {
+
+            return res
+                .status(404)
+                .json({
+
+                    success:
+                        false,
+
+                    found:
+                        false,
+
+                    message:
+                        "Nama file PDF tidak tersedia."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GOOGLE DRIVE
+        |--------------------------------------------------------------------------
+        */
+
+        const drive =
+            getDriveClient();
+
+
+        const driveFile =
+            await findDriveFile(
+                drive,
+                fileName
+            );
+
+
+        if (!driveFile) {
+
+            return res
+                .status(404)
+                .json({
+
+                    success:
+                        false,
+
+                    found:
+                        false,
+
+                    pkmId:
+                        pkmId,
+
+                    fileName:
+                        fileName,
+
+                    message:
+                        "PDF tidak ditemukan di Google Drive."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DRIVE URL
+        |--------------------------------------------------------------------------
+        */
+
+        const driveUrl =
+            "https://drive.google.com/file/d/" +
+            encodeURIComponent(
+                driveFile.id
+            ) +
+            "/view";
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SIMPAN LINK
+        |--------------------------------------------------------------------------
+        */
+
+        await supabaseRequest(
+
+            "/rest/v1/pkm" +
+            "?id_pkm=eq." +
+            encodeURIComponent(
+                pkmId
+            ),
+
+            {
+
+                method:
+                    "PATCH",
+
+                headers: {
+
+                    "Prefer":
+                        "return=minimal"
+                },
+
+                body:
+                    JSON.stringify({
+
+                        link:
+                            driveUrl
+                    })
+            }
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RETURN
+        |--------------------------------------------------------------------------
+        */
+
+        return res
+            .status(200)
+            .json({
+
+                success:
+                    true,
+
+                found:
+                    true,
+
+                source:
+                    "google_drive",
+
+                pkmId:
+                    pkmId,
+
+                fileId:
+                    driveFile.id,
+
+                fileName:
+                    driveFile.name,
+
+                pdfUrl:
+                    driveUrl
+            });
+
+
+    } catch (error) {
+
+        console.error(
+            "PKM DOWNLOAD ERROR:",
+            error
+        );
+
+
+        return res
+            .status(500)
+            .json({
+
+                success:
+                    false,
+
+                message:
+                    error?.message ||
+                    "Gagal mengambil PDF PKM."
+            });
+    }
+}
+})();
+
+// ===== discord =====
+const discordHandler = (() => {
+return async function handler(
+    request,
+    response
+) {
+    if (request.method !== "POST") {
+        return response.status(405).json({
+            success: false,
+            message: "Gunakan method POST."
+        });
+    }
+
+    const receivedSecret =
+        request.headers[
+            "x-discord-notify-secret"
+        ];
+
+    const expectedSecret =
+        process.env
+            .DISCORD_NOTIFY_SECRET;
+
+    if (
+        !expectedSecret ||
+        receivedSecret !== expectedSecret
+    ) {
+        return response.status(401).json({
+            success: false,
+            message: "Akses tidak diizinkan."
+        });
+    }
+
+    const botToken =
+        process.env.DISCORD_BOT_TOKEN;
+
+    if (!botToken) {
+        return response.status(500).json({
+            success: false,
+            message:
+                "DISCORD_BOT_TOKEN belum diatur."
+        });
+    }
+
+    try {
+        let body =
+            request.body || {};
+
+        if (typeof body === "string") {
+            body = JSON.parse(body);
+        }
+
+        const target =
+            String(
+                body.target || ""
+            ).trim().toUpperCase();
+
+        const channelMap = {
+            MSMC:
+                process.env
+                    .DISCORD_CHANNEL_MSMC,
+
+            MGR:
+                process.env
+                    .DISCORD_CHANNEL_MANAGER
+        };
+
+        const channelId =
+            channelMap[target];
+
+        if (!channelId) {
+            return response.status(400).json({
+                success: false,
+                message:
+                    "Target Discord tidak tersedia."
+            });
+        }
+
+        const messageData =
+            body.messageData;
+
+        if (
+            !messageData ||
+            typeof messageData !== "object"
+        ) {
+            return response.status(400).json({
+                success: false,
+                message:
+                    "Isi pesan Discord belum tersedia."
+            });
+        }
+
+        const discordResponse =
+            await fetch(
+                "https://discord.com/api/v10/channels/" +
+                    channelId +
+                    "/messages",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+
+                        Authorization:
+                            "Bot " + botToken
+                    },
+
+                    body:
+                        JSON.stringify(
+                            messageData
+                        )
+                }
+            );
+
+        const responseText =
+            await discordResponse.text();
+
+        let discordResult = null;
+
+        if (responseText) {
+            try {
+                discordResult =
+                    JSON.parse(
+                        responseText
+                    );
+            } catch (error) {
+                discordResult = {
+                    raw: responseText
+                };
+            }
+        }
+
+        if (!discordResponse.ok) {
+            return response
+                .status(discordResponse.status)
+                .json({
+                    success: false,
+
+                    message:
+                        discordResult &&
+                        discordResult.message
+                            ? discordResult.message
+                            : "Discord gagal menerima pesan.",
+
+                    discordCode:
+                        discordResult &&
+                        discordResult.code
+                            ? discordResult.code
+                            : null
+                });
+        }
+
+        return response.status(200).json({
+            success: true,
+
+            result: {
+                messageId:
+                    discordResult.id,
+
+                channelId:
+                    discordResult.channel_id,
+
+                target: target
+            }
+        });
+    } catch (error) {
+        return response.status(500).json({
+            success: false,
+
+            message:
+                error &&
+                error.message
+                    ? error.message
+                    : "Gagal mengirim reminder Discord."
+        });
+    }
+}
+})();
+
+// ===== SINGLE VERCEL FUNCTION ROUTER =====
+function normalizeAction(value) {
+  return String(value || "").trim();
+}
+
+function getRequestAction(req) {
+  const queryAction = normalizeAction(req.query?.action);
+  if (queryAction) return queryAction;
+  const body = typeof req.body === "string" ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body || {});
+  return normalizeAction(body.action);
+}
+
+async function runHandler(handler, req, res) {
+  return handler(req, res);
+}
+
+module.exports = async function handler(req, res) {
+  const action = getRequestAction(req);
+  try {
+    switch (action) {
+      case "login": return await runHandler(authHandler, req, res);
+      case "authMigrate":
+      case "auth-migrate-batch": return await runHandler(authMigrateHandler, req, res);
+      case "gas": return await runHandler(gasHandler, req, res);
+      case "getManagedAccounts": return await runHandler(managedHandler, req, res);
+      case "getMasterData":
+      case "getReferenceMasters": return await runHandler(masterHandler, req, res);
+      case "getSalesmen": return await runHandler(salesmanHandler, req, res);
+      case "getPkmData": return await runHandler(pkmHandler, req, res);
+      case "getPkmPdfData":
+      case "pkmDownload": return await runHandler(pkmDownloadHandler, req, res);
+      case "discord": return await runHandler(discordHandler, req, res);
+      default:
+        return res.status(400).json({ success: false, message: `Unknown backend action: ${action || "(empty)"}` });
+    }
+  } catch (error) {
+    console.error("[BACKEND] UNHANDLED ERROR", action, error);
+    return res.status(error?.status || 500).json({ success: false, message: error?.message || "Backend error." });
+  }
+};

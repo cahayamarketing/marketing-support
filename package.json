@@ -18,6 +18,9 @@
     "url": "https://github.com/cahayamarketing/marketing-support/issues"
   },
   "homepage": "https://github.com/cahayamarketing/marketing-support#readme",
+  "engines": {
+      "node": "22.x"
+  },
   "dependencies": {
     "googleapis": "^183.0.0"
   }

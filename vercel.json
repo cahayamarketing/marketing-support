@@ -1,0 +1,40 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/auth",
+      "destination": "/api/backend?action=login"
+    },
+    {
+      "source": "/api/auth-migrate-batch",
+      "destination": "/api/backend?action=authMigrate"
+    },
+    {
+      "source": "/api/gas",
+      "destination": "/api/backend?action=gas"
+    },
+    {
+      "source": "/api/managed-account",
+      "destination": "/api/backend?action=getManagedAccounts"
+    },
+    {
+      "source": "/api/master",
+      "destination": "/api/backend?action=getMasterData"
+    },
+    {
+      "source": "/api/salesman",
+      "destination": "/api/backend?action=getSalesmen"
+    },
+    {
+      "source": "/api/pkm",
+      "destination": "/api/backend?action=getPkmData"
+    },
+    {
+      "source": "/api/pkm-download",
+      "destination": "/api/backend?action=pkmDownload"
+    },
+    {
+      "source": "/api/discord",
+      "destination": "/api/backend?action=discord"
+    }
+  ]
+}

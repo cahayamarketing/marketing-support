@@ -1550,6 +1550,28 @@ async function requestBackend(
             };
         }
 
+        if (action === "getPkmPdfData") {
+
+            const params =
+                new URLSearchParams();
+
+            if (payload.pkmId) {
+                params.set(
+                    "pkmId",
+                    payload.pkmId
+                );
+            }
+
+            apiUrl =
+                `/api/pkm-download?${params.toString()}`;
+
+            fetchOptions = {
+                method: "GET",
+                signal: controller.signal,
+                cache: "no-store"
+            };
+        }
+
 
         const response = await fetch(
             apiUrl,
