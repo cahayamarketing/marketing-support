@@ -10863,6 +10863,13 @@ async function approvePkmWithSignature() {
             pkmId:
                 item.id,
 
+            userNik:
+                String(
+                    currentUser?.nik ||
+                    currentUser?.id ||
+                    ""
+                ).trim(),
+
             signatureMode:
                 approvalSignatureMode,
 

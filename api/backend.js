@@ -5562,7 +5562,10 @@ async function getApprovalUser(requestBody) {
 
     const requestedNik =
         String(
-            requestBody?.userNik || ""
+            requestBody?.userNik ||
+            requestBody?.payload?.userNik ||
+            requestBody?.payload?.nik ||
+            ""
         ).trim();
 
     if (!token) {
