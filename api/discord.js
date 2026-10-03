@@ -1,175 +1,113 @@
-export default async function handler(
-    request,
-    response
-) {
-    if (request.method !== "POST") {
-        return response.status(405).json({
-            success: false,
-            message: "Gunakan method POST."
-        });
-    }
+import { google } from "googleapis";
 
-    const receivedSecret =
-        request.headers[
-            "x-discord-notify-secret"
-        ];
+const GOOGLE_SERVICE_ACCOUNT_EMAIL =
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 
-    const expectedSecret =
-        process.env
-            .DISCORD_NOTIFY_SECRET;
+const GOOGLE_PRIVATE_KEY =
+    process.env.GOOGLE_PRIVATE_KEY;
 
+const PKM_DRIVE_FOLDER_ID =
+    process.env.PKM_DRIVE_FOLDER_ID;
+
+function getDriveClient() {
     if (
-        !expectedSecret ||
-        receivedSecret !== expectedSecret
+        !GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+        !GOOGLE_PRIVATE_KEY ||
+        !PKM_DRIVE_FOLDER_ID
     ) {
-        return response.status(401).json({
-            success: false,
-            message: "Akses tidak diizinkan."
-        });
+        throw new Error(
+            "Environment variable Google Drive belum lengkap."
+        );
     }
 
-    const botToken =
-        process.env.DISCORD_BOT_TOKEN;
+    const auth = new google.auth.GoogleAuth({
+        credentials: {
+            client_email:
+                GOOGLE_SERVICE_ACCOUNT_EMAIL,
 
-    if (!botToken) {
-        return response.status(500).json({
-            success: false,
-            message:
-                "DISCORD_BOT_TOKEN belum diatur."
-        });
-    }
+            private_key:
+                GOOGLE_PRIVATE_KEY.replace(
+                    /\\n/g,
+                    "\n"
+                )
+        },
 
+        scopes: [
+            "https://www.googleapis.com/auth/drive.readonly"
+        ]
+    });
+
+    return google.drive({
+        version: "v3",
+        auth
+    });
+}
+
+export default async function handler(req, res) {
     try {
-        let body =
-            request.body || {};
-
-        if (typeof body === "string") {
-            body = JSON.parse(body);
-        }
-
-        const target =
-            String(
-                body.target || ""
-            ).trim().toUpperCase();
-
-        const channelMap = {
-            MSMC:
-                process.env
-                    .DISCORD_CHANNEL_MSMC,
-
-            MGR:
-                process.env
-                    .DISCORD_CHANNEL_MANAGER
-        };
-
-        const channelId =
-            channelMap[target];
-
-        if (!channelId) {
-            return response.status(400).json({
+        if (req.method !== "GET") {
+            return res.status(405).json({
                 success: false,
-                message:
-                    "Target Discord tidak tersedia."
+                message: "Gunakan GET."
             });
         }
 
-        const messageData =
-            body.messageData;
+        const drive = getDriveClient();
 
-        if (
-            !messageData ||
-            typeof messageData !== "object"
-        ) {
-            return response.status(400).json({
-                success: false,
-                message:
-                    "Isi pesan Discord belum tersedia."
+        const result =
+            await drive.files.list({
+                q:
+                    `'${PKM_DRIVE_FOLDER_ID}' in parents` +
+                    ` and trashed = false`,
+
+                fields:
+                    "files(id,name,mimeType,size,modifiedTime,parents,webViewLink)",
+
+                pageSize: 1000,
+
+                orderBy:
+                    "modifiedTime desc"
             });
-        }
 
-        const discordResponse =
-            await fetch(
-                "https://discord.com/api/v10/channels/" +
-                    channelId +
-                    "/messages",
-                {
-                    method: "POST",
+        const files =
+            result.data.files || [];
 
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-
-                        Authorization:
-                            "Bot " + botToken
-                    },
-
-                    body:
-                        JSON.stringify(
-                            messageData
-                        )
-                }
-            );
-
-        const responseText =
-            await discordResponse.text();
-
-        let discordResult = null;
-
-        if (responseText) {
-            try {
-                discordResult =
-                    JSON.parse(
-                        responseText
-                    );
-            } catch (error) {
-                discordResult = {
-                    raw: responseText
-                };
-            }
-        }
-
-        if (!discordResponse.ok) {
-            return response
-                .status(discordResponse.status)
-                .json({
-                    success: false,
-
-                    message:
-                        discordResult &&
-                        discordResult.message
-                            ? discordResult.message
-                            : "Discord gagal menerima pesan.",
-
-                    discordCode:
-                        discordResult &&
-                        discordResult.code
-                            ? discordResult.code
-                            : null
-                });
-        }
-
-        return response.status(200).json({
+        return res.status(200).json({
             success: true,
 
-            result: {
-                messageId:
-                    discordResult.id,
+            folderId:
+                PKM_DRIVE_FOLDER_ID,
 
-                channelId:
-                    discordResult.channel_id,
+            total:
+                files.length,
 
-                target: target
-            }
+            files:
+                files.map(file => ({
+                    id: file.id,
+                    name: file.name,
+                    mimeType: file.mimeType,
+                    size: file.size || null,
+                    modifiedTime:
+                        file.modifiedTime || null,
+                    parents:
+                        file.parents || [],
+                    webViewLink:
+                        file.webViewLink || null
+                }))
         });
-    } catch (error) {
-        return response.status(500).json({
-            success: false,
 
-            message:
-                error &&
-                error.message
-                    ? error.message
-                    : "Gagal mengirim reminder Discord."
+    } catch (error) {
+
+        console.error(
+            "[TEST DRIVE FOLDER ERROR]",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            error:
+                error?.message ||
+                "Gagal membaca folder Google Drive."
         });
     }
 }
