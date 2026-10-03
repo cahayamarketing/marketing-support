@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "csm-marketing-support-drive",
+  "private_key_id": "ba036c1a4a906db079fa95197960f1b993d647fe",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCrAFCbp2+lO9+o\nNKyYmcnQG5g8kqp3uIkm4akUYcP8uYKFxeY163Tk4S4vVrVg+z0uSgtL+C0uXZnU\nTPWLhqIUbSuOT8K2jx9KP4tJlF/hsZcA0FRt1fk+mwCRM+HRinvJ/XxSxeoZz5IH\nlJsYRuE1yAOcoXneL0Fmk4r2EWGlXzqe+Bv46eG8P/etC6UwyZN1802uS0SNMkSO\nbUTAgsfjHHOnoThjRQ9UvsRmV/QCy3mVdeZO8sLBidSalH3Z7Q8iajIjlFDNKHKT\nhYBGH6nnSq0Mue09aXbxy4Mb1gtGApMZEJ/DTqiGcn4+GQypxHvbJRjd6mz5d5du\nm2BhmoVrAgMBAAECggEAAMlkFYs8JsDzQvVXE+6lMIln9mNgWGOncd/Y5MicW7XI\nxW/HItld9M2aZkpaVENjoSpjCeru3kc89W6TNJyec0SbTjDMvwVCihdnvyNpG4Mz\nJCRRNx4kYubYplJcSBgAgMnjQAg8DvlW/STwX7i3wYUViyttAZorDVtBaOdkkRuw\nnh8yELsfiszngNWF/fW7DqW6HQjqA+7pmbIS4rv0IUAHOo5p2lTGqevzlV3K0GJn\ndFDO81dhGg34YUtMdW4FaqofbHIXhsxt8wKZnErDGUSDsurLebvvIuuMp3TzoWoe\n3B9g18+QOkS72vN+vwlmHBlir46pJq8v9ts4PjI9uQKBgQDeP5OfRt0GxNOBguvU\nHIQedSkqzLiMV+LGF8QByZZjIlHWsl30xRFBYkIgwhNBSUdkWknBbPeEcDkeXlOp\n58OGKGr5cLrAwvYOmFYWpRbQPO4u1iv/Oy5xUFU+kPWzcJ41dP3kH/I+NoDps9RQ\nQAfTNjYx23YxWDB9WqZQXNgk6QKBgQDE+GMN87HFYS44Zzxop9LQzuBqaCFS3zB5\nRvbiVOJR5nENY/Kti9ZovOV/SRjRJFDZm77PbBpIkBYuKCXd8OfcdDtujsAdFNkG\nof02xoCqF19+RWs1TrmlYgwRl4XXT3KROpWFj3yl5CRroHjJjAB2IA4ToqMuLRcA\nkXdQMjLzMwKBgQCUosRhw4zSmBQ0C5EY3LFnhUew/hV2lthtTzuhTmariipdghDg\nQGPX7JT5P5KNGSsL7G5jVDL9eehZbRBbE0tqj+FrTX84p6rT/AGnR2XIgtdwr3/h\nRH08/1LjcyM/jNPiQIoEZXEnNmBk7AXUXd5d3WXFVlbnjWlwjI2qNU3A8QKBgQCb\niJ9/Ft1bRJ+gvjQ/V7XqWFFw9ITL0Z2PRnAQzIJhtZuzvSaVz4Qg9HgsCGZmT0zg\naFFFrNEcV1qMW/t6w43y0H1Vkbc1v46X5DX0mM5kgUxQgzRixaVmaIOrKIDxQbTv\n5NjIvELrI7l2myKF091RaYJ0EsrT3Zr6QeN7GgiNbQKBgGGZr+ctbvtRi1AhxkHc\nrVDQ1tdxtMSX5H3Ya9usEI35m86m80fIjic1Iu3O1hzOBafiEJ9VEEZYd2/KWg3J\nj5qTTUmiYPo3wx9wkM7WhUOSRRuTxrYVjjcgehxrzvICLingpUd4it98Ta8XNffg\nSSMp4EeoW36Qo38VbrSlt2G5\n-----END PRIVATE KEY-----\n",
+  "client_email": "csm-drive-reader@csm-marketing-support-drive.iam.gserviceaccount.com",
+  "client_id": "107766797430749910606",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/csm-drive-reader%40csm-marketing-support-drive.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

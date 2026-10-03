@@ -1,0 +1,24 @@
+{
+  "name": "website-pkm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "api.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cahayamarketing/marketing-support.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/cahayamarketing/marketing-support/issues"
+  },
+  "homepage": "https://github.com/cahayamarketing/marketing-support#readme",
+  "dependencies": {
+    "googleapis": "^183.0.0"
+  }
+}

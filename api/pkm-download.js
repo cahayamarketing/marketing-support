@@ -1,163 +1,485 @@
+"use strict";
+
+import { supabaseRequest } from "../src/backend/supabase.js";
+import { google } from "googleapis";
+
+
+const GOOGLE_SERVICE_ACCOUNT_EMAIL =
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+
+const GOOGLE_PRIVATE_KEY =
+    process.env.GOOGLE_PRIVATE_KEY;
+
+const PKM_DRIVE_FOLDER_ID =
+    process.env.PKM_DRIVE_FOLDER_ID;
+
+
+/*
+|--------------------------------------------------------------------------
+| GOOGLE DRIVE AUTH
+|--------------------------------------------------------------------------
+*/
+
+function getDriveClient() {
+
+    if (
+        !GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+        !GOOGLE_PRIVATE_KEY ||
+        !PKM_DRIVE_FOLDER_ID
+    ) {
+        throw new Error(
+            "Google Drive environment variable belum lengkap."
+        );
+    }
+
+
+    const auth =
+        new google.auth.GoogleAuth({
+
+            credentials: {
+
+                client_email:
+                    GOOGLE_SERVICE_ACCOUNT_EMAIL,
+
+                private_key:
+                    GOOGLE_PRIVATE_KEY.replace(
+                        /\\n/g,
+                        "\n"
+                    )
+            },
+
+            scopes: [
+                "https://www.googleapis.com/auth/drive.readonly"
+            ]
+        });
+
+
+    return google.drive({
+        version: "v3",
+        auth
+    });
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AMBIL DATA PKM
+|--------------------------------------------------------------------------
+*/
+
+async function getPkm(
+    pkmId
+) {
+
+    const rows =
+        await supabaseRequest(
+            "/rest/v1/pkm" +
+            "?select=id_pkm,pdf,print,link" +
+            "&id_pkm=eq." +
+            encodeURIComponent(
+                pkmId
+            ) +
+            "&limit=1"
+        );
+
+
+    if (
+        !rows ||
+        !rows.length
+    ) {
+        return null;
+    }
+
+
+    return rows[0];
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AMBIL NAMA FILE DARI PRINT
+|--------------------------------------------------------------------------
+*/
+
+function getFileNameFromPrint(
+    printPath
+) {
+
+    return String(
+        printPath || ""
+    )
+        .replace(
+            /\\/g,
+            "/"
+        )
+        .split("/")
+        .pop()
+        .trim();
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CARI FILE DI GOOGLE DRIVE
+|--------------------------------------------------------------------------
+*/
+
+async function findDriveFile(
+    drive,
+    fileName
+) {
+
+    const escapedName =
+        String(
+            fileName
+        )
+            .replace(
+                /\\/g,
+                "\\\\"
+            )
+            .replace(
+                /'/g,
+                "\\'"
+            );
+
+
+    const escapedFolder =
+        String(
+            PKM_DRIVE_FOLDER_ID
+        )
+            .replace(
+                /\\/g,
+                "\\\\"
+            )
+            .replace(
+                /'/g,
+                "\\'"
+            );
+
+
+    const result =
+        await drive.files.list({
+
+            q:
+                `'${escapedFolder}' in parents` +
+                ` and name = '${escapedName}'` +
+                ` and trashed = false`,
+
+            fields:
+                "files(id,name,mimeType,modifiedTime)",
+
+            pageSize:
+                20,
+
+            orderBy:
+                "modifiedTime desc"
+        });
+
+
+    return (
+        result.data.files &&
+        result.data.files.length
+            ? result.data.files[0]
+            : null
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| HANDLER
+|--------------------------------------------------------------------------
+*/
+
 export default async function handler(
     req,
     res
 ) {
-    if (
-        req.method !== "GET"
-    ) {
-        res.setHeader(
-            "Allow",
-            "GET"
-        );
-
-        return res
-            .status(405)
-            .json({
-                success:
-                    false,
-
-                message:
-                    "Method tidak diizinkan."
-            });
-    }
-
-    const downloadToken =
-        String(
-            req.query.token || ""
-        ).trim();
-
-    if (!downloadToken) {
-        return res
-            .status(400)
-            .send(
-                "Token download tidak tersedia."
-            );
-    }
-
-    const gasUrl =
-        process.env
-            .GAS_WEB_APP_URL;
-
-    if (!gasUrl) {
-        return res
-            .status(500)
-            .send(
-                "GAS_WEB_APP_URL belum dikonfigurasi."
-            );
-    }
 
     try {
-        const gasResponse =
-            await fetch(
-                gasUrl,
-                {
-                    method:
-                        "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:
-                        JSON.stringify({
-                            action:
-                                "getPkmPdfDownload",
-
-                            token:
-                                "",
-
-                            payload: {
-                                downloadToken:
-                                    downloadToken
-                            }
-                        })
-                }
-            );
-
-        const gasResult =
-            await gasResponse.json();
 
         if (
-            !gasResult ||
-            gasResult.success !==
-            true
+            req.method !== "GET"
         ) {
-            throw new Error(
-                gasResult &&
-                gasResult.message
-                    ? gasResult.message
-                    : "PDF tidak dapat diambil."
+
+            res.setHeader(
+                "Allow",
+                "GET"
             );
+
+            return res
+                .status(405)
+                .json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Method tidak diizinkan."
+                });
         }
 
-        const data =
-            gasResult.result;
 
-        if (
-            !data ||
-            !data.pdfBase64
-        ) {
-            throw new Error(
-                "Data PDF kosong."
-            );
+        const pkmId =
+            String(
+                req.query?.pkmId ||
+                ""
+            ).trim();
+
+
+        if (!pkmId) {
+
+            return res
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
+                    message:
+                        "pkmId wajib diisi."
+                });
         }
 
-        const pdfBuffer =
-            Buffer.from(
-                data.pdfBase64,
-                "base64"
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUPABASE
+        |--------------------------------------------------------------------------
+        */
+
+        const pkm =
+            await getPkm(
+                pkmId
             );
+
+
+        if (!pkm) {
+
+            return res
+                .status(404)
+                .json({
+
+                    success:
+                        false,
+
+                    found:
+                        false,
+
+                    message:
+                        "Data PKM tidak ditemukan."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LINK SUDAH ADA
+        |--------------------------------------------------------------------------
+        */
+
+        const existingLink =
+            String(
+                pkm.link ||
+                ""
+            ).trim();
+
+
+        if (existingLink) {
+
+            return res
+                .status(200)
+                .json({
+
+                    success:
+                        true,
+
+                    found:
+                        true,
+
+                    source:
+                        "supabase",
+
+                    pkmId:
+                        pkmId,
+
+                    pdfUrl:
+                        existingLink
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PDF LAMA
+        |--------------------------------------------------------------------------
+        */
 
         const fileName =
-            String(
-                data.fileName ||
-                "PKM.pdf"
-            )
-                .replace(
-                    /["\r\n]/g,
-                    ""
-                );
+            getFileNameFromPrint(
+                pkm.print
+            );
 
-        res.setHeader(
-            "Content-Type",
-            "application/pdf"
+
+        if (!fileName) {
+
+            return res
+                .status(404)
+                .json({
+
+                    success:
+                        false,
+
+                    found:
+                        false,
+
+                    message:
+                        "Nama file PDF tidak tersedia."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GOOGLE DRIVE
+        |--------------------------------------------------------------------------
+        */
+
+        const drive =
+            getDriveClient();
+
+
+        const driveFile =
+            await findDriveFile(
+                drive,
+                fileName
+            );
+
+
+        if (!driveFile) {
+
+            return res
+                .status(404)
+                .json({
+
+                    success:
+                        false,
+
+                    found:
+                        false,
+
+                    pkmId:
+                        pkmId,
+
+                    fileName:
+                        fileName,
+
+                    message:
+                        "PDF tidak ditemukan di Google Drive."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DRIVE URL
+        |--------------------------------------------------------------------------
+        */
+
+        const driveUrl =
+            "https://drive.google.com/file/d/" +
+            encodeURIComponent(
+                driveFile.id
+            ) +
+            "/view";
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SIMPAN LINK
+        |--------------------------------------------------------------------------
+        */
+
+        await supabaseRequest(
+
+            "/rest/v1/pkm" +
+            "?id_pkm=eq." +
+            encodeURIComponent(
+                pkmId
+            ),
+
+            {
+
+                method:
+                    "PATCH",
+
+                headers: {
+
+                    "Prefer":
+                        "return=minimal"
+                },
+
+                body:
+                    JSON.stringify({
+
+                        link:
+                            driveUrl
+                    })
+            }
         );
 
-        res.setHeader(
-            "Content-Disposition",
-            `attachment; filename="${fileName}"`
-        );
 
-        res.setHeader(
-            "Content-Length",
-            pdfBuffer.length
-        );
-
-        res.setHeader(
-            "Cache-Control",
-            "private, no-store"
-        );
+        /*
+        |--------------------------------------------------------------------------
+        | RETURN
+        |--------------------------------------------------------------------------
+        */
 
         return res
             .status(200)
-            .send(
-                pdfBuffer
-            );
+            .json({
+
+                success:
+                    true,
+
+                found:
+                    true,
+
+                source:
+                    "google_drive",
+
+                pkmId:
+                    pkmId,
+
+                fileId:
+                    driveFile.id,
+
+                fileName:
+                    driveFile.name,
+
+                pdfUrl:
+                    driveUrl
+            });
+
 
     } catch (error) {
+
         console.error(
             "PKM DOWNLOAD ERROR:",
             error
         );
 
+
         return res
-            .status(400)
-            .send(
-                error &&
-                error.message
-                    ? error.message
-                    : "PDF gagal diunduh."
-            );
+            .status(500)
+            .json({
+
+                success:
+                    false,
+
+                message:
+                    error?.message ||
+                    "Gagal mengambil PDF PKM."
+            });
     }
 }

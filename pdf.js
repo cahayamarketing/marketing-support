@@ -1387,6 +1387,7 @@ async function downloadStoredPkmPdf(
         : "";
 
     try {
+
         if (button) {
             button.disabled = true;
 
@@ -1398,18 +1399,58 @@ async function downloadStoredPkmPdf(
             `;
         }
 
-        const result = await requestBackend(
-            "getPkmPdfFile",
-            {
-                pkmId: pkmId
-            }
-        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | LANGSUNG KE VERCEL
+        |--------------------------------------------------------------------------
+        |
+        | Tidak melalui Apps Script.
+        |
+        */
+
+        const response =
+            await fetch(
+                `/api/pkm-download?pkmId=${encodeURIComponent(
+                    pkmId
+                )}`,
+                {
+                    method: "GET",
+
+                    cache: "no-store"
+                }
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | BACA RESPONSE
+        |--------------------------------------------------------------------------
+        */
+
+        let result = null;
+
+        try {
+            result =
+                await response.json();
+        } catch (error) {
+            result = null;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ERROR
+        |--------------------------------------------------------------------------
+        */
 
         if (
+            !response.ok ||
             !result ||
             result.found === false ||
-            !result.pdfBase64
+            !result.pdfUrl
         ) {
+
             const notFoundError =
                 new Error(
                     result?.message ||
@@ -1422,56 +1463,44 @@ async function downloadStoredPkmPdf(
             throw notFoundError;
         }
 
-        const binaryString = atob(
-            result.pdfBase64
+
+        /*
+        |--------------------------------------------------------------------------
+        | BUKA GOOGLE DRIVE
+        |--------------------------------------------------------------------------
+        */
+
+        console.log(
+            "[PDF] Membuka Google Drive:",
+            result.pdfUrl
         );
 
-        const bytes = new Uint8Array(
-            binaryString.length
+        console.log(
+            "[PDF] Source:",
+            result.source
         );
 
-        for (
-            let index = 0;
-            index < binaryString.length;
-            index += 1
-        ) {
-            bytes[index] =
-                binaryString.charCodeAt(index);
-        }
 
-        const blob = new Blob(
-            [bytes],
-            {
-                type: "application/pdf"
-            }
+        window.open(
+            result.pdfUrl,
+            "_blank",
+            "noopener,noreferrer"
         );
 
-        const downloadUrl =
-            URL.createObjectURL(blob);
-
-        const anchor =
-            document.createElement("a");
-
-        anchor.href = downloadUrl;
-        anchor.download =
-            result.fileName ||
-            pkmId + ".pdf";
-
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-
-        URL.revokeObjectURL(downloadUrl);
     } catch (error) {
+
         console.error(
             "Download PDF gagal:",
             error
         );
 
         throw error;
+
     } finally {
+
         if (button) {
             button.disabled = false;
+
             button.innerHTML =
                 originalContent;
         }

@@ -2290,6 +2290,111 @@ export default async function handler(
                 });
         }
 
+        /* ================================================================
+        PKM PDF → SUPABASE
+        PDF tetap berada di GOOGLE DRIVE.
+        Supabase hanya menyimpan URL PDF.
+        ================================================================ */
+
+        if (
+            requestBody.action ===
+            "getPkmPdfFile"
+        ) {
+            try {
+
+                const payload =
+                    requestBody.payload ||
+                    {};
+
+                const pkmId =
+                    String(
+                        payload.pkmId ||
+                        ""
+                    ).trim();
+
+                if (!pkmId) {
+                    return response
+                        .status(400)
+                        .json({
+                            success: false,
+                            message:
+                                "ID PKM tidak tersedia."
+                        });
+                }
+
+                const rows =
+                    await supabaseRequest(
+                        "/rest/v1/pkm" +
+                        "?select=id_pkm,pdf" +
+                        "&id_pkm=eq." +
+                        encodeURIComponent(pkmId) +
+                        "&limit=1"
+                    );
+
+                const row =
+                    Array.isArray(rows)
+                        ? rows[0]
+                        : null;
+
+                if (!row) {
+                    return response
+                        .status(404)
+                        .json({
+                            success: false,
+                            found: false,
+                            message:
+                                "Data PKM tidak ditemukan."
+                        });
+                }
+
+                const pdfUrl =
+                    String(
+                        row.pdf ||
+                        ""
+                    ).trim();
+
+                if (!pdfUrl) {
+                    return response
+                        .status(200)
+                        .json({
+                            success: true,
+                            found: false,
+                            message:
+                                "PDF belum tersedia."
+                        });
+                }
+
+                return response
+                    .status(200)
+                    .json({
+                        success: true,
+                        found: true,
+                        pdfUrl: pdfUrl,
+                        pkmId: pkmId
+                    });
+
+            } catch (error) {
+
+                console.error(
+                    "[VERCEL] GET PKM PDF ERROR",
+                    traceId,
+                    error
+                );
+
+                return response
+                    .status(
+                        error.status ||
+                        500
+                    )
+                    .json({
+                        success: false,
+                        message:
+                            error.message ||
+                            "Gagal mengambil link PDF."
+                    });
+            }
+        }
+
 
         /*
         |--------------------------------------------------------------------------
