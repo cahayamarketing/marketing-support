@@ -2336,7 +2336,9 @@ return async function handler(
                         "target_deal",
                         "target_ue",
                         "status",
-                        "acc_manager_h1"
+                        "acc_manager_h1",
+                        "acc_koordinator_h23",
+                        "acc_manager_h23"
                     ].join(",") +
                     "&order=tanggal_mulai.desc"
                 );
@@ -4182,13 +4184,10 @@ function getBranchName(branch) {
  */
 function getApprovalStep(row) {
 
-    const typePkm = textValue(row.type_pkm)
-        .replace(/\s+/g, "")
-        .toUpperCase();
-
-    const needsPicH23 =
-        typePkm === "H23" ||
-        typePkm === "H123";
+    const typePkm =
+        textValue(row.type_pkm)
+            .replace(/\s+/g, "")
+            .toUpperCase();
 
     const accCrm =
         textValue(row.acc_crm);
@@ -4199,58 +4198,99 @@ function getApprovalStep(row) {
     const accMsmc =
         textValue(row.acc_msmc);
 
+    const accKoordinatorH23 =
+        textValue(row.acc_koordinator_h23);
+
     const accManagerH1 =
         textValue(row.acc_manager_h1);
 
     const accManagerH23 =
         textValue(row.acc_manager_h23);
 
-    /*
-     * H23 / H123
-     */
-    if (needsPicH23) {
-
-        if (!accCrm) {
-            return "CRM";
-        }
-
-        if (!accKacab) {
-            return "KACAB";
-        }
-
-        if (!accMsmc) {
-            return "MSMC";
-        }
-
-        if (!accManagerH23) {
-            return "MGR_H23";
-        }
-
-        return "SELESAI";
-    }
 
     /*
-     * H1
-     */
+    |--------------------------------------------------------------------------
+    | STEP 1 — CRM
+    |--------------------------------------------------------------------------
+    */
+
     if (!accCrm) {
         return "CRM";
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 2 — KACAB
+    |--------------------------------------------------------------------------
+    */
 
     if (!accKacab) {
         return "KACAB";
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 3 — MSMC
+    |--------------------------------------------------------------------------
+    */
+
     if (!accMsmc) {
         return "MSMC";
     }
 
-    if (!accManagerH1) {
-        return "MGR_H1";
+
+    /*
+    |--------------------------------------------------------------------------
+    | H23 / H123
+    |--------------------------------------------------------------------------
+    | Setelah MSMC harus melalui Koordinator H23.
+    */
+
+    if (
+        typePkm === "H23" ||
+        typePkm === "H123"
+    ) {
+
+        if (!accKoordinatorH23) {
+            return "PIC_H23";
+        }
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MANAGER
+    |--------------------------------------------------------------------------
+    */
+
+    if (typePkm === "H23") {
+
+        if (!accManagerH23) {
+            return "MGR_H23";
+        }
+
+    } else {
+
+        /*
+        | H1 dan H123 berakhir di Manager H1
+        */
+
+        if (!accManagerH1) {
+            return "MGR_H1";
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELESAI
+    |--------------------------------------------------------------------------
+    */
 
     return "SELESAI";
 }
-
 
 function getStatus(row) {
 
@@ -4409,6 +4449,9 @@ function mapPkmRecord(row) {
 
             msmc:
                 textValue(row.acc_msmc),
+
+            koordinatorH23:
+                textValue(row.acc_koordinator_h23),
 
             managerH1:
                 textValue(row.acc_manager_h1),
@@ -5405,6 +5448,816 @@ return async function handler(
 }
 })();
 
+
+// ============================================================
+// PKM APPROVAL HANDLER
+// ROLE SISTEM:
+// CRM
+// KACAB
+// MSMC
+// PIC_H23
+// MGR_H1
+// MGR_H23
+//
+// CATATAN:
+// PIC_H23 = ROLE SISTEM
+// acc_koordinator_h23 = KOLOM DATABASE
+// ============================================================
+
+function normalizeApprovalRole(value) {
+    const role = String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, "_");
+
+    if (role.includes("CRM")) {
+        return "CRM";
+    }
+
+    if (role === "PIC_H23") {
+        return "PIC_H23";
+    }
+
+    return role;
+}
+
+
+function getApprovalColumn(role) {
+    const map = {
+        CRM: "acc_crm",
+        KACAB: "acc_kacab",
+        MSMC: "acc_msmc",
+        PIC_H23: "acc_koordinator_h23",
+        MGR_H1: "acc_manager_h1",
+        MGR_H23: "acc_manager_h23"
+    };
+
+    return map[role] || null;
+}
+
+
+function getApprovalDateColumn(role) {
+    const map = {
+        CRM: "tgl_acc_crm",
+        KACAB: "tgl_acc_kacab",
+        MSMC: "tgl_acc_msmc",
+
+        // ROLE SISTEM = PIC_H23
+        // KOLOM DATABASE = tgl_acc_koordinator_h23
+        PIC_H23: "tgl_acc_koordinator_h23",
+
+        MGR_H1: "tgl_acc_manager_h1",
+        MGR_H23: "tgl_acc_manager_h23"
+    };
+
+    return map[role] || null;
+}
+
+
+function getApprovalRoleFromUser(user) {
+
+    const candidates = [
+        user?.approval_role,
+        user?.role_pkm,
+        user?.role,
+        user?.jabatan,
+        user?.jab
+    ];
+
+    for (const candidate of candidates) {
+
+        const role =
+            normalizeApprovalRole(candidate);
+
+        if (
+            [
+                "CRM",
+                "KACAB",
+                "MSMC",
+                "PIC_H23",
+                "MGR_H1",
+                "MGR_H23"
+            ].includes(role)
+        ) {
+            return role;
+        }
+    }
+
+    return "";
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AUTH USER UNTUK APPROVAL
+|--------------------------------------------------------------------------
+*/
+
+async function getApprovalUser(requestBody) {
+
+    const token =
+        String(
+            requestBody?.token || ""
+        ).trim();
+
+    const requestedNik =
+        String(
+            requestBody?.userNik || ""
+        ).trim();
+
+    if (!token) {
+
+        const error =
+            new Error(
+                "Session token tidak ditemukan."
+            );
+
+        error.status = 401;
+
+        throw error;
+    }
+
+    if (!requestedNik) {
+
+        const error =
+            new Error(
+                "NIK user tidak ditemukan."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+    const rows =
+        await supabaseRequest(
+            "/rest/v1/salesman" +
+            "?select=*" +
+            "&nik=eq." +
+            encodeURIComponent(
+                requestedNik
+            ) +
+            "&limit=1"
+        );
+
+    if (
+        !Array.isArray(rows) ||
+        !rows.length
+    ) {
+
+        const error =
+            new Error(
+                "Data user tidak ditemukan."
+            );
+
+        error.status = 404;
+
+        throw error;
+    }
+
+    return rows[0];
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| HITUNG STEP APPROVAL
+|--------------------------------------------------------------------------
+*/
+
+function getPkmApprovalState(row) {
+
+    const typePkm =
+        String(
+            row.type_pkm ||
+            row.jenis_pkm ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const accCrm =
+        String(
+            row.acc_crm || ""
+        ).trim();
+
+    const accKacab =
+        String(
+            row.acc_kacab || ""
+        ).trim();
+
+    const accMsmc =
+        String(
+            row.acc_msmc || ""
+        ).trim();
+
+    const accKoordinatorH23 =
+        String(
+            row.acc_koordinator_h23 || ""
+        ).trim();
+
+    const accManagerH1 =
+        String(
+            row.acc_manager_h1 || ""
+        ).trim();
+
+    const accManagerH23 =
+        String(
+            row.acc_manager_h23 || ""
+        ).trim();
+
+
+    if (!accCrm) {
+
+        return {
+            currentRole: "CRM",
+            column: "acc_crm",
+            final: false
+        };
+    }
+
+
+    if (!accKacab) {
+
+        return {
+            currentRole: "KACAB",
+            column: "acc_kacab",
+            final: false
+        };
+    }
+
+
+    if (!accMsmc) {
+
+        return {
+            currentRole: "MSMC",
+            column: "acc_msmc",
+            final: false
+        };
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | H23 / H123
+    |
+    | ROLE SISTEM = PIC_H23
+    | DATABASE     = acc_koordinator_h23
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        typePkm === "H23" ||
+        typePkm === "H123"
+    ) {
+
+        if (!accKoordinatorH23) {
+
+            return {
+                currentRole: "PIC_H23",
+                column: "acc_koordinator_h23",
+                final: false
+            };
+        }
+    }
+
+
+    if (
+        typePkm === "H1" ||
+        typePkm === "H123"
+    ) {
+
+        if (!accManagerH1) {
+
+            return {
+                currentRole: "MGR_H1",
+                column: "acc_manager_h1",
+                final: false
+            };
+        }
+    }
+
+
+    if (
+        typePkm === "H23"
+    ) {
+
+        if (!accManagerH23) {
+
+            return {
+                currentRole: "MGR_H23",
+                column: "acc_manager_h23",
+                final: false
+            };
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | H123
+    |
+    | Setelah PIC_H23 → MGR_H1
+    | lalu MGR_H23
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        typePkm === "H123"
+    ) {
+
+        if (!accManagerH23) {
+
+            return {
+                currentRole: "MGR_H23",
+                column: "acc_manager_h23",
+                final: false
+            };
+        }
+    }
+
+
+    return {
+        currentRole: "SELESAI",
+        column: null,
+        final: true
+    };
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| APPROVE PKM
+|--------------------------------------------------------------------------
+*/
+
+async function approvePkmHandler(
+    request,
+    response
+) {
+
+    if (
+        request.method !== "POST"
+    ) {
+
+        return response
+            .status(405)
+            .json({
+                success: false,
+                message:
+                    "Gunakan method POST."
+            });
+    }
+
+
+    try {
+
+        let body =
+            request.body || {};
+
+        if (
+            typeof body ===
+            "string"
+        ) {
+            body =
+                JSON.parse(body);
+        }
+
+
+        const payload =
+            body.payload || {};
+
+        const pkmId =
+            String(
+                payload.pkmId ||
+                ""
+            ).trim();
+
+
+        if (!pkmId) {
+
+            return response
+                .status(400)
+                .json({
+                    success: false,
+                    message:
+                        "ID PKM tidak ditemukan."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | USER
+        |--------------------------------------------------------------------------
+        */
+
+        const user =
+            await getApprovalUser(
+                body
+            );
+
+
+        const role =
+            getApprovalRoleFromUser(
+                user
+            );
+
+
+        const allowedRoles = [
+            "CRM",
+            "KACAB",
+            "MSMC",
+            "PIC_H23",
+            "MGR_H1",
+            "MGR_H23"
+        ];
+
+
+        if (
+            !allowedRoles.includes(role)
+        ) {
+
+            return response
+                .status(403)
+                .json({
+                    success: false,
+                    message:
+                        "Role Anda tidak memiliki akses approval PKM."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | AMBIL PKM
+        |--------------------------------------------------------------------------
+        */
+
+        const rows =
+            await supabaseRequest(
+                "/rest/v1/pkm" +
+                "?select=*" +
+                "&id_pkm=eq." +
+                encodeURIComponent(
+                    pkmId
+                ) +
+                "&limit=1"
+            );
+
+
+        const row =
+            Array.isArray(rows)
+                ? rows[0]
+                : null;
+
+
+        if (!row) {
+
+            return response
+                .status(404)
+                .json({
+                    success: false,
+                    message:
+                        "Data PKM tidak ditemukan."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CEK STEP
+        |--------------------------------------------------------------------------
+        */
+
+        const state =
+            getPkmApprovalState(
+                row
+            );
+
+
+        if (state.final) {
+
+            return response
+                .status(409)
+                .json({
+                    success: false,
+                    message:
+                        "PKM ini sudah selesai di-approve.",
+                    approvalRole:
+                        role,
+                    nextRole:
+                        "SELESAI"
+                });
+        }
+
+
+        if (
+            state.currentRole !==
+            role
+        ) {
+
+            return response
+                .status(409)
+                .json({
+                    success: false,
+                    message:
+                        `Approval belum pada giliran ${state.currentRole}.`,
+                    approvalRole:
+                        role,
+                    nextRole:
+                        state.currentRole
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | KACAB HANYA CABANG SENDIRI
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            role === "KACAB"
+        ) {
+
+            const userBranch =
+                String(
+                    user.cab ||
+                    user.branch ||
+                    user.cabang ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            const pkmBranch =
+                String(
+                    row.cabang ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+
+            if (
+                !userBranch ||
+                userBranch === "HO" ||
+                userBranch === "ALL" ||
+                userBranch !==
+                    pkmBranch
+            ) {
+
+                return response
+                    .status(403)
+                    .json({
+                        success: false,
+                        message:
+                            "KACAB hanya dapat menyetujui PKM dari cabangnya sendiri."
+                    });
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TTD
+        |--------------------------------------------------------------------------
+        |
+        | Untuk tahap ini kita simpan signatureData
+        | langsung sebagai nilai approval.
+        |
+        | Jika frontend menggunakan SAVED/DRAWN,
+        | nilai tersebut tetap diterima.
+        |--------------------------------------------------------------------------
+        */
+
+        const signatureData =
+            String(
+                payload.signatureData ||
+                ""
+            ).trim();
+
+
+        const signatureMode =
+            String(
+                payload.signatureMode ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+
+        if (
+            !signatureData &&
+            !["SAVED"].includes(
+                signatureMode
+            )
+        ) {
+
+            return response
+                .status(400)
+                .json({
+                    success: false,
+                    message:
+                        "Tanda tangan tidak ditemukan."
+                });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | UPDATE DATABASE
+        |--------------------------------------------------------------------------
+        */
+
+        const now =
+            new Date()
+                .toISOString();
+
+
+        const approvalColumn =
+            getApprovalColumn(
+                role
+            );
+
+        const dateColumn =
+            getApprovalDateColumn(
+                role
+            );
+
+
+        if (!approvalColumn) {
+
+            return response
+                .status(500)
+                .json({
+                    success: false,
+                    message:
+                        `Kolom approval untuk role ${role} tidak ditemukan.`
+                });
+        }
+
+
+        const updateRecord = {
+
+            [approvalColumn]:
+                signatureData,
+
+            updated_at:
+                now
+        };
+
+
+        if (dateColumn) {
+
+            updateRecord[
+                dateColumn
+            ] = now;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | HITUNG STATUS BERIKUTNYA
+        |--------------------------------------------------------------------------
+        */
+
+        const simulatedRow = {
+            ...row,
+
+            [approvalColumn]:
+                signatureData
+        };
+
+
+        const nextState =
+            getPkmApprovalState(
+                simulatedRow
+            );
+
+
+        const nextRole =
+            nextState.currentRole;
+
+
+        updateRecord.status =
+            nextState.final
+                ? "ACC"
+                : `MENUNGGU ${nextRole}`;
+
+
+        await supabaseRequest(
+            "/rest/v1/pkm" +
+            "?id_pkm=eq." +
+            encodeURIComponent(
+                pkmId
+            ),
+            {
+                method: "PATCH",
+
+                headers: {
+                    "Prefer":
+                        "return=minimal"
+                },
+
+                body:
+                    JSON.stringify(
+                        updateRecord
+                    )
+            }
+        );
+
+
+        console.log(
+            "[BACKEND] APPROVE PKM SUCCESS",
+            {
+                pkmId,
+                role,
+                nextRole
+            }
+        );
+
+
+        return response
+            .status(200)
+            .json({
+
+                success: true,
+
+                message:
+                    nextState.final
+                        ? "Approval final berhasil. PKM sudah ACC."
+                        : `Approval ${role} berhasil. Menunggu ${nextRole}.`,
+
+                pkmId,
+
+                approvalRole:
+                    role,
+
+                nextRole,
+
+                status:
+                    nextState.final
+                        ? "ACC"
+                        : `MENUNGGU ${nextRole}`
+
+            });
+
+
+    } catch (error) {
+
+        console.error(
+            "[BACKEND] APPROVE PKM ERROR",
+            error
+        );
+
+
+        return response
+            .status(
+                error.status ||
+                500
+            )
+            .json({
+
+                success: false,
+
+                message:
+                    error.message ||
+                    "Gagal memproses approval PKM."
+
+            });
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| APPROVE PKM FROM DISCORD
+|--------------------------------------------------------------------------
+*/
+
+async function approvePkmFromDiscordHandler(
+    request,
+    response
+) {
+
+    /*
+    | Untuk sementara gunakan handler approval
+    | yang sama.
+    |
+    | Endpoint Discord tetap dipisahkan
+    | agar frontend/router tidak berubah.
+    */
+
+    return approvePkmHandler(
+        request,
+        response
+    );
+}
+
+
+
 // ===== SINGLE VERCEL FUNCTION ROUTER =====
 function normalizeAction(value) {
   return String(value || "").trim();
@@ -5423,25 +6276,117 @@ async function runHandler(handler, req, res) {
 
 module.exports = async function handler(req, res) {
   const action = getRequestAction(req);
+
   try {
     switch (action) {
-      case "login": return await runHandler(authHandler, req, res);
+
+      case "login":
+        return await runHandler(
+          authHandler,
+          req,
+          res
+        );
+
       case "authMigrate":
-      case "auth-migrate-batch": return await runHandler(authMigrateHandler, req, res);
-      case "gas": return await runHandler(gasHandler, req, res);
-      case "getManagedAccounts": return await runHandler(managedHandler, req, res);
+      case "auth-migrate-batch":
+        return await runHandler(
+          authMigrateHandler,
+          req,
+          res
+        );
+
+      case "gas":
+        return await runHandler(
+          gasHandler,
+          req,
+          res
+        );
+
+      case "getManagedAccounts":
+        return await runHandler(
+          managedHandler,
+          req,
+          res
+        );
+
       case "getMasterData":
-      case "getReferenceMasters": return await runHandler(masterHandler, req, res);
-      case "getSalesmen": return await runHandler(salesmanHandler, req, res);
-      case "getPkmData": return await runHandler(pkmHandler, req, res);
+      case "getReferenceMasters":
+        return await runHandler(
+          masterHandler,
+          req,
+          res
+        );
+
+      case "getSalesmen":
+        return await runHandler(
+          salesmanHandler,
+          req,
+          res
+        );
+
+      case "getPkmData":
+        return await runHandler(
+          pkmHandler,
+          req,
+          res
+        );
+
       case "getPkmPdfData":
-      case "pkmDownload": return await runHandler(pkmDownloadHandler, req, res);
-      case "discord": return await runHandler(discordHandler, req, res);
+      case "pkmDownload":
+        return await runHandler(
+          pkmDownloadHandler,
+          req,
+          res
+        );
+
+      case "discord":
+        return await runHandler(
+          discordHandler,
+          req,
+          res
+        );
+
+      // ==================================================
+      // PKM APPROVAL
+      // ==================================================
+
+      case "approvePkm":
+        return await runHandler(
+          approvePkmHandler,
+          req,
+          res
+        );
+
+      case "approvePkmFromDiscord":
+        return await runHandler(
+          approvePkmFromDiscordHandler,
+          req,
+          res
+        );
+
       default:
-        return res.status(400).json({ success: false, message: `Unknown backend action: ${action || "(empty)"}` });
+        return res.status(400).json({
+          success: false,
+          message:
+            `Unknown backend action: ${action || "(empty)"}`
+        });
     }
+
   } catch (error) {
-    console.error("[BACKEND] UNHANDLED ERROR", action, error);
-    return res.status(error?.status || 500).json({ success: false, message: error?.message || "Backend error." });
+
+    console.error(
+      "[BACKEND] UNHANDLED ERROR",
+      action,
+      error
+    );
+
+    return res.status(
+      error?.status || 500
+    ).json({
+      success: false,
+      message:
+        error?.message ||
+        "Backend error."
+    });
   }
 };

@@ -7679,9 +7679,6 @@ function getCurrentUserRole() {
 
 
 function getApprovalStep(item) {
-    if (item.approvalStep) {
-        return item.approvalStep;
-    }
 
     if (
         item.status === "ACC" ||
@@ -7690,7 +7687,11 @@ function getApprovalStep(item) {
         return "SELESAI";
     }
 
-    return "KACAB";
+    if (item.approvalStep) {
+        return item.approvalStep;
+    }
+
+    return "CRM";
 }
 
 
