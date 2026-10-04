@@ -7295,16 +7295,18 @@
 
 
                         <!-- ================================================= -->
-                        <!-- TABLE -->
+                        <!-- DESKTOP TABLE PDF PKM -->
                         <!-- ================================================= -->
 
                         <div
                             class="
                                 mt-6
+                                hidden
                                 overflow-x-auto
                                 rounded-2xl
                                 border
                                 border-slate-200
+                                md:block
                             "
                         >
 
@@ -7315,7 +7317,19 @@
                                 "
                             >
 
-                                ...
+                                <thead>
+                                    <tr>
+                                        <th>ID PKM</th>
+                                        <th>Nama PKM</th>
+                                        <th>Cabang</th>
+                                        <th>Type</th>
+                                        <th>Pelaksanaan</th>
+                                        <th>Status</th>
+                                        <th class="text-right">
+                                            PDF
+                                        </th>
+                                    </tr>
+                                </thead>
 
                                 <tbody
                                     id="pdfPkmTableBody"
@@ -7323,12 +7337,21 @@
 
                             </table>
 
-                            <div
-                                id="pdfPkmMobileList"
-                                class="space-y-3 md:hidden"
-                            ></div>
-
                         </div>
+
+
+                        <!-- ================================================= -->
+                        <!-- MOBILE CARD PDF PKM -->
+                        <!-- ================================================= -->
+
+                        <div
+                            id="pdfPkmMobileList"
+                            class="
+                                mt-6
+                                space-y-3
+                                md:hidden
+                            "
+                        ></div>
 
 
                         <div
