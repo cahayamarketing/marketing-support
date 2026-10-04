@@ -1,6 +1,7 @@
 "use strict";
 
 const { google } = require("googleapis");
+const { Readable } = require("stream");
 
 // Supabase helper kept inside the single Vercel Function.
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -5450,6 +5451,651 @@ return async function handler(
 
 
 // ============================================================
+// PKM APPROVAL SIGNATURE / GOOGLE DRIVE
+// ============================================================
+
+const PKM_ITEM_DRIVE_ID =
+    process.env.PKM_ITEM_DRIVE_ID;
+
+
+/*
+|---------------------------------------------------------------------------
+| GOOGLE DRIVE CLIENT UNTUK TTD PKM
+|---------------------------------------------------------------------------
+*/
+
+function getPkmItemDriveClient() {
+
+    const email =
+        process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+
+    const privateKey =
+        process.env.GOOGLE_PRIVATE_KEY;
+
+
+    if (
+        !email ||
+        !privateKey ||
+        !PKM_ITEM_DRIVE_ID
+    ) {
+
+        const error =
+            new Error(
+                "Konfigurasi Google Drive PKM belum lengkap. Pastikan GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, dan PKM_ITEM_DRIVE_ID tersedia."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+
+    const auth =
+        new google.auth.GoogleAuth({
+
+            credentials: {
+
+                client_email:
+                    email,
+
+                private_key:
+                    privateKey.replace(
+                        /\\n/g,
+                        "\n"
+                    )
+            },
+
+            scopes: [
+                "https://www.googleapis.com/auth/drive"
+            ]
+        });
+
+
+    return google.drive({
+
+        version:
+            "v3",
+
+        auth
+    });
+}
+
+
+/*
+|---------------------------------------------------------------------------
+| CARI / BUAT FOLDER PKM_Images
+|---------------------------------------------------------------------------
+*/
+
+async function getOrCreatePkmImagesFolder(
+    drive
+) {
+
+    const escapedRoot =
+        String(
+            PKM_ITEM_DRIVE_ID
+        )
+            .replace(
+                /\\/g,
+                "\\\\"
+            )
+            .replace(
+                /'/g,
+                "\\'"
+            );
+
+
+    const result =
+        await drive.files.list({
+
+            q:
+                `'${escapedRoot}' in parents` +
+                ` and name = 'PKM_Images'` +
+                ` and mimeType = 'application/vnd.google-apps.folder'` +
+                ` and trashed = false`,
+
+            fields:
+                "files(id,name)",
+
+            pageSize:
+                10
+        });
+
+
+    if (
+        result.data.files &&
+        result.data.files.length
+    ) {
+
+        return result
+            .data
+            .files[0]
+            .id;
+    }
+
+
+    const created =
+        await drive.files.create({
+
+            requestBody: {
+
+                name:
+                    "PKM_Images",
+
+                mimeType:
+                    "application/vnd.google-apps.folder",
+
+                parents: [
+                    PKM_ITEM_DRIVE_ID
+                ]
+            },
+
+            fields:
+                "id,name"
+        });
+
+
+    return created
+        .data
+        .id;
+}
+
+
+/*
+|---------------------------------------------------------------------------
+| PARSE DATA URL TTD
+|---------------------------------------------------------------------------
+*/
+
+function parseDataUrlImage(
+    dataUrl
+) {
+
+    const value =
+        String(
+            dataUrl || ""
+        ).trim();
+
+
+    const match =
+        value.match(
+            /^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=\r\n]+)$/i
+        );
+
+
+    if (!match) {
+
+        const error =
+            new Error(
+                "Format tanda tangan tidak valid."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+
+    const rawExtension =
+        match[1]
+            .toLowerCase();
+
+
+    const extension =
+        rawExtension === "jpeg" ||
+        rawExtension === "jpg"
+            ? "jpg"
+            : rawExtension;
+
+
+    const mimeType =
+        extension === "jpg"
+            ? "image/jpeg"
+            : `image/${extension}`;
+
+
+    const buffer =
+        Buffer.from(
+            match[2]
+                .replace(
+                    /\s+/g,
+                    ""
+                ),
+            "base64"
+        );
+
+
+    return {
+
+        buffer:
+            buffer,
+
+        extension:
+            extension,
+
+        mimeType:
+            mimeType
+    };
+}
+
+
+/*
+|---------------------------------------------------------------------------
+| AMBIL TTD TERSIMPAN USER
+|---------------------------------------------------------------------------
+*/
+
+async function downloadSavedProfileSignature(
+    userNik
+) {
+
+    const rows =
+        await supabaseRequest(
+
+            "/rest/v1/salesman" +
+
+            "?select=" +
+                "nik," +
+                "nama_marketing," +
+                "ttd_storage_path," +
+                "ttd_url" +
+
+            "&nik=eq." +
+                encodeURIComponent(
+                    userNik
+                ) +
+
+            "&limit=1"
+        );
+
+
+    const user =
+        Array.isArray(rows)
+            ? rows[0]
+            : null;
+
+
+    if (!user) {
+
+        const error =
+            new Error(
+                "Data profil user tidak ditemukan."
+            );
+
+        error.status = 404;
+
+        throw error;
+    }
+
+
+    const storagePath =
+        String(
+            user.ttd_storage_path ||
+            ""
+        ).trim();
+
+
+    const legacyUrl =
+        String(
+            user.ttd_url ||
+            ""
+        ).trim();
+
+
+    let response;
+
+
+    /*
+    |-----------------------------------------------------------------------
+    | PRIORITAS 1: SUPABASE STORAGE
+    |-----------------------------------------------------------------------
+    */
+
+    if (
+        storagePath
+    ) {
+
+        const storageUrl =
+            `${SUPABASE_URL}/storage/v1/object/ttd/${storagePath
+                .split("/")
+                .map(
+                    encodeURIComponent
+                )
+                .join("/")}`;
+
+
+        response =
+            await fetch(
+                storageUrl
+            );
+
+    }
+
+
+    /*
+    |-----------------------------------------------------------------------
+    | PRIORITAS 2: URL LAMA
+    |-----------------------------------------------------------------------
+    */
+
+    if (
+        !response &&
+        legacyUrl
+    ) {
+
+        response =
+            await fetch(
+                legacyUrl
+            );
+    }
+
+
+    if (
+        !response ||
+        !response.ok
+    ) {
+
+        const error =
+            new Error(
+                "TTD tersimpan tidak dapat diambil. Silakan gambar TTD secara manual."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+
+    const buffer =
+        Buffer.from(
+            await response.arrayBuffer()
+        );
+
+
+    if (
+        !buffer.length
+    ) {
+
+        const error =
+            new Error(
+                "File TTD tersimpan kosong."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+
+    const contentType =
+        String(
+            response.headers.get(
+                "content-type"
+            ) ||
+            "image/png"
+        )
+            .split(";")[0]
+            .trim()
+            .toLowerCase();
+
+
+    const extension =
+        contentType === "image/jpeg" ||
+        contentType === "image/jpg"
+            ? "jpg"
+            : contentType === "image/webp"
+                ? "webp"
+                : "png";
+
+
+    return {
+
+        buffer:
+            buffer,
+
+        extension:
+            extension,
+
+        mimeType:
+            extension === "jpg"
+                ? "image/jpeg"
+                : `image/${extension}`
+    };
+}
+
+
+/*
+|---------------------------------------------------------------------------
+| UPLOAD TTD APPROVAL KE GOOGLE DRIVE
+|---------------------------------------------------------------------------
+*/
+
+async function uploadPkmApprovalSignature({
+    pkmId,
+    role,
+    userNik,
+    signatureMode,
+    signatureData
+}) {
+
+    let image;
+
+
+    /*
+    |-----------------------------------------------------------------------
+    | DRAWN
+    |-----------------------------------------------------------------------
+    */
+
+    if (
+        String(
+            signatureMode
+        )
+            .toUpperCase() ===
+        "DRAWN"
+    ) {
+
+        image =
+            parseDataUrlImage(
+                signatureData
+            );
+    }
+
+
+    /*
+    |-----------------------------------------------------------------------
+    | SAVED
+    |-----------------------------------------------------------------------
+    */
+
+    else if (
+        String(
+            signatureMode
+        )
+            .toUpperCase() ===
+        "SAVED"
+    ) {
+
+        image =
+            await downloadSavedProfileSignature(
+                userNik
+            );
+    }
+
+
+    else {
+
+        const error =
+            new Error(
+                "Metode tanda tangan tidak valid."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+
+    /*
+    |-----------------------------------------------------------------------
+    | MAX 1 MB
+    |-----------------------------------------------------------------------
+    */
+
+    if (
+        image.buffer.length >
+        1024 * 1024
+    ) {
+
+        const error =
+            new Error(
+                "Ukuran tanda tangan terlalu besar. Maksimal 1 MB."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+
+    const drive =
+        getPkmItemDriveClient();
+
+
+    const folderId =
+        await getOrCreatePkmImagesFolder(
+            drive
+        );
+
+
+    const now =
+        new Date();
+
+
+    const time = [
+
+        String(
+            now.getHours()
+        ).padStart(
+            2,
+            "0"
+        ),
+
+        String(
+            now.getMinutes()
+        ).padStart(
+            2,
+            "0"
+        ),
+
+        String(
+            now.getSeconds()
+        ).padStart(
+            2,
+            "0"
+        )
+
+    ].join("");
+
+
+    /*
+    |-----------------------------------------------------------------------
+    | LABEL FILE
+    |
+    | ROLE SISTEM TETAP PIC_H23
+    | Nama file memakai label KOORDINATOR H23
+    |-----------------------------------------------------------------------
+    */
+
+    const roleLabel = {
+
+        CRM:
+            "CRM",
+
+        KACAB:
+            "KACAB",
+
+        MSMC:
+            "MSMC",
+
+        PIC_H23:
+            "KOORDINATOR H23",
+
+        MGR_H1:
+            "MANAGER H1",
+
+        MGR_H23:
+            "MANAGER H23"
+
+    }[role] || role;
+
+
+    const fileName =
+        `${pkmId}.ACC ${roleLabel}.${time}.${image.extension}`;
+
+
+    const uploaded =
+        await drive.files.create({
+
+            requestBody: {
+
+                name:
+                    fileName,
+
+                parents: [
+                    folderId
+                ],
+
+                mimeType:
+                    image.mimeType
+            },
+
+            media: {
+
+                mimeType:
+                    image.mimeType,
+
+                body:
+                    Readable.from(
+                        image.buffer
+                    )
+            },
+
+            fields:
+                "id,name,mimeType"
+        });
+
+
+    if (
+        !uploaded.data ||
+        !uploaded.data.id
+    ) {
+
+        const error =
+            new Error(
+                "File TTD gagal disimpan ke Google Drive."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+
+    return {
+
+        path:
+            `PKM_Images/${fileName}`,
+
+        fileId:
+            uploaded.data.id,
+
+        fileName:
+            fileName
+    };
+}
+
+// ============================================================
 // PKM APPROVAL HANDLER
 // ROLE SISTEM:
 // CRM
@@ -5806,7 +6452,10 @@ async function approvePkmHandler(
         return response
             .status(405)
             .json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Gunakan method POST."
             });
@@ -5816,19 +6465,26 @@ async function approvePkmHandler(
     try {
 
         let body =
-            request.body || {};
+            request.body ||
+            {};
+
 
         if (
             typeof body ===
             "string"
         ) {
+
             body =
-                JSON.parse(body);
+                JSON.parse(
+                    body
+                );
         }
 
 
         const payload =
-            body.payload || {};
+            body.payload ||
+            {};
+
 
         const pkmId =
             String(
@@ -5837,12 +6493,17 @@ async function approvePkmHandler(
             ).trim();
 
 
-        if (!pkmId) {
+        if (
+            !pkmId
+        ) {
 
             return response
                 .status(400)
                 .json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "ID PKM tidak ditemukan."
                 });
@@ -5850,9 +6511,9 @@ async function approvePkmHandler(
 
 
         /*
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         | USER
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         */
 
         const user =
@@ -5867,24 +6528,40 @@ async function approvePkmHandler(
             );
 
 
+        const userNik =
+            String(
+                user.nik ||
+                body.userNik ||
+                payload.userNik ||
+                ""
+            ).trim();
+
+
         const allowedRoles = [
+
             "CRM",
             "KACAB",
             "MSMC",
             "PIC_H23",
             "MGR_H1",
             "MGR_H23"
+
         ];
 
 
         if (
-            !allowedRoles.includes(role)
+            !allowedRoles.includes(
+                role
+            )
         ) {
 
             return response
                 .status(403)
                 .json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Role Anda tidak memiliki akses approval PKM."
                 });
@@ -5892,19 +6569,23 @@ async function approvePkmHandler(
 
 
         /*
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         | AMBIL PKM
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         */
 
         const rows =
             await supabaseRequest(
+
                 "/rest/v1/pkm" +
+
                 "?select=*" +
+
                 "&id_pkm=eq." +
-                encodeURIComponent(
-                    pkmId
-                ) +
+                    encodeURIComponent(
+                        pkmId
+                    ) +
+
                 "&limit=1"
             );
 
@@ -5915,12 +6596,17 @@ async function approvePkmHandler(
                 : null;
 
 
-        if (!row) {
+        if (
+            !row
+        ) {
 
             return response
                 .status(404)
                 .json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Data PKM tidak ditemukan."
                 });
@@ -5928,9 +6614,9 @@ async function approvePkmHandler(
 
 
         /*
-        |--------------------------------------------------------------------------
-        | CEK STEP
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
+        | CEK STEP APPROVAL
+        |-----------------------------------------------------------------------
         */
 
         const state =
@@ -5939,16 +6625,23 @@ async function approvePkmHandler(
             );
 
 
-        if (state.final) {
+        if (
+            state.final
+        ) {
 
             return response
                 .status(409)
                 .json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "PKM ini sudah selesai di-approve.",
+
                     approvalRole:
                         role,
+
                     nextRole:
                         "SELESAI"
                 });
@@ -5963,11 +6656,16 @@ async function approvePkmHandler(
             return response
                 .status(409)
                 .json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         `Approval belum pada giliran ${state.currentRole}.`,
+
                     approvalRole:
                         role,
+
                     nextRole:
                         state.currentRole
                 });
@@ -5975,13 +6673,14 @@ async function approvePkmHandler(
 
 
         /*
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         | KACAB HANYA CABANG SENDIRI
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         */
 
         if (
-            role === "KACAB"
+            role ===
+            "KACAB"
         ) {
 
             const userBranch =
@@ -5993,6 +6692,7 @@ async function approvePkmHandler(
                 )
                     .trim()
                     .toUpperCase();
+
 
             const pkmBranch =
                 String(
@@ -6014,7 +6714,10 @@ async function approvePkmHandler(
                 return response
                     .status(403)
                     .json({
-                        success: false,
+
+                        success:
+                            false,
+
                         message:
                             "KACAB hanya dapat menyetujui PKM dari cabangnya sendiri."
                     });
@@ -6023,16 +6726,9 @@ async function approvePkmHandler(
 
 
         /*
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         | TTD
-        |--------------------------------------------------------------------------
-        |
-        | Untuk tahap ini kita simpan signatureData
-        | langsung sebagai nilai approval.
-        |
-        | Jika frontend menggunakan SAVED/DRAWN,
-        | nilai tersebut tetap diterima.
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         */
 
         const signatureData =
@@ -6052,27 +6748,99 @@ async function approvePkmHandler(
 
 
         if (
-            !signatureData &&
-            !["SAVED"].includes(
-                signatureMode
-            )
+            signatureMode !==
+            "DRAWN" &&
+            signatureMode !==
+            "SAVED"
         ) {
 
             return response
                 .status(400)
                 .json({
-                    success: false,
+
+                    success:
+                        false,
+
+                    message:
+                        "Metode tanda tangan tidak valid."
+                });
+        }
+
+
+        if (
+            signatureMode ===
+            "DRAWN" &&
+            !signatureData
+        ) {
+
+            return response
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
                     message:
                         "Tanda tangan tidak ditemukan."
                 });
         }
 
 
+        if (
+            !userNik
+        ) {
+
+            return response
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
+                    message:
+                        "NIK user tidak ditemukan."
+                });
+        }
+
+
         /*
-        |--------------------------------------------------------------------------
-        | UPDATE DATABASE
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
+        | UPLOAD TTD KE GOOGLE DRIVE
+        |-----------------------------------------------------------------------
         */
+
+        const uploadedSignature =
+            await uploadPkmApprovalSignature({
+
+                pkmId:
+                    pkmId,
+
+                role:
+                    role,
+
+                userNik:
+                    userNik,
+
+                signatureMode:
+                    signatureMode,
+
+                signatureData:
+                    signatureData
+            });
+
+
+        /*
+        |-----------------------------------------------------------------------
+        | HASIL DATABASE
+        |
+        | DB menyimpan PATH,
+        | BUKAN BASE64.
+        |-----------------------------------------------------------------------
+        */
+
+        const approvalPath =
+            uploadedSignature.path;
+
 
         const now =
             new Date()
@@ -6084,18 +6852,24 @@ async function approvePkmHandler(
                 role
             );
 
+
         const dateColumn =
             getApprovalDateColumn(
                 role
             );
 
 
-        if (!approvalColumn) {
+        if (
+            !approvalColumn
+        ) {
 
             return response
                 .status(500)
                 .json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         `Kolom approval untuk role ${role} tidak ditemukan.`
                 });
@@ -6105,32 +6879,36 @@ async function approvePkmHandler(
         const updateRecord = {
 
             [approvalColumn]:
-                signatureData,
+                approvalPath,
 
             updated_at:
                 now
         };
 
 
-        if (dateColumn) {
+        if (
+            dateColumn
+        ) {
 
             updateRecord[
                 dateColumn
-            ] = now;
+            ] =
+                now;
         }
 
 
         /*
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         | HITUNG STATUS BERIKUTNYA
-        |--------------------------------------------------------------------------
+        |-----------------------------------------------------------------------
         */
 
         const simulatedRow = {
+
             ...row,
 
             [approvalColumn]:
-                signatureData
+                approvalPath
         };
 
 
@@ -6150,16 +6928,28 @@ async function approvePkmHandler(
                 : `MENUNGGU ${nextRole}`;
 
 
+        /*
+        |-----------------------------------------------------------------------
+        | UPDATE SUPABASE
+        |-----------------------------------------------------------------------
+        */
+
         await supabaseRequest(
+
             "/rest/v1/pkm" +
+
             "?id_pkm=eq." +
-            encodeURIComponent(
-                pkmId
-            ),
+                encodeURIComponent(
+                    pkmId
+                ),
+
             {
-                method: "PATCH",
+
+                method:
+                    "PATCH",
 
                 headers: {
+
                     "Prefer":
                         "return=minimal"
                 },
@@ -6175,9 +6965,18 @@ async function approvePkmHandler(
         console.log(
             "[BACKEND] APPROVE PKM SUCCESS",
             {
-                pkmId,
-                role,
-                nextRole
+
+                pkmId:
+                    pkmId,
+
+                role:
+                    role,
+
+                approvalPath:
+                    approvalPath,
+
+                nextRole:
+                    nextRole
             }
         );
 
@@ -6186,29 +6985,43 @@ async function approvePkmHandler(
             .status(200)
             .json({
 
-                success: true,
+                success:
+                    true,
 
                 message:
                     nextState.final
                         ? "Approval final berhasil. PKM sudah ACC."
                         : `Approval ${role} berhasil. Menunggu ${nextRole}.`,
 
-                pkmId,
+                pkmId:
+                    pkmId,
 
                 approvalRole:
                     role,
 
-                nextRole,
+                nextRole:
+                    nextRole,
 
                 status:
                     nextState.final
                         ? "ACC"
-                        : `MENUNGGU ${nextRole}`
+                        : `MENUNGGU ${nextRole}`,
+
+                approvalPath:
+                    approvalPath,
+
+                fileId:
+                    uploadedSignature.fileId,
+
+                fileName:
+                    uploadedSignature.fileName
 
             });
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
         console.error(
             "[BACKEND] APPROVE PKM ERROR",
@@ -6223,7 +7036,8 @@ async function approvePkmHandler(
             )
             .json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     error.message ||
