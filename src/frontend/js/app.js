@@ -5199,12 +5199,6 @@ document
 
 function updateMobileBottomNav(pageId) {
 
-    /*
-    |--------------------------------------------------------------
-    | HAPUS ACTIVE DARI SEMUA MENU UTAMA
-    |--------------------------------------------------------------
-    */
-
     document
         .querySelectorAll(
             ".mobile-bottom-nav-item"
@@ -5216,25 +5210,12 @@ function updateMobileBottomNav(pageId) {
         });
 
 
-    /*
-    |--------------------------------------------------------------
-    | HALAMAN YANG MASUK KE MENU PKM
-    |--------------------------------------------------------------
-    */
-
     const pkmPages = [
         "pengajuanPage",
         "listPkmPage",
-        "pdfPkmPage",
-        "lpjPage"
+        "pdfPkmPage"
     ];
 
-
-    /*
-    |--------------------------------------------------------------
-    | HALAMAN YANG MASUK KE MENU KPI
-    |--------------------------------------------------------------
-    */
 
     const kpiPages = [
         "crmKpiPage",
@@ -5242,74 +5223,46 @@ function updateMobileBottomNav(pageId) {
     ];
 
 
-    /*
-    |--------------------------------------------------------------
-    | PKM
-    |--------------------------------------------------------------
-    */
-
+    /* PKM */
     if (pkmPages.includes(pageId)) {
 
-        const pkmButton =
+        const button =
             document.getElementById(
                 "mobilePkmMenuButton"
             );
 
-        if (pkmButton) {
-
-            pkmButton.classList.add(
-                "active"
-            );
-
+        if (button) {
+            button.classList.add("active");
         }
 
         return;
     }
 
 
-    /*
-    |--------------------------------------------------------------
-    | KPI
-    |--------------------------------------------------------------
-    */
-
+    /* KPI */
     if (kpiPages.includes(pageId)) {
 
-        const kpiButton =
+        const button =
             document.getElementById(
                 "mobileKpiMenuButton"
             );
 
-        if (kpiButton) {
-
-            kpiButton.classList.add(
-                "active"
-            );
-
+        if (button) {
+            button.classList.add("active");
         }
 
         return;
     }
 
 
-    /*
-    |--------------------------------------------------------------
-    | MENU BIASA
-    |--------------------------------------------------------------
-    */
-
-    const matchedButton =
+    /* MENU BIASA */
+    const button =
         document.querySelector(
             `[data-mobile-nav-page="${pageId}"]`
         );
 
-
-    if (matchedButton) {
-
-        matchedButton.classList.add(
-            "active"
-        );
-
+    if (button) {
+        button.classList.add("active");
     }
 
 }
