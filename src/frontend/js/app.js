@@ -1215,6 +1215,7 @@ function saveStoredPkm(data) {
 */
 
 const mutationActions = new Set([
+    "saveMasterData",
     "createPkm",
     "approvePkm",
     "approvePkmFromDiscord",
@@ -1688,6 +1689,42 @@ async function requestBackend(
 
                 method:
                     "GET",
+
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
+            };
+        }
+
+
+        if (
+            action === "saveMasterData"
+        ) {
+
+            apiUrl =
+                `/api/backend?action=saveMasterData`;
+
+            fetchOptions = {
+                method:
+                    "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    action:
+                        action,
+
+                    token:
+                        sessionToken,
+
+                    payload:
+                        payload
+                }),
 
                 signal:
                     controller.signal,

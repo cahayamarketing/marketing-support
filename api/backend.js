@@ -4772,462 +4772,643 @@ return async function handler(req, res) {
 // ===== master =====
 const masterHandler = (() => {
 
+    const MASTER_CONFIG = {
+
+        LEASING: {
+            table: "master_leasing",
+            key: "kode",
+            headers: [
+                "INIT",
+                "KODE",
+                "NAMA"
+            ],
+            select:
+                "init,kode,nama",
+            order:
+                "init.asc"
+        },
+
+        PKM: {
+            table: "master_pkm",
+            key: "id",
+            headers: [
+                "ID PKM",
+                "PKM",
+                "JENIS PKM"
+            ],
+            select:
+                "id,pkm,jenis_pkm",
+            order:
+                "id.asc"
+        },
+
+        EVENT: {
+            table: "master_activity",
+            key: "id_event",
+            headers: [
+                "ID EVENT",
+                "KODE EVENT",
+                "NAMA EVENT",
+                "NAMA EVENT MD",
+                "JENIS EVENT"
+            ],
+            select:
+                "id_event,kode_event,nama_event,nama_event_md,jenis_event",
+            order:
+                "id_event.asc"
+        },
+
+        KPI_CRM: {
+            table: "master_kpi_crm",
+            key: "id",
+            headers: [
+                "ID",
+                "PILAR UTAMA",
+                "INDIKATOR KPI",
+                "TARGET",
+                "%",
+                "BOBOT",
+                "JENIS TARGET",
+                "UNDER TARGET"
+            ],
+            select:
+                "id,pilar_utama,indikator_kpi,target,target_persen,bobot,jenis_target,under_target",
+            order:
+                "id.asc"
+        }
+    };
 
 
-return async function handler(req, res) {
+    function clean(value) {
 
-    if (req.method !== "GET") {
-        return res.status(405).json({
-            success: false,
-            message: "Method tidak diizinkan."
-        });
+        if (
+            value === null ||
+            value === undefined
+        ) {
+            return "";
+        }
+
+        return String(value).trim();
     }
 
-    try {
 
-        const type =
-            String(
-                req.query?.type || ""
-            ).trim().toUpperCase();
+    function toDbValues(
+        type,
+        values
+    ) {
 
+        const config =
+            MASTER_CONFIG[type];
 
-        /*
-        |--------------------------------------------------------------------------
-        | MODE GET MASTER DATA TABLE
-        |--------------------------------------------------------------------------
-        |
-        | Dipakai oleh:
-        | loadMasterDataTable()
-        |
-        | Contoh:
-        | /api/master?type=PKM
-        | /api/master?type=EVENT
-        | /api/master?type=KPI_CRM
-        |
-        |--------------------------------------------------------------------------
-        */
+        if (!config) {
+            throw new Error(
+                `Jenis master "${type}" tidak tersedia.`
+            );
+        }
 
-        if (type) {
+        const source =
+            values || {};
 
-            /*
-            |--------------------------------------------------------------------------
-            | MASTER PKM
-            |--------------------------------------------------------------------------
-            */
+        if (type === "LEASING") {
 
-            if (type === "PKM") {
+            return {
+                init:
+                    clean(source["INIT"]),
 
-                const rows =
-                    await supabaseRequest(
-                        "/rest/v1/master_pkm" +
-                        "?select=id,pkm,jenis_pkm" +
-                        "&order=id.asc"
-                    );
+                kode:
+                    clean(source["KODE"]),
 
-                const headers = [
-                    "ID PKM",
-                    "PKM",
-                    "JENIS PKM"
-                ];
-
-                const data =
-                    Array.isArray(rows)
-                        ? rows.map(function (row) {
-                            return {
-                                "ID PKM":
-                                    String(
-                                        row.id ?? ""
-                                    ).trim(),
-
-                                "PKM":
-                                    String(
-                                        row.pkm ?? ""
-                                    ).trim(),
-
-                                "JENIS PKM":
-                                    String(
-                                        row.jenis_pkm ?? ""
-                                    ).trim()
-                            };
-                        })
-                        : [];
-
-                return res.status(200).json({
-                    success: true,
-                    type: type,
-                    headers: headers,
-                    data: data
-                });
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | MASTER EVENT
-            |--------------------------------------------------------------------------
-            */
-
-            if (type === "EVENT") {
-
-                const rows =
-                    await supabaseRequest(
-                        "/rest/v1/master_activity" +
-                        "?select=id_event,kode_event,nama_event,nama_event_md,jenis_event" +
-                        "&order=id_event.asc"
-                    );
-
-                const headers = [
-                    "ID EVENT",
-                    "KODE EVENT",
-                    "NAMA EVENT",
-                    "NAMA EVENT MD",
-                    "JENIS EVENT"
-                ];
-
-                const data =
-                    Array.isArray(rows)
-                        ? rows.map(function (row) {
-                            return {
-                                "ID EVENT":
-                                    String(
-                                        row.id_event ?? ""
-                                    ).trim(),
-
-                                "KODE EVENT":
-                                    String(
-                                        row.kode_event ?? ""
-                                    ).trim(),
-
-                                "NAMA EVENT":
-                                    String(
-                                        row.nama_event ?? ""
-                                    ).trim(),
-
-                                "NAMA EVENT MD":
-                                    String(
-                                        row.nama_event_md ?? ""
-                                    ).trim(),
-
-                                "JENIS EVENT":
-                                    String(
-                                        row.jenis_event ?? ""
-                                    ).trim()
-                            };
-                        })
-                        : [];
-
-                return res.status(200).json({
-                    success: true,
-                    type: type,
-                    headers: headers,
-                    data: data
-                });
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | MASTER KPI CRM
-            |--------------------------------------------------------------------------
-            */
-
-            if (type === "KPI_CRM") {
-
-                const rows =
-                    await supabaseRequest(
-                        "/rest/v1/master_kpi_crm" +
-                        "?select=id,pilar_utama,indikator_kpi,target,target_persen,bobot,jenis_target,under_target" +
-                        "&order=id.asc"
-                    );
-
-                const headers = [
-                    "ID",
-                    "PILAR UTAMA",
-                    "INDIKATOR KPI",
-                    "TARGET",
-                    "%",
-                    "BOBOT",
-                    "JENIS TARGET",
-                    "UNDER TARGET"
-                ];
-
-                const data =
-                    Array.isArray(rows)
-                        ? rows.map(function (row) {
-                            return {
-                                "ID":
-                                    row.id,
-
-                                "PILAR UTAMA":
-                                    String(
-                                        row.pilar_utama ?? ""
-                                    ).trim(),
-
-                                "INDIKATOR KPI":
-                                    String(
-                                        row.indikator_kpi ?? ""
-                                    ).trim(),
-
-                                "TARGET":
-                                    row.target ?? "",
-
-                                "%":
-                                    row.target_persen ?? "",
-
-                                "BOBOT":
-                                    row.bobot ?? "",
-
-                                "JENIS TARGET":
-                                    String(
-                                        row.jenis_target ?? ""
-                                    ).trim(),
-
-                                "UNDER TARGET":
-                                    String(
-                                        row.under_target ?? ""
-                                    ).trim()
-                            };
-                        })
-                        : [];
-
-                return res.status(200).json({
-                    success: true,
-                    type: type,
-                    headers: headers,
-                    data: data
-                });
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | LEASING
-            |--------------------------------------------------------------------------
-            */
-
-            if (type === "LEASING") {
-
-                const rows =
-                    await supabaseRequest(
-                        "/rest/v1/master_leasing" +
-                        "?select=id,init,kode,nama" +
-                        "&order=id.asc"
-                    );
-
-                const headers = [
-                    "INIT",
-                    "KODE",
-                    "NAMA"
-                ];
-
-                const data =
-                    Array.isArray(rows)
-                        ? rows.map(function (row) {
-                            return {
-                                "INIT":
-                                    String(
-                                        row.init ?? ""
-                                    ).trim(),
-
-                                "KODE":
-                                    String(
-                                        row.kode ?? ""
-                                    ).trim(),
-
-                                "NAMA":
-                                    String(
-                                        row.nama ?? ""
-                                    ).trim()
-                            };
-                        })
-                        : [];
-
-                return res.status(200).json({
-                    success: true,
-                    type: type,
-                    headers: headers,
-                    data: data
-                });
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | TYPE TIDAK DIKENAL
-            |--------------------------------------------------------------------------
-            */
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    `Jenis master "${type}" tidak tersedia.`
-            });
+                nama:
+                    clean(source["NAMA"])
+            };
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | MODE REFERENCE MASTER LAMA
-        |--------------------------------------------------------------------------
-        |
-        | /api/master
-        |
-        | Jangan diubah bentuk responsenya karena app.js
-        | loadReferenceMasters() sudah bergantung pada format ini.
-        |
-        |--------------------------------------------------------------------------
-        */
+        if (type === "PKM") {
+
+            return {
+                id:
+                    clean(source["ID PKM"]),
+
+                pkm:
+                    clean(source["PKM"]),
+
+                jenis_pkm:
+                    clean(source["JENIS PKM"])
+            };
+        }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | MASTER PKM
-        |--------------------------------------------------------------------------
-        */
+        if (type === "EVENT") {
 
-        const pkmTypes =
-            await supabaseRequest(
-                "/rest/v1/master_pkm" +
-                "?select=id,pkm,jenis_pkm" +
-                "&order=id.asc"
-            );
+            return {
+                id_event:
+                    clean(source["ID EVENT"]),
 
+                kode_event:
+                    clean(source["KODE EVENT"]),
 
-        /*
-        |--------------------------------------------------------------------------
-        | MASTER ACTIVITY / EVENT
-        |--------------------------------------------------------------------------
-        */
+                nama_event:
+                    clean(source["NAMA EVENT"]),
 
-        const events =
-            await supabaseRequest(
-                "/rest/v1/master_activity" +
-                "?select=id_event,kode_event,nama_event,nama_event_md,jenis_event" +
-                "&order=id_event.asc"
-            );
+                nama_event_md:
+                    clean(source["NAMA EVENT MD"]),
+
+                jenis_event:
+                    clean(source["JENIS EVENT"])
+            };
+        }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | MASTER UNIT / GAB
-        |--------------------------------------------------------------------------
-        */
+        if (type === "KPI_CRM") {
 
-        const unitRows =
-            await supabaseRequest(
-                "/rest/v1/master_unit" +
-                "?select=gab" +
-                "&order=gab.asc"
-            );
+            return {
+                id:
+                    source["ID"] === "" ||
+                    source["ID"] === null ||
+                    source["ID"] === undefined
+                        ? null
+                        : Number(
+                            source["ID"]
+                        ),
 
+                pilar_utama:
+                    clean(
+                        source["PILAR UTAMA"]
+                    ),
 
-        /*
-        |--------------------------------------------------------------------------
-        | FORMAT LAMA
-        |--------------------------------------------------------------------------
-        */
+                indikator_kpi:
+                    clean(
+                        source["INDIKATOR KPI"]
+                    ),
 
-        const result = {
+                target:
+                    source["TARGET"] === ""
+                        ? null
+                        : Number(
+                            source["TARGET"]
+                        ),
 
-            leasing: [],
+                target_persen:
+                    source["%"] === ""
+                        ? null
+                        : Number(
+                            source["%"]
+                        ),
 
-            focusTypes:
-                unitRows
-                    .map(function (row) {
-                        return String(
-                            row.gab || ""
-                        ).trim();
-                    })
-                    .filter(Boolean),
+                bobot:
+                    source["BOBOT"] === ""
+                        ? null
+                        : Number(
+                            source["BOBOT"]
+                        ),
 
-            pkmTypes:
-                pkmTypes
-                    .map(function (row) {
-                        return {
-                            id:
-                                String(
-                                    row.id || ""
-                                ).trim(),
+                jenis_target:
+                    clean(
+                        source["JENIS TARGET"]
+                    ),
 
-                            category:
-                                String(
-                                    row.pkm || ""
-                                ).trim(),
+                under_target:
+                    clean(
+                        source["UNDER TARGET"]
+                    )
+            };
+        }
 
-                            name:
-                                String(
-                                    row.jenis_pkm || ""
-                                ).trim()
-                        };
-                    })
-                    .filter(function (item) {
-                        return Boolean(
-                            item.name
-                        );
-                    }),
-
-            events:
-                events
-                    .map(function (row) {
-                        return {
-                            id:
-                                String(
-                                    row.id_event || ""
-                                ).trim(),
-
-                            code:
-                                String(
-                                    row.kode_event || ""
-                                ).trim(),
-
-                            name:
-                                String(
-                                    row.nama_event || ""
-                                ).trim(),
-
-                            mdName:
-                                String(
-                                    row.nama_event_md || ""
-                                ).trim(),
-
-                            category:
-                                String(
-                                    row.jenis_event || ""
-                                ).trim()
-                        };
-                    })
-                    .filter(function (item) {
-                        return Boolean(
-                            item.name
-                        );
-                    })
-        };
-
-
-        return res.status(200).json({
-            success: true,
-            message:
-                "Master data berhasil diambil dari Supabase.",
-            data: result
-        });
-
-    } catch (error) {
-
-        console.error(
-            "MASTER API ERROR:",
-            error
-        );
-
-        return res.status(
-            error.status || 500
-        ).json({
-            success: false,
-            message:
-                error.message ||
-                "Gagal mengambil master data dari Supabase."
-        });
+        return {};
     }
-}
+
+
+    function toFrontendRow(
+        type,
+        row
+    ) {
+
+        if (type === "LEASING") {
+
+            return {
+                "INIT":
+                    clean(row.init),
+
+                "KODE":
+                    clean(row.kode),
+
+                "NAMA":
+                    clean(row.nama)
+            };
+        }
+
+
+        if (type === "PKM") {
+
+            return {
+                "ID PKM":
+                    clean(row.id),
+
+                "PKM":
+                    clean(row.pkm),
+
+                "JENIS PKM":
+                    clean(row.jenis_pkm)
+            };
+        }
+
+
+        if (type === "EVENT") {
+
+            return {
+                "ID EVENT":
+                    clean(row.id_event),
+
+                "KODE EVENT":
+                    clean(row.kode_event),
+
+                "NAMA EVENT":
+                    clean(row.nama_event),
+
+                "NAMA EVENT MD":
+                    clean(row.nama_event_md),
+
+                "JENIS EVENT":
+                    clean(row.jenis_event)
+            };
+        }
+
+
+        if (type === "KPI_CRM") {
+
+            return {
+                "ID":
+                    row.id,
+
+                "PILAR UTAMA":
+                    clean(row.pilar_utama),
+
+                "INDIKATOR KPI":
+                    clean(row.indikator_kpi),
+
+                "TARGET":
+                    row.target ?? "",
+
+                "%":
+                    row.target_persen ?? "",
+
+                "BOBOT":
+                    row.bobot ?? "",
+
+                "JENIS TARGET":
+                    clean(row.jenis_target),
+
+                "UNDER TARGET":
+                    clean(row.under_target)
+            };
+        }
+
+        return {};
+    }
+
+
+    return async function handler(
+        req,
+        res
+    ) {
+
+        try {
+
+            const type =
+                String(
+                    req.query?.type ||
+                    req.body?.type ||
+                    req.body?.payload?.type ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+
+            const config =
+                MASTER_CONFIG[type];
+
+
+            if (!config) {
+
+                return res.status(400).json({
+                    success: false,
+
+                    message:
+                        `Jenis master "${type}" tidak tersedia.`
+                });
+            }
+
+
+            // ==================================================
+            // GET
+            // ==================================================
+
+            if (req.method === "GET") {
+
+                const rows =
+                    await supabaseRequest(
+                        "/rest/v1/" +
+                        config.table +
+                        "?select=" +
+                        encodeURIComponent(
+                            config.select
+                        ) +
+                        "&order=" +
+                        encodeURIComponent(
+                            config.order
+                        )
+                    );
+
+
+                const data =
+                    Array.isArray(rows)
+                        ? rows.map(function (row) {
+
+                            return toFrontendRow(
+                                type,
+                                row
+                            );
+
+                        })
+                        : [];
+
+
+                return res.status(200).json({
+
+                    success:
+                        true,
+
+                    type:
+                        type,
+
+                    headers:
+                        config.headers,
+
+                    data:
+                        data
+                });
+            }
+
+
+            // ==================================================
+            // POST = TAMBAH / EDIT
+            // ==================================================
+
+            if (req.method === "POST") {
+
+                const body =
+                    req.body || {};
+
+                const payload =
+                    body.payload ||
+                    body;
+
+                const values =
+                    payload.values ||
+                    {};
+
+                const mode =
+                    String(
+                        payload.mode ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+
+                const dbValues =
+                    toDbValues(
+                        type,
+                        values
+                    );
+
+
+                const keyValue =
+                    clean(
+                        dbValues[
+                            config.key
+                        ]
+                    );
+
+
+                if (!keyValue) {
+
+                    return res.status(400).json({
+
+                        success:
+                            false,
+
+                        message:
+                            `${config.headers[0]} wajib diisi.`
+                    });
+                }
+
+
+                // --------------------------------------------------
+                // EDIT
+                // --------------------------------------------------
+
+                if (mode === "UPDATE") {
+
+                    const result =
+                        await supabaseRequest(
+
+                            "/rest/v1/" +
+                            config.table +
+                            "?" +
+                            encodeURIComponent(
+                                config.key
+                            ) +
+                            "=eq." +
+                            encodeURIComponent(
+                                keyValue
+                            ),
+
+                            {
+                                method:
+                                    "PATCH",
+
+                                headers: {
+                                    "Prefer":
+                                        "return=representation"
+                                },
+
+                                body:
+                                    JSON.stringify(
+                                        dbValues
+                                    )
+                            }
+                        );
+
+
+                    return res.status(200).json({
+
+                        success:
+                            true,
+
+                        mode:
+                            "UPDATE",
+
+                        data:
+                            Array.isArray(
+                                result
+                            )
+                                ? result[0]
+                                : result
+                    });
+                }
+
+
+                // --------------------------------------------------
+                // TAMBAH
+                // --------------------------------------------------
+
+                const result =
+                    await supabaseRequest(
+
+                        "/rest/v1/" +
+                        config.table,
+
+                        {
+                            method:
+                                "POST",
+
+                            headers: {
+                                "Prefer":
+                                    "return=representation"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    dbValues
+                                )
+                        }
+                    );
+
+
+                return res.status(201).json({
+
+                    success:
+                        true,
+
+                    mode:
+                        "INSERT",
+
+                    data:
+                        Array.isArray(
+                            result
+                        )
+                            ? result[0]
+                            : result
+                });
+            }
+
+
+            // ==================================================
+            // DELETE
+            // ==================================================
+
+            if (req.method === "DELETE") {
+
+                const body =
+                    req.body || {};
+
+                const payload =
+                    body.payload ||
+                    body;
+
+                const keyValue =
+                    clean(
+                        payload.keyValue
+                    );
+
+
+                if (!keyValue) {
+
+                    return res.status(400).json({
+
+                        success:
+                            false,
+
+                        message:
+                            `${config.headers[0]} tidak ditemukan.`
+                    });
+                }
+
+
+                await supabaseRequest(
+
+                    "/rest/v1/" +
+                    config.table +
+                    "?" +
+                    encodeURIComponent(
+                        config.key
+                    ) +
+                    "=eq." +
+                    encodeURIComponent(
+                        keyValue
+                    ),
+
+                    {
+                        method:
+                            "DELETE",
+
+                        headers: {
+                            "Prefer":
+                                "return=minimal"
+                        }
+                    }
+                );
+
+
+                return res.status(200).json({
+
+                    success:
+                        true,
+
+                    mode:
+                        "DELETE",
+
+                    message:
+                        "Master data berhasil dihapus."
+                });
+            }
+
+
+            return res.status(405).json({
+
+                success:
+                    false,
+
+                message:
+                    "Method tidak diizinkan."
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "MASTER API ERROR:",
+                error
+            );
+
+
+            return res.status(
+                error.status || 500
+            ).json({
+
+                success:
+                    false,
+
+                message:
+                    error.message ||
+                    "Gagal memproses master data."
+            });
+        }
+    };
+
 })();
 
 // ===== salesman =====
@@ -8321,6 +8502,13 @@ module.exports = async function handler(req, res) {
 
       case "getMasterData":
       case "getReferenceMasters":
+        return await runHandler(
+          masterHandler,
+          req,
+          res
+        );
+
+      case "saveMasterData":
         return await runHandler(
           masterHandler,
           req,
