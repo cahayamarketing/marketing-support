@@ -480,7 +480,351 @@ const PKM_PAGE_SIZE = 7;
 let currentPkmPage = 1;
 
 let currentUser;
+let approvalNotificationInterval = null;
+let approvalNotificationPreviousCount = 0;
 
+
+async function loadApprovalNotifications() {
+
+    const badge =
+        document.getElementById(
+            "approvalNotificationBadge"
+        );
+
+    const countElement =
+        document.getElementById(
+            "approvalNotificationCount"
+        );
+
+    const list =
+        document.getElementById(
+            "approvalNotificationList"
+        );
+
+    const button =
+        document.getElementById(
+            "approvalNotificationButton"
+        );
+
+    if (
+        !badge ||
+        !countElement ||
+        !list
+    ) {
+        return;
+    }
+
+
+    try {
+
+        const result =
+            await requestBackend(
+                "getApprovalNotifications",
+                {
+                    userNik:
+                        String(
+                            currentUser?.nik ||
+                            currentUser?.id ||
+                            ""
+                        ).trim()
+                }
+            );
+
+
+        const notifications =
+            Array.isArray(
+                result.notifications
+            )
+                ? result.notifications
+                : [];
+
+        const total =
+            Number(
+                result.total || 0
+            );
+
+
+        countElement.textContent =
+            String(total);
+
+
+        if (total > 0) {
+
+            badge.textContent =
+                total > 99
+                    ? "99+"
+                    : String(total);
+
+            badge.classList.remove(
+                "hidden"
+            );
+
+        } else {
+
+            badge.classList.add(
+                "hidden"
+            );
+        }
+
+
+        if (
+            total >
+            approvalNotificationPreviousCount
+        ) {
+
+            button?.classList.add(
+                "animate-bounce"
+            );
+
+            window.setTimeout(
+                function () {
+
+                    button?.classList.remove(
+                        "animate-bounce"
+                    );
+
+                },
+                1200
+            );
+        }
+
+
+        approvalNotificationPreviousCount =
+            total;
+
+
+        if (!notifications.length) {
+
+            list.innerHTML = `
+                <div
+                    class="px-4 py-10 text-center text-sm text-slate-400"
+                >
+                    Tidak ada approval yang menunggu.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        list.innerHTML =
+            notifications
+                .map(function (item) {
+
+                    return `
+                        <button
+                            type="button"
+                            class="approval-notification-item w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-red-50"
+                            data-approval-notification-id="${escapeHtml(item.id)}"
+                        >
+
+                            <div class="flex items-start gap-3">
+
+                                <div
+                                    class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M12 6v6l4 2"
+                                        />
+                                        <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="9"
+                                        />
+                                    </svg>
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+
+                                    <p class="truncate text-sm font-black text-slate-800">
+                                        ${escapeHtml(
+                                            item.id
+                                        )}
+                                    </p>
+
+                                    <p class="truncate text-xs font-semibold text-slate-500">
+                                        ${escapeHtml(
+                                            item.name || "Tanpa nama"
+                                        )}
+                                    </p>
+
+                                    <div class="mt-1 flex flex-wrap gap-1.5">
+
+                                        <span class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-black text-red-600">
+                                            ${escapeHtml(
+                                                item.roleLabel
+                                            )}
+                                        </span>
+
+                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                                            ${escapeHtml(
+                                                item.branch || "-"
+                                            )}
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </button>
+                    `;
+
+                })
+                .join("");
+
+
+    } catch (error) {
+
+        console.warn(
+            "Notif approval gagal dimuat:",
+            error
+        );
+    }
+}
+
+const approvalNotificationButton =
+    document.getElementById(
+        "approvalNotificationButton"
+    );
+
+const approvalNotificationPanel =
+    document.getElementById(
+        "approvalNotificationPanel"
+    );
+
+const approvalNotificationViewAll =
+    document.getElementById(
+        "approvalNotificationViewAll"
+    );
+
+const approvalNotificationList =
+    document.getElementById(
+        "approvalNotificationList"
+    );
+
+
+if (
+    approvalNotificationButton
+) {
+
+    approvalNotificationButton.addEventListener(
+        "click",
+        async function () {
+
+            approvalNotificationPanel.classList.toggle(
+                "hidden"
+            );
+
+            await loadApprovalNotifications();
+        }
+    );
+}
+
+
+if (
+    approvalNotificationViewAll
+) {
+
+    approvalNotificationViewAll.addEventListener(
+        "click",
+        async function () {
+
+            approvalNotificationPanel.classList.add(
+                "hidden"
+            );
+
+            const filter =
+                document.getElementById(
+                    "approvalStepFilter"
+                );
+
+            if (filter) {
+                filter.value =
+                    "MY_QUEUE";
+            }
+
+            showPage(
+                "listPkmPage"
+            );
+
+            await loadPkmData(
+                "list"
+            );
+        }
+    );
+}
+
+
+if (
+    approvalNotificationList
+) {
+
+    approvalNotificationList.addEventListener(
+        "click",
+        async function (event) {
+
+            const item =
+                event.target.closest(
+                    "[data-approval-notification-id]"
+                );
+
+            if (!item) {
+                return;
+            }
+
+            approvalNotificationPanel.classList.add(
+                "hidden"
+            );
+
+            const filter =
+                document.getElementById(
+                    "approvalStepFilter"
+                );
+
+            if (filter) {
+                filter.value =
+                    "MY_QUEUE";
+            }
+
+            showPage(
+                "listPkmPage"
+            );
+
+            await loadPkmData(
+                "list"
+            );
+        }
+    );
+}
+
+function startApprovalNotificationPolling() {
+
+    window.clearInterval(
+        approvalNotificationInterval
+    );
+
+    loadApprovalNotifications();
+
+    approvalNotificationInterval =
+        window.setInterval(
+            function () {
+                loadApprovalNotifications();
+            },
+            30000
+        );
+}
 
 
 /*
@@ -3419,6 +3763,7 @@ async function initializeApplication() {
     updateBtlSections();
 
     validateFormState();
+    startApprovalNotificationPolling();
 }
 
 

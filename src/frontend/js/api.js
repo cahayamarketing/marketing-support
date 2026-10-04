@@ -188,53 +188,49 @@ async function callApi(
     }
 
 
-    // ==========================================
-    // GAS API LEGACY
-    // ==========================================
-    //
-    // Action lain yang belum dipindahkan
-    // masih menggunakan /api/gas.
-    //
+        // ==========================================
+    // BACKEND VERCEL
     // ==========================================
 
-    const gasStartedAt =
+    const backendStartedAt =
         performance.now();
 
 
-    const response = await fetch(
-        "/api/gas",
-        {
-            method: "POST",
+    const response =
+        await fetch(
+            `/api/backend?action=${encodeURIComponent(action)}`,
+            {
+                method: "POST",
 
-            headers: {
-                "Content-Type":
-                    "application/json"
-            },
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
 
-            body: JSON.stringify({
-                action:
-                    action,
+                body: JSON.stringify({
+                    action:
+                        action,
 
-                token:
-                    token,
+                    token:
+                        token,
 
-                payload:
-                    payload
-            })
-        }
-    );
+                    payload:
+                        payload
+                })
+            }
+        );
 
 
-    const gasDuration =
+    const backendDuration =
         performance.now() -
-        gasStartedAt;
+        backendStartedAt;
 
 
     console.log(
-        "[API] GAS",
+        "[API] BACKEND",
         action,
         `${(
-            gasDuration /
+            backendDuration /
             1000
         ).toFixed(2)}s`
     );
@@ -267,6 +263,55 @@ async function callApi(
     const apiDuration =
         performance.now() -
         apiStartedAt;
+
+
+    console.log(
+        "[API] TOTAL",
+        action,
+        `${(
+            apiDuration /
+            1000
+        ).toFixed(2)}s`
+    );
+
+
+    return result;
+
+
+    const gasDuration =
+        performance.now() -
+        gasStartedAt;
+
+
+    console.log(
+        "[API] GAS",
+        action,
+        `${(
+            gasDuration /
+            1000
+        ).toFixed(2)}s`
+    );
+
+    try {
+
+        result =
+            await response.json();
+
+    } catch (error) {
+
+        throw new Error(
+            "Respons backend tidak valid."
+        );
+    }
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            result.message ||
+            "Permintaan gagal diproses."
+        );
+    }
 
 
     console.log(

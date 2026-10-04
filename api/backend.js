@@ -7930,6 +7930,211 @@ function getPkmApprovalState(row) {
     };
 }
 
+async function approvalNotificationHandler(
+    request,
+    response
+) {
+
+    if (request.method !== "POST") {
+
+        return response.status(405).json({
+            success: false,
+            message:
+                "Gunakan method POST."
+        });
+    }
+
+    try {
+
+        let body =
+            request.body || {};
+
+        if (
+            typeof body === "string"
+        ) {
+            body =
+                JSON.parse(body);
+        }
+
+        const user =
+            await getApprovalUser(
+                body
+            );
+
+        const role =
+            getApprovalRoleFromUser(
+                user
+            );
+
+        const approvalRoles = [
+            "KACAB",
+            "MSMC",
+            "PIC_H23",
+            "MGR_H1",
+            "MGR_H23"
+        ];
+
+        if (
+            !approvalRoles.includes(
+                role
+            )
+        ) {
+            return response.status(200).json({
+                success: true,
+                role: role,
+                total: 0,
+                notifications: []
+            });
+        }
+
+
+        const userBranch =
+            String(
+                user.cab ||
+                user.branch ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+        const isHeadOffice =
+            userBranch === "HO" ||
+            userBranch === "ALL";
+
+
+        const rows =
+            await supabaseRequest(
+                "/rest/v1/pkm" +
+                "?select=" +
+                [
+                    "id_pkm",
+                    "nama",
+                    "cabang",
+                    "type_pkm",
+                    "created_at",
+                    "acc_crm",
+                    "acc_kacab",
+                    "acc_msmc",
+                    "acc_koordinator_h23",
+                    "acc_manager_h1",
+                    "acc_manager_h23"
+                ].join(",") +
+                "&order=created_at.asc" +
+                "&limit=5000"
+            );
+
+
+        const notifications =
+            Array.isArray(rows)
+                ? rows
+                    .map(function (row) {
+
+                        const state =
+                            getPkmApprovalState(
+                                row
+                            );
+
+                        if (
+                            state.final ||
+                            state.currentRole !==
+                                role
+                        ) {
+                            return null;
+                        }
+
+
+                        if (
+                            role === "KACAB" &&
+                            String(
+                                row.cabang || ""
+                            )
+                                .trim()
+                                .toUpperCase() !==
+                                userBranch
+                        ) {
+                            return null;
+                        }
+
+
+                        if (
+                            role !== "KACAB" &&
+                            !isHeadOffice
+                        ) {
+                            return null;
+                        }
+
+
+                        return {
+                            id:
+                                String(
+                                    row.id_pkm || ""
+                                ).trim(),
+
+                            name:
+                                String(
+                                    row.nama || ""
+                                ).trim(),
+
+                            branch:
+                                String(
+                                    row.cabang || ""
+                                ).trim(),
+
+                            type:
+                                String(
+                                    row.type_pkm || ""
+                                ).trim(),
+
+                            role:
+                                role,
+
+                            roleLabel:
+                                role === "PIC_H23"
+                                    ? "PIC H23"
+                                    : role === "MGR_H1"
+                                        ? "MANAGER H1"
+                                        : role === "MGR_H23"
+                                            ? "MANAGER H23"
+                                            : role,
+
+                            createdAt:
+                                row.created_at || null
+                        };
+                    })
+                    .filter(Boolean)
+                : [];
+
+
+        return response.status(200).json({
+            success: true,
+            role: role,
+            total:
+                notifications.length,
+            notifications:
+                notifications.slice(
+                    0,
+                    20
+                )
+        });
+
+    } catch (error) {
+
+        console.error(
+            "APPROVAL NOTIFICATION ERROR:",
+            error
+        );
+
+        return response.status(
+            error.status || 500
+        ).json({
+            success: false,
+            message:
+                error.message ||
+                "Gagal mengambil notifikasi approval."
+        });
+    }
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -8684,6 +8889,13 @@ module.exports = async function handler(req, res) {
     case "googleOAuthCallback":
         return await runHandler(
             googleOAuthCallbackHandler,
+            req,
+            res
+        );
+
+    case "getApprovalNotifications":
+        return await runHandler(
+            approvalNotificationHandler,
             req,
             res
         );
