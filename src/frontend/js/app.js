@@ -5197,13 +5197,11 @@ document
 |--------------------------------------------------------------------------
 */
 
-function updateMobileBottomNav(
-    pageId
-) {
+function updateMobileBottomNav(pageId) {
 
     /*
     |--------------------------------------------------------------
-    | HAPUS ACTIVE DARI SEMUA MENU
+    | HAPUS ACTIVE DARI SEMUA MENU UTAMA
     |--------------------------------------------------------------
     */
 
@@ -5211,45 +5209,37 @@ function updateMobileBottomNav(
         .querySelectorAll(
             ".mobile-bottom-nav-item"
         )
-        .forEach(
-            function (item) {
+        .forEach(function (item) {
 
-                item.classList.remove(
-                    "active"
-                );
+            item.classList.remove("active");
 
-            }
-        );
+        });
 
 
     /*
     |--------------------------------------------------------------
-    | MAP HALAMAN KE MENU UTAMA MOBILE
+    | HALAMAN YANG MASUK KE MENU PKM
     |--------------------------------------------------------------
     */
 
-    const mobileNavPageMap = {
-
-        dashboardPage:
-            "dashboardPage",
-
-        pengajuanPage:
-            "pkm",
-
-        listPkmPage:
-            "pkm",
-
-        pdfPkmPage:
-            "pkm",
-
-        lpjPage:
-            "lpjPage"
-
-    };
+    const pkmPages = [
+        "pengajuanPage",
+        "listPkmPage",
+        "pdfPkmPage",
+        "lpjPage"
+    ];
 
 
-    const navTarget =
-        mobileNavPageMap[pageId];
+    /*
+    |--------------------------------------------------------------
+    | HALAMAN YANG MASUK KE MENU KPI
+    |--------------------------------------------------------------
+    */
+
+    const kpiPages = [
+        "crmKpiPage",
+        "sipedeKpiPage"
+    ];
 
 
     /*
@@ -5258,9 +5248,7 @@ function updateMobileBottomNav(
     |--------------------------------------------------------------
     */
 
-    if (
-        navTarget === "pkm"
-    ) {
+    if (pkmPages.includes(pageId)) {
 
         const pkmButton =
             document.getElementById(
@@ -5276,7 +5264,31 @@ function updateMobileBottomNav(
         }
 
         return;
+    }
 
+
+    /*
+    |--------------------------------------------------------------
+    | KPI
+    |--------------------------------------------------------------
+    */
+
+    if (kpiPages.includes(pageId)) {
+
+        const kpiButton =
+            document.getElementById(
+                "mobileKpiMenuButton"
+            );
+
+        if (kpiButton) {
+
+            kpiButton.classList.add(
+                "active"
+            );
+
+        }
+
+        return;
     }
 
 
@@ -5286,66 +5298,21 @@ function updateMobileBottomNav(
     |--------------------------------------------------------------
     */
 
-    if (!navTarget) {
-        return;
-    }
-
-
-    const pkmPages = [
-        "pengajuanPage",
-        "listPkmPage",
-        "pdfPkmPage",
-        "lpjPage"
-    ];
-
-    const kpiPages = [
-        "crmKpiPage",
-        "sipedeKpiPage"
-    ];
-
-
-    let targetPageId =
-        pageId;
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SEMUA HALAMAN PKM
-    | → AKTIFKAN TOMBOL PKM
-    |--------------------------------------------------------------------------
-    */
-
-    if (pkmPages.includes(pageId)) {
-        targetPageId = "pkmMenu";
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SEMUA HALAMAN KPI
-    | → AKTIFKAN TOMBOL KPI
-    |--------------------------------------------------------------------------
-    */
-
-    if (kpiPages.includes(pageId)) {
-        targetPageId = "kpiMenu";
-    }
-
-
     const matchedButton =
         document.querySelector(
-            `[data-mobile-nav-page="${targetPageId}"]`
+            `[data-mobile-nav-page="${pageId}"]`
         );
 
 
     if (matchedButton) {
+
         matchedButton.classList.add(
             "active"
         );
+
     }
 
 }
-
 
 /*
 |--------------------------------------------------------------------------
