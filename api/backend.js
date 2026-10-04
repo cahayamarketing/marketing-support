@@ -5082,19 +5082,142 @@ const masterHandler = (() => {
                     req.body?.payload?.type ||
                     ""
                 )
-                    .trim()
-                    .toUpperCase();
+                .trim()
+                .toUpperCase();
 
+
+            // ==================================================
+            // GET REFERENCE MASTER LAMA
+            // GET /api/master
+            // tanpa ?type
+            // ==================================================
+
+            if (
+                req.method === "GET" &&
+                !type
+            ) {
+
+                const pkmTypes =
+                    await supabaseRequest(
+                        "/rest/v1/master_pkm" +
+                        "?select=id,pkm,jenis_pkm" +
+                        "&order=id.asc"
+                    );
+
+
+                const events =
+                    await supabaseRequest(
+                        "/rest/v1/master_activity" +
+                        "?select=id_event,kode_event,nama_event,nama_event_md,jenis_event" +
+                        "&order=id_event.asc"
+                    );
+
+
+                const unitRows =
+                    await supabaseRequest(
+                        "/rest/v1/master_unit" +
+                        "?select=gab" +
+                        "&order=gab.asc"
+                    );
+
+
+                const result = {
+
+                    leasing: [],
+
+                    focusTypes:
+                        unitRows
+                            .map(function (row) {
+                                return String(
+                                    row.gab || ""
+                                ).trim();
+                            })
+                            .filter(Boolean),
+
+                    pkmTypes:
+                        pkmTypes
+                            .map(function (row) {
+                                return {
+                                    id:
+                                        String(
+                                            row.id || ""
+                                        ).trim(),
+
+                                    category:
+                                        String(
+                                            row.pkm || ""
+                                        ).trim(),
+
+                                    name:
+                                        String(
+                                            row.jenis_pkm || ""
+                                        ).trim()
+                                };
+                            })
+                            .filter(function (item) {
+                                return Boolean(
+                                    item.name
+                                );
+                            }),
+
+                    events:
+                        events
+                            .map(function (row) {
+                                return {
+                                    id:
+                                        String(
+                                            row.id_event || ""
+                                        ).trim(),
+
+                                    code:
+                                        String(
+                                            row.kode_event || ""
+                                        ).trim(),
+
+                                    name:
+                                        String(
+                                            row.nama_event || ""
+                                        ).trim(),
+
+                                    mdName:
+                                        String(
+                                            row.nama_event_md || ""
+                                        ).trim(),
+
+                                    category:
+                                        String(
+                                            row.jenis_event || ""
+                                        ).trim()
+                                };
+                            })
+                            .filter(function (item) {
+                                return Boolean(
+                                    item.name
+                                );
+                            })
+                };
+
+
+                return res.status(200).json({
+                    success: true,
+                    message:
+                        "Master data berhasil diambil dari Supabase.",
+                    data: result
+                });
+            }
+
+
+            // ==================================================
+            // MASTER DATA INDIVIDUAL
+            // ==================================================
 
             const config =
                 MASTER_CONFIG[type];
 
 
             if (!config) {
-
                 return res.status(400).json({
                     success: false,
-
                     message:
                         `Jenis master "${type}" tidak tersedia.`
                 });
