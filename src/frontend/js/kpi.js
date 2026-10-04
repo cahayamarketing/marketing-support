@@ -325,6 +325,19 @@ function initializeCrmKpiPeriod() {
     updateCrmKpiPeriodTypeUI();
 }
 
+const CRM_KPI_BRANCH_OPTIONS = [
+    { code: "SLO", name: "SOLO YOS" },
+    { code: "RJM", name: "RAJIMAN" },
+    { code: "KRA", name: "KARANGANYAR" },
+    { code: "KRP", name: "KARANGPANDAN" },
+    { code: "SRG", name: "SRAGEN" },
+    { code: "WNG", name: "WONOGIRI" },
+    { code: "NGA", name: "NGAWI" },
+    { code: "CRB", name: "CARUBAN" },
+    { code: "STY", name: "SUTOYO" },
+    { code: "KSM", name: "KUSUMANEGARA" }
+];
+
 function initializeCrmKpiBranch() {
     const isHeadOffice =
         currentUser.branch === "ALL" ||
@@ -334,15 +347,16 @@ function initializeCrmKpiBranch() {
         currentUser.originalBranch ||
         currentUser.branch ||
         ""
-    ).toUpperCase();
+    ).trim().toUpperCase();
 
     crmKpiBranch.innerHTML = "";
 
-    sheetBranchOptions.forEach(function (branch) {
+    CRM_KPI_BRANCH_OPTIONS.forEach(function (branch) {
         const option =
             document.createElement("option");
 
         option.value = branch.code;
+
         option.textContent =
             `${branch.code} — ${branch.name}`;
 
@@ -353,7 +367,22 @@ function initializeCrmKpiBranch() {
         crmKpiBranch.appendChild(option);
     });
 
+    /*
+     * Jika user HO/MSCM/MGR dan branch user
+     * bukan salah satu cabang operasional,
+     * default ke SLO.
+     */
+    if (
+        isHeadOffice &&
+        !CRM_KPI_BRANCH_OPTIONS.some(function (branch) {
+            return branch.code === userBranch;
+        })
+    ) {
+        crmKpiBranch.value = "SLO";
+    }
+
     crmKpiBranch.disabled = !isHeadOffice;
+
     crmKpiBranch.classList.toggle(
         "bg-slate-100",
         !isHeadOffice
