@@ -2967,15 +2967,36 @@ body.modal-open {
 
     .mobile-bottom-nav-icon {
         display: flex;
-        width: 22px;
-        height: 22px;
+        width: 26px;
+        height: 26px;
         align-items: center;
         justify-content: center;
     }
 
     .mobile-bottom-nav-icon svg {
-        width: 19px;
-        height: 19px;
+        width: 23px;
+        height: 23px;
+    }
+
+    /* POSISI 4 ITEM NAV */
+    #mobileBottomNav
+        button[data-mobile-nav-page="dashboardPage"] {
+        grid-column: 1;
+    }
+
+    #mobileBottomNav
+        #mobilePkmMenuButton {
+        grid-column: 2;
+    }
+
+    #mobileBottomNav
+        button[data-mobile-nav-page="lpjPage"] {
+        grid-column: 4;
+    }
+
+    #mobileBottomNav
+        #mobileKpiMenuButton {
+        grid-column: 5;
     }
 
 
