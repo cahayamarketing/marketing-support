@@ -1224,7 +1224,8 @@ const mutationActions = new Set([
     "saveCrmKpi",
     "verifyCrmKpi",
     "saveLpj",
-    "createLpj"
+    "createLpj",
+    "deleteMasterData"
 ]);
 
 const activeMutationRequests =
@@ -1689,6 +1690,38 @@ async function requestBackend(
 
                 method:
                     "GET",
+
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
+            };
+        }
+
+        if (action === "deleteMasterData") {
+
+            apiUrl =
+                "/api/backend?action=deleteMasterData";
+
+            fetchOptions = {
+                method: "DELETE",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    action:
+                        action,
+
+                    token:
+                        sessionToken,
+
+                    payload:
+                        payload
+                }),
 
                 signal:
                     controller.signal,
@@ -3707,13 +3740,25 @@ async function loadMasterDataTable(
                             ).join("")}
 
                             <td class="sticky right-0 bg-white px-4 py-3 text-right">
-                                <button
-                                    type="button"
-                                    data-edit-master-row="${rowIndex}"
-                                    class="rounded-lg bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100"
-                                >
-                                    Edit
-                                </button>
+                                <div class="flex justify-end gap-2">
+
+                                    <button
+                                        type="button"
+                                        data-edit-master-row="${rowIndex}"
+                                        class="rounded-lg bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100"
+                                    >
+                                        Edit
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        data-delete-master-row="${rowIndex}"
+                                        class="rounded-lg bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100"
+                                    >
+                                        Hapus
+                                    </button>
+
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -3990,6 +4035,11 @@ async function submitMasterDataForm(
                     type:
                         currentMasterType,
 
+                    mode:
+                        editingMasterRowIndex === null
+                            ? "INSERT"
+                            : "UPDATE",
+
                     values:
                         values
                 }
@@ -4036,6 +4086,87 @@ async function submitMasterDataForm(
     }
 }
 
+async function deleteMasterDataRow(
+    rowIndex
+) {
+    const index =
+        Number(rowIndex);
+
+    const row =
+        currentMasterRows[index];
+
+    if (!row) {
+        showToast(
+            "Data master tidak ditemukan.",
+            "error"
+        );
+        return;
+    }
+
+    const keyHeader =
+        MASTER_KEY_HEADERS[
+            currentMasterType
+        ];
+
+    const keyValue =
+        String(
+            row[keyHeader] || ""
+        ).trim();
+
+    if (!keyHeader || !keyValue) {
+        showToast(
+            "Key data tidak ditemukan.",
+            "error"
+        );
+        return;
+    }
+
+    const confirmed =
+        window.confirm(
+            `Hapus data ${keyHeader} "${keyValue}"?`
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        await requestBackend(
+            "deleteMasterData",
+            {
+                type:
+                    currentMasterType,
+
+                keyValue:
+                    keyValue
+            }
+        );
+
+        showToast(
+            "Master data berhasil dihapus.",
+            "success"
+        );
+
+        await loadMasterDataTable(
+            currentMasterType
+        );
+
+        await loadReferenceMasters();
+
+    } catch (error) {
+
+        console.error(
+            "Gagal menghapus Master Data:",
+            error
+        );
+
+        showToast(
+            getApiErrorMessage(error),
+            "error"
+        );
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -4081,19 +4212,35 @@ if (masterDataTableBody) {
     masterDataTableBody.addEventListener(
         "click",
         function (event) {
+
             const editButton =
                 event.target.closest(
                     "[data-edit-master-row]"
                 );
 
-            if (!editButton) {
+            if (editButton) {
+
+                openMasterDataForm(
+                    editButton.dataset
+                        .editMasterRow
+                );
+
                 return;
             }
 
-            openMasterDataForm(
-                editButton.dataset
-                    .editMasterRow
-            );
+
+            const deleteButton =
+                event.target.closest(
+                    "[data-delete-master-row]"
+                );
+
+            if (deleteButton) {
+
+                deleteMasterDataRow(
+                    deleteButton.dataset
+                        .deleteMasterRow
+                );
+            }
         }
     );
 }

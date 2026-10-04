@@ -8638,6 +8638,13 @@ module.exports = async function handler(req, res) {
           res
         );
 
+      case "deleteMasterData":
+        return await runHandler(
+          masterHandler,
+          req,
+          res
+        );
+
       case "getSalesmen":
         return await runHandler(
           salesmanHandler,
