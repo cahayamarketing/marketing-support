@@ -5291,18 +5291,57 @@ function updateMobileBottomNav(
     }
 
 
+    const pkmPages = [
+        "pengajuanPage",
+        "listPkmPage",
+        "pdfPkmPage",
+        "lpjPage"
+    ];
+
+    const kpiPages = [
+        "crmKpiPage",
+        "sipedeKpiPage"
+    ];
+
+
+    let targetPageId =
+        pageId;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SEMUA HALAMAN PKM
+    | → AKTIFKAN TOMBOL PKM
+    |--------------------------------------------------------------------------
+    */
+
+    if (pkmPages.includes(pageId)) {
+        targetPageId = "pkmMenu";
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SEMUA HALAMAN KPI
+    | → AKTIFKAN TOMBOL KPI
+    |--------------------------------------------------------------------------
+    */
+
+    if (kpiPages.includes(pageId)) {
+        targetPageId = "kpiMenu";
+    }
+
+
     const matchedButton =
         document.querySelector(
-            `[data-mobile-nav-page="${navTarget}"]`
+            `[data-mobile-nav-page="${targetPageId}"]`
         );
 
 
     if (matchedButton) {
-
         matchedButton.classList.add(
             "active"
         );
-
     }
 
 }
