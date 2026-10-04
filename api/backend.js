@@ -2,6 +2,7 @@
 
 const { google } = require("googleapis");
 const { Readable } = require("stream");
+const crypto = require("crypto");
 
 const PKM_ITEM_DRIVE_ID =
     process.env.PKM_ITEM_DRIVE_ID;
@@ -17,6 +18,331 @@ function getPkmImagesFolderId() {
     }
 
     return PKM_ITEM_DRIVE_ID;
+}
+
+/* --------------------------------------------------------------------------
+| GOOGLE DRIVE OAUTH
+| -------------------------------------------------------------------------- */
+
+const GOOGLE_OAUTH_SCOPE =
+    "https://www.googleapis.com/auth/drive";
+
+function getGoogleOAuthClient() {
+
+    const clientId =
+        process.env.GOOGLE_OAUTH_CLIENT_ID;
+
+    const clientSecret =
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+    const redirectUri =
+        process.env.GOOGLE_OAUTH_REDIRECT_URI;
+
+    if (
+        !clientId ||
+        !clientSecret ||
+        !redirectUri
+    ) {
+        const error =
+            new Error(
+                "Konfigurasi Google OAuth belum lengkap."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    return new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        redirectUri
+    );
+}
+
+
+function createOAuthState() {
+
+    const timestamp =
+        String(Date.now());
+
+    const secret =
+        process.env.GOOGLE_OAUTH_SETUP_SECRET;
+
+    if (!secret) {
+        throw new Error(
+            "GOOGLE_OAUTH_SETUP_SECRET belum dikonfigurasi."
+        );
+    }
+
+    const signature =
+        crypto
+            .createHmac(
+                "sha256",
+                secret
+            )
+            .update(timestamp)
+            .digest("hex");
+
+    return `${timestamp}.${signature}`;
+}
+
+
+function verifyOAuthState(state) {
+
+    const secret =
+        process.env.GOOGLE_OAUTH_SETUP_SECRET;
+
+    if (
+        !secret ||
+        !state
+    ) {
+        return false;
+    }
+
+    const parts =
+        String(state).split(".");
+
+    if (parts.length !== 2) {
+        return false;
+    }
+
+    const timestamp =
+        parts[0];
+
+    const signature =
+        parts[1];
+
+    const age =
+        Date.now() -
+        Number(timestamp);
+
+    // Maksimal 10 menit
+    if (
+        !Number.isFinite(age) ||
+        age < 0 ||
+        age > 10 * 60 * 1000
+    ) {
+        return false;
+    }
+
+    const expected =
+        crypto
+            .createHmac(
+                "sha256",
+                secret
+            )
+            .update(timestamp)
+            .digest("hex");
+
+    return crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expected)
+    );
+}
+
+/* --------------------------------------------------------------------------
+| GOOGLE OAUTH START
+| -------------------------------------------------------------------------- */
+
+async function googleOAuthHandler(
+    request,
+    response
+) {
+
+    const setupSecret =
+        String(
+            request.query?.key ||
+            ""
+        ).trim();
+
+    if (
+        !setupSecret ||
+        setupSecret !==
+            process.env.GOOGLE_OAUTH_SETUP_SECRET
+    ) {
+        return response
+            .status(403)
+            .send(
+                "OAuth setup tidak diizinkan."
+            );
+    }
+
+    const oauth2Client =
+        getGoogleOAuthClient();
+
+    const state =
+        createOAuthState();
+
+    const authorizationUrl =
+        oauth2Client.generateAuthUrl({
+
+            access_type:
+                "offline",
+
+            prompt:
+                "consent",
+
+            scope: [
+                GOOGLE_OAUTH_SCOPE
+            ],
+
+            state,
+
+            login_hint:
+                "cahaya.marketing.ho@gmail.com"
+        });
+
+    return response
+        .redirect(
+            authorizationUrl
+        );
+}
+
+/* --------------------------------------------------------------------------
+| GOOGLE OAUTH CALLBACK
+| -------------------------------------------------------------------------- */
+
+async function googleOAuthCallbackHandler(
+    request,
+    response
+) {
+
+    const code =
+        String(
+            request.query?.code ||
+            ""
+        ).trim();
+
+    const state =
+        String(
+            request.query?.state ||
+            ""
+        ).trim();
+
+    const oauthError =
+        String(
+            request.query?.error ||
+            ""
+        ).trim();
+
+    if (oauthError) {
+        return response
+            .status(400)
+            .send(
+                `Google OAuth gagal: ${oauthError}`
+            );
+    }
+
+    if (
+        !verifyOAuthState(state)
+    ) {
+        return response
+            .status(403)
+            .send(
+                "OAuth state tidak valid atau sudah kedaluwarsa."
+            );
+    }
+
+    if (!code) {
+        return response
+            .status(400)
+            .send(
+                "Authorization code tidak ditemukan."
+            );
+    }
+
+    try {
+
+        const oauth2Client =
+            getGoogleOAuthClient();
+
+        const {
+            tokens
+        } =
+            await oauth2Client.getToken(
+                code
+            );
+
+        const refreshToken =
+            String(
+                tokens.refresh_token ||
+                ""
+            ).trim();
+
+        if (!refreshToken) {
+
+            return response
+                .status(500)
+                .send(
+                    "Refresh token tidak diberikan Google. Ulangi authorization."
+                );
+        }
+
+        return response
+            .status(200)
+            .send(`
+                <!doctype html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Google Drive OAuth Berhasil</title>
+                </head>
+                <body style="
+                    font-family: Arial, sans-serif;
+                    padding: 40px;
+                ">
+
+                    <h2>Google Drive OAuth berhasil.</h2>
+
+                    <p>
+                        Copy refresh token berikut ke
+                        Vercel Environment Variables:
+                    </p>
+
+                    <textarea
+                        readonly
+                        style="
+                            width:100%;
+                            min-height:120px;
+                            font-family:monospace;
+                            font-size:14px;
+                        "
+                    >${refreshToken}</textarea>
+
+                    <p>
+                        Variable name:
+                    </p>
+
+                    <pre>GOOGLE_DRIVE_REFRESH_TOKEN</pre>
+
+                    <p>
+                        Setelah disimpan di Vercel,
+                        jangan bagikan token ini kepada siapa pun.
+                    </p>
+
+                </body>
+                </html>
+            `);
+
+    } catch (error) {
+
+        console.error(
+            "[GOOGLE OAUTH CALLBACK]",
+            error
+        );
+
+        return response
+            .status(
+                error?.response?.status ||
+                error?.status ||
+                500
+            )
+            .send(
+                error?.message ||
+                "Google OAuth callback gagal."
+            );
+    }
 }
 
 // Supabase helper kept inside the single Vercel Function.
@@ -5474,22 +5800,14 @@ return async function handler(
 
 function getPkmItemDriveClient() {
 
-    const email =
-        process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const refreshToken =
+        process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
 
-    const privateKey =
-        process.env.GOOGLE_PRIVATE_KEY;
-
-
-    if (
-        !email ||
-        !privateKey ||
-        !PKM_ITEM_DRIVE_ID
-    ) {
+    if (!refreshToken) {
 
         const error =
             new Error(
-                "Konfigurasi Google Drive PKM belum lengkap. Pastikan GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, dan PKM_ITEM_DRIVE_ID tersedia."
+                "GOOGLE_DRIVE_REFRESH_TOKEN belum dikonfigurasi di Vercel."
             );
 
         error.status = 500;
@@ -5497,33 +5815,16 @@ function getPkmItemDriveClient() {
         throw error;
     }
 
-
     const auth =
-        new google.auth.GoogleAuth({
+        getGoogleOAuthClient();
 
-            credentials: {
-
-                client_email:
-                    email,
-
-                private_key:
-                    privateKey.replace(
-                        /\\n/g,
-                        "\n"
-                    )
-            },
-
-            scopes: [
-                "https://www.googleapis.com/auth/drive"
-            ]
-        });
-
+    auth.setCredentials({
+        refresh_token:
+            refreshToken
+    });
 
     return google.drive({
-
-        version:
-            "v3",
-
+        version: "v3",
         auth
     });
 }
@@ -7093,6 +7394,20 @@ module.exports = async function handler(req, res) {
           discordHandler,
           req,
           res
+        );
+
+    case "googleOAuth":
+        return await runHandler(
+            googleOAuthHandler,
+            req,
+            res
+        );
+
+    case "googleOAuthCallback":
+        return await runHandler(
+            googleOAuthCallbackHandler,
+            req,
+            res
         );
 
       // ==================================================
