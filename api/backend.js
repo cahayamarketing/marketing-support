@@ -8873,6 +8873,911 @@ async function approvePkmFromDiscordHandler(
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| CRM KPI
+|--------------------------------------------------------------------------
+*/
+
+async function crmKpiHandler(req, res) {
+
+    try {
+
+        let body = req.body || {};
+
+        if (typeof body === "string") {
+            body = JSON.parse(body);
+        }
+
+        const action =
+            String(
+                req.query?.action ||
+                body.action ||
+                ""
+            )
+                .trim();
+
+        const payload =
+            body.payload ||
+            body;
+
+        const branch =
+            String(
+                payload.branch ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+        const year =
+            Number(
+                payload.year
+            );
+
+        const month =
+            Number(
+                payload.month
+            );
+
+        const week =
+            payload.week === null ||
+            payload.week === undefined ||
+            payload.week === ""
+                ? null
+                : Number(payload.week);
+
+        const snapshotType =
+            String(
+                payload.snapshotType ||
+                "WEEKLY"
+            )
+                .trim()
+                .toUpperCase();
+
+        if (!branch) {
+            throw new Error(
+                "Branch KPI CRM belum dipilih."
+            );
+        }
+
+        if (
+            !Number.isFinite(year) ||
+            !Number.isFinite(month)
+        ) {
+            throw new Error(
+                "Periode KPI CRM tidak valid."
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ID SNAPSHOT
+        |--------------------------------------------------------------------------
+        */
+
+        const periodKey =
+            [
+                branch,
+                year,
+                month,
+                snapshotType === "CLOSING"
+                    ? "CLOSING"
+                    : `W${week}`
+            ].join("-");
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GET DATA
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            action ===
+            "getCrmKpiData"
+        ) {
+
+            const hoRows =
+                await supabaseRequest(
+                    "/rest/v1/kpi_crm_ho" +
+                    "?select=*" +
+                    `&id_input=eq.${encodeURIComponent(periodKey)}` +
+                    "&order=id_detail.asc"
+                );
+
+
+            /*
+            | CRM actual disimpan di raw_data
+            | atau kpi_crm berdasarkan id_input.
+            */
+
+            const crmRows =
+                await supabaseRequest(
+                    "/rest/v1/kpi_crm" +
+                    "?select=*" +
+                    `&id_input=eq.${encodeURIComponent(periodKey)}` +
+                    "&order=id_detail.asc"
+                );
+
+
+            const hoMap =
+                new Map();
+
+            (Array.isArray(hoRows)
+                ? hoRows
+                : []
+            ).forEach(
+                function (row) {
+
+                    const code =
+                        String(
+                            row.kode_kpi ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                    if (code) {
+                        hoMap.set(
+                            code,
+                            row
+                        );
+                    }
+                }
+            );
+
+
+            const crmMap =
+                new Map();
+
+            (Array.isArray(crmRows)
+                ? crmRows
+                : []
+            ).forEach(
+                function (row) {
+
+                    const code =
+                        String(
+                            row.id_detail ||
+                            row.indikator_kpi ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                    if (code) {
+                        crmMap.set(
+                            code,
+                            row
+                        );
+                    }
+                }
+            );
+
+
+            const data =
+                CRM_KPI_METRICS.map(
+                    function (metric) {
+
+                        const crm =
+                            crmMap.get(
+                                metric.code
+                            );
+
+                        const ho =
+                            hoMap.get(
+                                metric.code
+                            );
+
+
+                        let actualCrm =
+                            crm
+                                ? crm.aktual
+                                : "";
+
+                        let scoreCrm =
+                            crm
+                                ? crm.skor
+                                : "";
+
+                        let actualHo =
+                            ho
+                                ? ho.aktual_ho
+                                : "";
+
+                        let scoreHo =
+                            ho
+                                ? ho.skor_ho
+                                : "";
+
+
+                        /*
+                        | KPB = 4 nilai
+                        */
+
+                        if (
+                            metric.code ===
+                            "KPB"
+                        ) {
+
+                            actualCrm =
+                                crm?.raw_data
+                                    ?.actualCrm ||
+                                crm?.raw_data
+                                    ?.actual_crm ||
+                                [
+                                    "",
+                                    "",
+                                    "",
+                                    ""
+                                ];
+
+                            actualHo =
+                                ho?.raw_data
+                                    ?.actualHo ||
+                                ho?.raw_data
+                                    ?.actual_ho ||
+                                [
+                                    "",
+                                    "",
+                                    "",
+                                    ""
+                                ];
+                        }
+
+
+                        return {
+
+                            code:
+                                metric.code,
+
+                            target:
+                                crm?.raw_data
+                                    ?.target ??
+                                metric.target,
+
+                            actualCrm:
+                                actualCrm,
+
+                            actualHo:
+                                actualHo,
+
+                            scoreCrm:
+                                scoreCrm,
+
+                            scoreHo:
+                                scoreHo,
+
+                            status:
+                                String(
+                                    ho?.status ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase()
+                        };
+                    }
+                );
+
+
+            const verifiedRow =
+                Array.isArray(hoRows)
+                    ? hoRows.find(
+                        function (row) {
+
+                            return (
+                                String(
+                                    row.status ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase() ===
+                                "TERVERIFIKASI"
+                            );
+                        }
+                    )
+                    : null;
+
+
+            const status =
+                verifiedRow
+                    ? "TERVERIFIKASI"
+                    : (
+                        Array.isArray(
+                            hoRows
+                        ) &&
+                        hoRows.length
+                    )
+                        ? String(
+                            hoRows[0]
+                                ?.status ||
+                            "MENUNGGU VERIFIKASI MSCM"
+                        )
+                        : "";
+
+
+            const snapshotNote =
+                Array.isArray(hoRows) &&
+                hoRows.length
+                    ? String(
+                        hoRows[0]
+                            ?.catatan ||
+                        ""
+                    )
+                    : "";
+
+
+            return res.status(200).json({
+
+                success:
+                    true,
+
+                data:
+                    data,
+
+                status:
+                    status,
+
+                snapshotType:
+                    snapshotType,
+
+                snapshotNote:
+                    snapshotNote,
+
+                canViewHo:
+                    branch === "ALL" ||
+                    branch === "HO"
+
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SAVE CRM
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            action ===
+            "saveCrmKpi"
+        ) {
+
+            const metrics =
+                Array.isArray(
+                    payload.metrics
+                )
+                    ? payload.metrics
+                    : [];
+
+
+            if (!metrics.length) {
+                throw new Error(
+                    "Data KPI CRM kosong."
+                );
+            }
+
+
+            const snapshotNote =
+                String(
+                    payload.snapshotNote ||
+                    ""
+                )
+                    .trim();
+
+
+            const now =
+                new Date()
+                    .toISOString();
+
+
+            /*
+            | Simpan Actual CRM
+            */
+
+            const crmPayload =
+                metrics.map(
+                    function (metric) {
+
+                        const code =
+                            String(
+                                metric.code ||
+                                ""
+                            )
+                                .trim()
+                                .toUpperCase();
+
+                        let actual =
+                            metric.actualCrm;
+
+
+                        let rawData = {
+                            code:
+                                code,
+
+                            target:
+                                metric.target,
+
+                            actualCrm:
+                                metric.actualCrm,
+
+                            snapshotType:
+                                snapshotType,
+
+                            branch:
+                                branch,
+
+                            year:
+                                year,
+
+                            month:
+                                month,
+
+                            week:
+                                week
+                        };
+
+
+                        /*
+                        | KPB menyimpan array
+                        | di raw_data.
+                        */
+
+                        if (
+                            code === "KPB"
+                        ) {
+
+                            actual =
+                                null;
+                        }
+
+
+                        return {
+
+                            id_input:
+                                periodKey,
+
+                            id_detail:
+                                code,
+
+                            tanggal:
+                                now
+                                    .slice(
+                                        0,
+                                        10
+                                    ),
+
+                            nik:
+                                String(
+                                    body.nik ||
+                                    body.userNik ||
+                                    ""
+                                ).trim(),
+
+                            nama:
+                                String(
+                                    body.nama ||
+                                    body.userName ||
+                                    ""
+                                ).trim(),
+
+                            cabang:
+                                branch,
+
+                            indikator_kpi:
+                                code,
+
+                            aktual:
+                                actual === "" ||
+                                actual === null ||
+                                Array.isArray(
+                                    actual
+                                )
+                                    ? null
+                                    : Number(
+                                        actual
+                                    ),
+
+                            skor:
+                                metric.scoreCrm === "" ||
+                                metric.scoreCrm === null
+                                    ? null
+                                    : Number(
+                                        metric.scoreCrm
+                                    ),
+
+                            source:
+                                "SUPABASE",
+
+                            raw_data:
+                                rawData
+                        };
+                    }
+                );
+
+
+            /*
+            | Hapus snapshot CRM lama,
+            | lalu insert versi terbaru.
+            */
+
+            await supabaseRequest(
+                "/rest/v1/kpi_crm" +
+                `?id_input=eq.${encodeURIComponent(periodKey)}`,
+                {
+                    method:
+                        "DELETE"
+                }
+            );
+
+
+            await supabaseRequest(
+                "/rest/v1/kpi_crm",
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Prefer":
+                            "return=minimal"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            crmPayload
+                        )
+                }
+            );
+
+
+            /*
+            | Buat / reset status HO
+            | menjadi MENUNGGU VERIFIKASI.
+            */
+
+            const hoPayload =
+                metrics.map(
+                    function (metric) {
+
+                        const code =
+                            String(
+                                metric.code ||
+                                ""
+                            )
+                                .trim()
+                                .toUpperCase();
+
+                        const actualCrm =
+                            metric.actualCrm;
+
+                        return {
+
+                            id_input:
+                                periodKey,
+
+                            id_detail:
+                                `${periodKey}-${code}`,
+
+                            kode_kpi:
+                                code,
+
+                            cabang:
+                                branch,
+
+                            tahun:
+                                year,
+
+                            bulan:
+                                month,
+
+                            week:
+                                week,
+
+                            target_input:
+                                Array.isArray(
+                                    metric.target
+                                )
+                                    ? JSON.stringify(
+                                        metric.target
+                                    )
+                                    : String(
+                                        metric.target ??
+                                        ""
+                                    ),
+
+                            realisasi_crm:
+                                Array.isArray(
+                                    actualCrm
+                                )
+                                    ? JSON.stringify(
+                                        actualCrm
+                                    )
+                                    : String(
+                                        actualCrm ??
+                                        ""
+                                    ),
+
+                            aktual_ho:
+                                String(
+                                    metric.actualHo ??
+                                    ""
+                                ),
+
+                            skor_ho:
+                                metric.scoreHo === "" ||
+                                metric.scoreHo === null
+                                    ? null
+                                    : Number(
+                                        metric.scoreHo
+                                    ),
+
+                            status:
+                                "MENUNGGU VERIFIKASI MSCM",
+
+                            tipe_snapshot:
+                                snapshotType,
+
+                            catatan:
+                                snapshotNote,
+
+                            tanggal_input:
+                                now,
+
+                            raw_data:
+                                {
+                                    branch:
+                                        branch,
+
+                                    year:
+                                        year,
+
+                                    month:
+                                        month,
+
+                                    week:
+                                        week,
+
+                                    snapshotType:
+                                        snapshotType,
+
+                                    actualCrm:
+                                        actualCrm
+                                }
+                        };
+                    }
+                );
+
+
+            await supabaseRequest(
+                "/rest/v1/kpi_crm_ho" +
+                `?id_input=eq.${encodeURIComponent(periodKey)}`,
+                {
+                    method:
+                        "DELETE"
+                }
+            );
+
+
+            await supabaseRequest(
+                "/rest/v1/kpi_crm_ho",
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Prefer":
+                            "return=minimal"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            hoPayload
+                        )
+                }
+            );
+
+
+            return res.status(200).json({
+
+                success:
+                    true,
+
+                message:
+                    "KPI CRM berhasil disimpan dan menunggu verifikasi MSCM."
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VERIFY MSCM
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            action ===
+            "verifyCrmKpi"
+        ) {
+
+            const metrics =
+                Array.isArray(
+                    payload.metrics
+                )
+                    ? payload.metrics
+                    : [];
+
+
+            if (!metrics.length) {
+                throw new Error(
+                    "Data KPI CRM kosong."
+                );
+            }
+
+
+            const now =
+                new Date()
+                    .toISOString();
+
+
+            const hoRows =
+                await supabaseRequest(
+                    "/rest/v1/kpi_crm_ho" +
+                    "?select=*" +
+                    `&id_input=eq.${encodeURIComponent(periodKey)}`
+                );
+
+
+            const updates =
+                metrics.map(
+                    function (metric) {
+
+                        const code =
+                            String(
+                                metric.code ||
+                                ""
+                            )
+                                .trim()
+                                .toUpperCase();
+
+                        const existing =
+                            (
+                                Array.isArray(
+                                    hoRows
+                                )
+                                    ? hoRows
+                                    : []
+                            ).find(
+                                function (row) {
+
+                                    return (
+                                        String(
+                                            row.kode_kpi ||
+                                            ""
+                                        )
+                                            .trim()
+                                            .toUpperCase() ===
+                                        code
+                                    );
+                                }
+                            );
+
+
+                        if (!existing) {
+                            return null;
+                        }
+
+
+                        return {
+
+                            id:
+                                existing.id,
+
+                            aktual_ho:
+                                Array.isArray(
+                                    metric.actualHo
+                                )
+                                    ? JSON.stringify(
+                                        metric.actualHo
+                                    )
+                                    : String(
+                                        metric.actualHo ??
+                                        ""
+                                    ),
+
+                            skor_ho:
+                                metric.scoreHo === "" ||
+                                metric.scoreHo === null
+                                    ? null
+                                    : Number(
+                                        metric.scoreHo
+                                    ),
+
+                            status:
+                                "TERVERIFIKASI",
+
+                            tanggal_verifikasi:
+                                now,
+
+                            updated_at:
+                                now
+                        };
+                    }
+                )
+                .filter(
+                    Boolean
+                );
+
+
+            if (!updates.length) {
+                throw new Error(
+                    "Data KPI CRM belum tersedia untuk diverifikasi."
+                );
+            }
+
+
+            for (
+                const update
+                of updates
+            ) {
+
+                await supabaseRequest(
+                    `/rest/v1/kpi_crm_ho?id=eq.${update.id}`,
+                    {
+                        method:
+                            "PATCH",
+
+                        headers: {
+                            "Prefer":
+                                "return=minimal"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                update
+                            )
+                    }
+                );
+            }
+
+
+            return res.status(200).json({
+
+                success:
+                    true,
+
+                message:
+                    "KPI CRM berhasil diverifikasi MSCM."
+            });
+        }
+
+
+        throw new Error(
+            `Action KPI CRM tidak dikenal: ${action}`
+        );
+
+    } catch (error) {
+
+        console.error(
+            "[CRM KPI HANDLER ERROR]",
+            error
+        );
+
+        return res.status(
+            error?.status ||
+            500
+        ).json({
+
+            success:
+                false,
+
+            message:
+                error?.message ||
+                "Gagal memproses KPI CRM."
+        });
+    }
+}
+
 
 // ===== SINGLE VERCEL FUNCTION ROUTER =====
 function normalizeAction(value) {
