@@ -544,6 +544,7 @@
 
                 <div class="header-account">
 
+                    <!-- LOGO CSM -->
                     <div class="header-logo-wrapper">
                         <img
                             src="./data/logo.png"
@@ -552,7 +553,25 @@
                         >
                     </div>
 
+
+                    <!-- INFO USER -->
+                    <div class="mobile-header-user">
+
+                        <p
+                            id="headerUserName"
+                            class="text-sm font-black leading-tight text-slate-900"
+                        ></p>
+
+                        <p
+                            id="headerBranch"
+                            class="mt-0.5 text-[10px] font-bold text-slate-400"
+                        ></p>
+
+                    </div>
+
+
                     <div class="header-account-divider"></div>
+
 
                     <!-- NOTIFIKASI APPROVAL -->
                     <div
@@ -579,19 +598,16 @@
                                 shadow-sm
                                 transition-all
                                 duration-200
-                                hover:-translate-y-0.5
                                 hover:border-red-200
                                 hover:bg-red-50
                                 hover:text-red-600
-                                hover:shadow-md
                             "
                             aria-label="Notifikasi approval"
                         >
 
-                            <!-- BELL -->
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                class="h-[21px] w-[21px] transition-transform duration-200 group-hover:scale-110"
+                                class="h-[21px] w-[21px]"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -611,7 +627,6 @@
                             </svg>
 
 
-                            <!-- BADGE -->
                             <span
                                 id="approvalNotificationBadge"
                                 class="
@@ -643,10 +658,25 @@
                         <!-- PANEL NOTIFIKASI -->
                         <div
                             id="approvalNotificationPanel"
-                            class="absolute right-0 top-12 z-50 hidden w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                            class="
+                                absolute
+                                right-0
+                                top-14
+                                z-50
+                                hidden
+                                w-[calc(100vw-24px)]
+                                max-w-[360px]
+                                overflow-hidden
+                                rounded-2xl
+                                border
+                                border-slate-200
+                                bg-white
+                                shadow-2xl
+                            "
                         >
 
                             <div class="border-b border-slate-100 px-4 py-4">
+
                                 <div class="flex items-center justify-between">
 
                                     <div>
@@ -667,7 +697,9 @@
                                     </span>
 
                                 </div>
+
                             </div>
+
 
                             <div
                                 id="approvalNotificationList"
@@ -677,6 +709,7 @@
                                     Tidak ada approval yang menunggu.
                                 </div>
                             </div>
+
 
                             <button
                                 id="approvalNotificationViewAll"
@@ -691,23 +724,217 @@
                     </div>
 
 
-                    <div class="hidden text-right sm:block">
-                        <p
-                            id="headerUserName"
-                            class="text-sm font-black text-slate-900"
-                        ></p>
-
-                        <p
-                            id="headerBranch"
-                            class="text-xs font-semibold text-slate-500"
-                        ></p>
-                    </div>
-
-                    <div id="userInitial" class="user-avatar"></div>
+                    <!-- AVATAR AKUN -->
+                    <button
+                        id="mobileAccountButton"
+                        type="button"
+                        class="user-avatar cursor-pointer"
+                        aria-label="Menu akun"
+                        aria-expanded="false"
+                    ></button>
 
                 </div>
 
             </header>
+
+            <!-- ===================================================== -->
+            <!-- MOBILE ACCOUNT PANEL -->
+            <!-- ===================================================== -->
+
+            <div
+                id="mobileAccountPanel"
+                class="
+                    fixed
+                    right-3
+                    top-[68px]
+                    z-[90]
+                    hidden
+                    w-[280px]
+                    overflow-hidden
+                    rounded-3xl
+                    border
+                    border-slate-200
+                    bg-white
+                    shadow-2xl
+                "
+            >
+
+                <!-- USER -->
+                <div class="border-b border-slate-100 p-4">
+
+                    <div class="flex items-center gap-3">
+
+                        <div
+                            id="mobileAccountInitial"
+                            class="user-avatar shrink-0"
+                        ></div>
+
+                        <div class="min-w-0">
+
+                            <p
+                                id="mobileAccountName"
+                                class="truncate text-sm font-black text-slate-900"
+                            ></p>
+
+                            <p
+                                id="mobileAccountBranch"
+                                class="truncate text-xs font-semibold text-slate-400"
+                            ></p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PROFILE -->
+                <button
+                    type="button"
+                    data-mobile-account-target="manageProfileButton"
+                    class="
+                        flex
+                        w-full
+                        items-center
+                        gap-3
+                        px-4
+                        py-3
+                        text-left
+                        text-sm
+                        font-bold
+                        text-slate-700
+                        hover:bg-slate-50
+                    "
+                >
+
+                    <span
+                        class="account-action-icon account-icon-green"
+                        data-app-icon="profile"
+                    ></span>
+
+                    <span>
+                        <span class="block font-black">
+                            Kelola Profil
+                        </span>
+
+                        <span class="block text-xs font-medium text-slate-400">
+                            Password dan tanda tangan
+                        </span>
+                    </span>
+
+                </button>
+
+
+                <!-- MANAGE ACCOUNT -->
+                <button
+                    type="button"
+                    data-mobile-account-target="manageAccountsButton"
+                    class="
+                        flex
+                        hidden
+                        w-full
+                        items-center
+                        gap-3
+                        px-4
+                        py-3
+                        text-left
+                        text-sm
+                        font-bold
+                        text-slate-700
+                        hover:bg-slate-50
+                    "
+                >
+
+                    <span
+                        class="account-action-icon account-icon-blue"
+                        data-app-icon="accounts"
+                    ></span>
+
+                    <span>
+                        <span class="block font-black">
+                            Manage Akun
+                        </span>
+
+                        <span class="block text-xs font-medium text-slate-400">
+                            Atur akun dan approval
+                        </span>
+                    </span>
+
+                </button>
+
+
+                <!-- MASTER DATA -->
+                <button
+                    type="button"
+                    data-mobile-account-target="masterDataButton"
+                    class="
+                        flex
+                        hidden
+                        w-full
+                        items-center
+                        gap-3
+                        px-4
+                        py-3
+                        text-left
+                        text-sm
+                        font-bold
+                        text-slate-700
+                        hover:bg-slate-50
+                    "
+                >
+
+                    <span
+                        class="account-action-icon account-icon-purple"
+                        data-app-icon="database"
+                    ></span>
+
+                    <span>
+                        <span class="block font-black">
+                            Master Data
+                        </span>
+
+                        <span class="block text-xs font-medium text-slate-400">
+                            Kelola referensi sistem
+                        </span>
+                    </span>
+
+                </button>
+
+
+                <div class="my-1 border-t border-slate-100"></div>
+
+
+                <!-- LOGOUT -->
+                <button
+                    type="button"
+                    data-mobile-account-target="logoutButton"
+                    class="
+                        flex
+                        w-full
+                        items-center
+                        gap-3
+                        px-4
+                        py-3
+                        text-left
+                        text-sm
+                        font-black
+                        text-red-600
+                        hover:bg-red-50
+                    "
+                >
+
+                    <span
+                        class="account-action-icon account-icon-red"
+                        data-app-icon="logout"
+                    ></span>
+
+                    <span>
+                        Logout
+                    </span>
+
+                </button>
+
+            </div>
 
             <div class="p-4 md:p-8">
 
@@ -6853,6 +7080,131 @@
                 </section>         
             </div>
         </main>
+
+        <!-- ===================================================== -->
+        <!-- MOBILE BOTTOM NAVIGATION -->
+        <!-- ===================================================== -->
+
+        <nav
+            id="mobileBottomNav"
+            class="
+                fixed
+                bottom-0
+                left-0
+                right-0
+                z-[80]
+                hidden
+                border-t
+                border-slate-200
+                bg-white/95
+                px-2
+                pb-[env(safe-area-inset-bottom)]
+                pt-2
+                shadow-[0_-8px_30px_rgba(15,23,42,0.10)]
+                backdrop-blur-xl
+            "
+        >
+
+            <div class="relative grid grid-cols-5 items-end">
+
+                <!-- BERANDA -->
+                <button
+                    type="button"
+                    data-mobile-nav-page="dashboardPage"
+                    class="mobile-bottom-nav-item"
+                >
+
+                    <span
+                        class="mobile-bottom-nav-icon"
+                        data-app-icon="dashboard"
+                    ></span>
+
+                    <span>
+                        Beranda
+                    </span>
+
+                </button>
+
+
+                <!-- LIST PKM -->
+                <button
+                    type="button"
+                    data-mobile-nav-page="listPkmPage"
+                    class="mobile-bottom-nav-item"
+                >
+
+                    <span
+                        class="mobile-bottom-nav-icon"
+                        data-app-icon="list"
+                    ></span>
+
+                    <span>
+                        List PKM
+                    </span>
+
+                </button>
+
+
+                <!-- AJUKAN PKM -->
+                <button
+                    type="button"
+                    id="mobileCreatePkmButton"
+                    class="mobile-bottom-nav-create"
+                    aria-label="Ajukan PKM"
+                >
+
+                    <span
+                        data-app-icon="submission"
+                    ></span>
+
+                    <span>
+                        +
+                    </span>
+
+                </button>
+
+
+                <!-- MONITORING -->
+                <button
+                    type="button"
+                    data-mobile-nav-page="dashboardPage"
+                    data-mobile-monitoring="true"
+                    class="mobile-bottom-nav-item"
+                >
+
+                    <span
+                        class="mobile-bottom-nav-icon"
+                        data-app-icon="chart"
+                    ></span>
+
+                    <span>
+                        Monitoring
+                    </span>
+
+                </button>
+
+
+                <!-- LAINNYA -->
+                <button
+                    type="button"
+                    id="mobileMoreButton"
+                    class="mobile-bottom-nav-item"
+                >
+
+                    <span
+                        class="mobile-bottom-nav-icon"
+                        data-app-icon="list"
+                    ></span>
+
+                    <span>
+                        Lainnya
+                    </span>
+
+                </button>
+
+            </div>
+
+        </nav>
 
     </section>
 

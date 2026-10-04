@@ -3707,6 +3707,83 @@ async function initializeApplication() {
             .charAt(0)
             .toUpperCase();
 
+    const mobileAccountInitial =
+        document.getElementById(
+            "mobileAccountInitial"
+        );
+
+    if (mobileAccountInitial) {
+
+        mobileAccountInitial.textContent =
+            currentUser.name
+                .charAt(0)
+                .toUpperCase();
+    }
+
+
+    const mobileAccountName =
+        document.getElementById(
+            "mobileAccountName"
+        );
+
+    if (mobileAccountName) {
+
+        mobileAccountName.textContent =
+            currentUser.name;
+    }
+
+
+    const mobileAccountBranch =
+        document.getElementById(
+            "mobileAccountBranch"
+        );
+
+    if (mobileAccountBranch) {
+
+        mobileAccountBranch.textContent =
+            `${currentUser.branchName} — ${currentUser.jabatan}`;
+    }
+
+
+    /*
+    | Sinkronkan tombol master dengan
+    | hak akses akun.
+    */
+
+    document
+        .querySelectorAll(
+            "[data-mobile-account-target]"
+        )
+        .forEach(function (button) {
+
+            const targetId =
+                button.dataset
+                    .mobileAccountTarget;
+
+            const target =
+                document.getElementById(
+                    targetId
+                );
+
+            if (
+                !target ||
+                !target.classList.contains(
+                    "hidden"
+                )
+            ) {
+                button.classList.remove(
+                    "hidden"
+                );
+
+            } else {
+
+                button.classList.add(
+                    "hidden"
+                );
+            }
+
+        });
+
     setDefaultApprovalStepFilter();
 
     document.getElementById(
@@ -5036,6 +5113,255 @@ document
     .addEventListener("click", closeSidebar);
 
 sidebarOverlay.addEventListener("click", closeSidebar);
+
+/*
+|-------------------------------------------------------------------------- 
+| MOBILE BOTTOM NAVIGATION
+|-------------------------------------------------------------------------- 
+*/
+
+document
+    .querySelectorAll(
+        "[data-mobile-nav-page]"
+    )
+    .forEach(function (button) {
+
+        button.addEventListener(
+            "click",
+            async function () {
+
+                const pageId =
+                    button.dataset.mobileNavPage;
+
+                if (!pageId) {
+                    return;
+                }
+
+                showPage(pageId);
+
+
+                document
+                    .querySelectorAll(
+                        ".mobile-bottom-nav-item"
+                    )
+                    .forEach(function (item) {
+                        item.classList.remove(
+                            "active"
+                        );
+                    });
+
+                button.classList.add(
+                    "active"
+                );
+
+
+                /*
+                | Monitoring:
+                | buka dashboard lalu scroll
+                | ke bagian status pengajuan.
+                */
+
+                if (
+                    button.dataset.mobileMonitoring ===
+                    "true"
+                ) {
+
+                    const monitoringText =
+                        Array.from(
+                            document.querySelectorAll(
+                                "#dashboardPage *"
+                            )
+                        ).find(function (element) {
+
+                            return (
+                                element.textContent
+                                    ?.trim() ===
+                                "Status Pengajuan"
+                            );
+                        });
+
+                    if (monitoringText) {
+
+                        monitoringText
+                            .scrollIntoView({
+                                behavior:
+                                    "smooth",
+                                block:
+                                    "start"
+                            });
+                    }
+                }
+
+            }
+        );
+
+    });
+
+
+/*
+|-------------------------------------------------------------------------- 
+| AJUKAN PKM - TOMBOL TENGAH
+|-------------------------------------------------------------------------- 
+*/
+
+const mobileCreatePkmButton =
+    document.getElementById(
+        "mobileCreatePkmButton"
+    );
+
+if (
+    mobileCreatePkmButton
+) {
+
+    mobileCreatePkmButton.addEventListener(
+        "click",
+        function () {
+
+            showPage(
+                "pengajuanPage"
+            );
+
+        }
+    );
+
+}
+
+
+/*
+|-------------------------------------------------------------------------- 
+| LAINNYA
+|-------------------------------------------------------------------------- 
+*/
+
+const mobileMoreButton =
+    document.getElementById(
+        "mobileMoreButton"
+    );
+
+if (
+    mobileMoreButton
+) {
+
+    mobileMoreButton.addEventListener(
+        "click",
+        function () {
+
+            openSidebar();
+
+        }
+    );
+
+}
+
+
+/*
+|-------------------------------------------------------------------------- 
+| MENU AKUN MOBILE
+|-------------------------------------------------------------------------- 
+*/
+
+const mobileAccountButton =
+    document.getElementById(
+        "mobileAccountButton"
+    );
+
+const mobileAccountPanel =
+    document.getElementById(
+        "mobileAccountPanel"
+    );
+
+
+if (
+    mobileAccountButton &&
+    mobileAccountPanel
+) {
+
+    mobileAccountButton.addEventListener(
+        "click",
+        function (event) {
+
+            event.stopPropagation();
+
+            const willOpen =
+                mobileAccountPanel
+                    .classList
+                    .contains(
+                        "hidden"
+                    );
+
+            mobileAccountPanel
+                .classList
+                .toggle(
+                    "hidden",
+                    !willOpen
+                );
+
+            mobileAccountButton
+                .setAttribute(
+                    "aria-expanded",
+                    String(willOpen)
+                );
+
+        }
+    );
+
+
+    mobileAccountPanel.addEventListener(
+        "click",
+        function (event) {
+
+            event.stopPropagation();
+
+            const button =
+                event.target.closest(
+                    "[data-mobile-account-target]"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            const targetId =
+                button.dataset
+                    .mobileAccountTarget;
+
+            const target =
+                document.getElementById(
+                    targetId
+                );
+
+            if (target) {
+
+                mobileAccountPanel
+                    .classList
+                    .add("hidden");
+
+                target.click();
+
+            }
+
+        }
+    );
+
+
+    document.addEventListener(
+        "click",
+        function () {
+
+            mobileAccountPanel
+                .classList
+                .add("hidden");
+
+            mobileAccountButton
+                .setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+
+        }
+    );
+
+}
 
 function openSidebar() {
     sidebar.classList.add("open");
