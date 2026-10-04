@@ -3641,6 +3641,162 @@ function closeMasterDataModal() {
     );
 }
 
+let masterDataLoadingProgress = 0;
+let masterDataLoadingInterval = null;
+let masterDataLoadingHideTimeout = null;
+
+
+function updateMasterDataLoading(
+    progress,
+    message = ""
+) {
+    masterDataLoadingProgress =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                progress
+            )
+        );
+
+    const bar =
+        document.getElementById(
+            "masterDataLoadingBar"
+        );
+
+    const percentage =
+        document.getElementById(
+            "masterDataLoadingPercentage"
+        );
+
+    const messageElement =
+        document.getElementById(
+            "masterDataLoadingMessage"
+        );
+
+    if (bar) {
+        bar.style.width =
+            `${masterDataLoadingProgress}%`;
+    }
+
+    if (percentage) {
+        percentage.textContent =
+            `${Math.round(
+                masterDataLoadingProgress
+            )}%`;
+    }
+
+    if (
+        message &&
+        messageElement
+    ) {
+        messageElement.textContent =
+            message;
+    }
+}
+
+
+function setMasterDataLoading(
+    loading
+) {
+    const loadingPanel =
+        document.getElementById(
+            "masterDataLoading"
+        );
+
+    window.clearInterval(
+        masterDataLoadingInterval
+    );
+
+    window.clearTimeout(
+        masterDataLoadingHideTimeout
+    );
+
+    if (!loadingPanel) {
+        return;
+    }
+
+    if (loading) {
+
+        loadingPanel.classList.remove(
+            "hidden"
+        );
+
+        loadingPanel.classList.add(
+            "flex"
+        );
+
+        updateMasterDataLoading(
+            8,
+            "Menghubungkan ke database..."
+        );
+
+        masterDataLoadingInterval =
+            window.setInterval(
+                function () {
+
+                    if (
+                        masterDataLoadingProgress >=
+                        92
+                    ) {
+                        return;
+                    }
+
+                    const addition =
+                        Math.floor(
+                            Math.random() * 6
+                        ) + 2;
+
+                    const nextProgress =
+                        Math.min(
+                            92,
+                            masterDataLoadingProgress +
+                            addition
+                        );
+
+                    updateMasterDataLoading(
+                        nextProgress,
+                        masterDataLoadingProgress < 45
+                            ? "Membaca data master..."
+                            : masterDataLoadingProgress < 75
+                                ? "Memproses data..."
+                                : "Menyiapkan tabel..."
+                    );
+
+                },
+                220
+            );
+
+        return;
+    }
+
+    updateMasterDataLoading(
+        100,
+        "Data berhasil dimuat."
+    );
+
+    masterDataLoadingHideTimeout =
+        window.setTimeout(
+            function () {
+
+                loadingPanel.classList.add(
+                    "hidden"
+                );
+
+                loadingPanel.classList.remove(
+                    "flex"
+                );
+
+                updateMasterDataLoading(
+                    0,
+                    ""
+                );
+
+            },
+            350
+        );
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -3653,9 +3809,7 @@ async function loadMasterDataTable(
 ) {
     currentMasterType = type;
 
-    masterDataLoading.classList.remove(
-        "hidden"
-    );
+    setMasterDataLoading(true);
 
     masterDataTableHead.innerHTML = "";
     masterDataTableBody.innerHTML = "";
@@ -3780,9 +3934,7 @@ async function loadMasterDataTable(
             </tr>
         `;
     } finally {
-        masterDataLoading.classList.add(
-            "hidden"
-        );
+        setMasterDataLoading(false);
     }
 }
 

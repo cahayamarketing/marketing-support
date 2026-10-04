@@ -8192,17 +8192,65 @@
                 </div>
             </div>
 
-            <div
-                id="masterDataLoading"
-                class="hidden p-10 text-center"
-            >
-                <span class="ui-spinner"></span>
+            <div class="relative flex-1 overflow-auto p-6">
 
-                <p class="mt-3 font-bold text-slate-600">
-                    Memuat master data...
-                </p>
+                <div
+                    id="masterDataLoading"
+                    class="absolute inset-0 z-20 hidden items-center justify-center bg-white/90 p-6 backdrop-blur-sm"
+                >
+                    <div class="w-full max-w-md text-center">
+
+                        <div
+                            class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600"
+                        >
+                            <span class="ui-spinner h-7 w-7"></span>
+                        </div>
+
+                        <p
+                            class="mt-4 text-base font-black text-slate-900"
+                        >
+                            Mengambil data Master
+                        </p>
+
+                        <p
+                            id="masterDataLoadingMessage"
+                            class="mt-1 text-sm text-slate-500"
+                        >
+                            Menghubungkan ke database...
+                        </p>
+
+                        <div class="mt-4 overflow-hidden rounded-full bg-slate-200">
+                            <div
+                                id="masterDataLoadingBar"
+                                class="database-progress-bar h-2 rounded-full bg-red-600"
+                                style="width: 0%"
+                            ></div>
+                        </div>
+
+                        <p
+                            id="masterDataLoadingPercentage"
+                            class="mt-2 text-xs font-black text-slate-500"
+                        >
+                            0%
+                        </p>
+
+                    </div>
+                </div>
+
+                <table class="w-full min-w-[800px] text-left">
+                    <thead
+                        id="masterDataTableHead"
+                        class="bg-slate-100 text-xs uppercase text-slate-500"
+                    ></thead>
+
+                    <tbody
+                        id="masterDataTableBody"
+                        class="divide-y divide-slate-100 text-sm"
+                    ></tbody>
+                </table>
+
             </div>
-
+            
             <div class="flex-1 overflow-auto p-6">
                 <table class="w-full min-w-[800px] text-left">
                     <thead
