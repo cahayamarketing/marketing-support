@@ -1865,6 +1865,47 @@ async function requestBackend(
             };
         }
 
+        // ==========================================
+        // APPROVAL NOTIFICATIONS
+        // ==========================================
+
+        if (
+            action === "getApprovalNotifications"
+        ) {
+
+            apiUrl =
+                "/api/backend?action=getApprovalNotifications";
+
+            fetchOptions = {
+
+                method:
+                    "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        action:
+                            action,
+
+                        token:
+                            sessionToken,
+
+                        payload:
+                            payload
+                    }),
+
+                signal:
+                    controller.signal,
+
+                cache:
+                    "no-store"
+            };
+        }
+
 
         /*
         * PKM sudah dipindahkan ke Supabase.

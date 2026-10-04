@@ -8002,6 +8002,73 @@ async function approvalNotificationHandler(
             userBranch === "ALL";
 
 
+        // ==========================================
+        // FILTER TANGGAL NOTIFIKASI
+        // H     = hari ini
+        // H-2   = 2 hari lagi
+        // ==========================================
+
+        const jakartaFormatter =
+            new Intl.DateTimeFormat(
+                "en-CA",
+                {
+                    timeZone:
+                        "Asia/Jakarta",
+
+                    year:
+                        "numeric",
+
+                    month:
+                        "2-digit",
+
+                    day:
+                        "2-digit"
+                }
+            );
+
+
+        const todayKey =
+            jakartaFormatter.format(
+                new Date()
+            );
+
+
+        const todayStart =
+            new Date(
+                `${todayKey}T00:00:00+07:00`
+            );
+
+
+        const h2Start =
+            new Date(
+                todayStart
+            );
+
+        h2Start.setDate(
+            h2Start.getDate() + 2
+        );
+
+
+        const h3Start =
+            new Date(
+                todayStart
+            );
+
+        h3Start.setDate(
+            h3Start.getDate() + 3
+        );
+
+
+        const h2Key =
+            jakartaFormatter.format(
+                h2Start
+            );
+
+
+        // ==========================================
+        // AMBIL PKM YANG BERADA DALAM RANGE H s/d H-2
+        // ==========================================
+
         const rows =
             await supabaseRequest(
                 "/rest/v1/pkm" +
@@ -8011,6 +8078,7 @@ async function approvalNotificationHandler(
                     "nama",
                     "cabang",
                     "type_pkm",
+                    "tanggal_mulai",
                     "created_at",
                     "acc_crm",
                     "acc_kacab",
@@ -8019,6 +8087,17 @@ async function approvalNotificationHandler(
                     "acc_manager_h1",
                     "acc_manager_h23"
                 ].join(",") +
+
+                "&tanggal_mulai=gte." +
+                encodeURIComponent(
+                    todayStart.toISOString()
+                ) +
+
+                "&tanggal_mulai=lt." +
+                encodeURIComponent(
+                    h3Start.toISOString()
+                ) +
+
                 "&order=created_at.asc" +
                 "&limit=5000"
             );
@@ -8028,6 +8107,24 @@ async function approvalNotificationHandler(
             Array.isArray(rows)
                 ? rows
                     .map(function (row) {
+
+
+                        const kegiatanDate =
+                            row.tanggal_mulai
+                                ? jakartaFormatter.format(
+                                    new Date(
+                                        row.tanggal_mulai
+                                    )
+                                )
+                                : "";
+
+
+                        if (
+                            kegiatanDate !== todayKey &&
+                            kegiatanDate !== h2Key
+                        ) {
+                            return null;
+                        }
 
                         const state =
                             getPkmApprovalState(
