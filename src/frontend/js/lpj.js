@@ -14,6 +14,70 @@ function initializeLpjFrontend() {
         "lpj"
     );
 
+    /*
+    |--------------------------------------------------------------
+    | MOBILE FILTER TOGGLE
+    |--------------------------------------------------------------
+    */
+
+    const lpjFilterToggle =
+        document.getElementById(
+            "lpjFilterToggle"
+        );
+
+    const lpjFilterContent =
+        document.getElementById(
+            "lpjFilterContent"
+        );
+
+    const lpjFilterChevron =
+        document.getElementById(
+            "lpjFilterChevron"
+        );
+
+    if (
+        lpjFilterToggle &&
+        lpjFilterContent
+    ) {
+
+        lpjFilterToggle.addEventListener(
+            "click",
+            function () {
+
+                const isHidden =
+                    lpjFilterContent
+                        .classList
+                        .contains("hidden");
+
+                lpjFilterContent
+                    .classList
+                    .toggle(
+                        "hidden",
+                        !isHidden
+                    );
+
+                lpjFilterToggle
+                    .setAttribute(
+                        "aria-expanded",
+                        String(isHidden)
+                    );
+
+                if (lpjFilterChevron) {
+
+                    lpjFilterChevron
+                        .classList
+                        .toggle(
+                            "rotate-180",
+                            isHidden
+                        );
+
+                }
+
+            }
+        );
+
+    }
+
     document
         .querySelectorAll('[data-page="lpjPage"]')
         .forEach(function (button) {
@@ -320,6 +384,11 @@ function initializeLpjFrontend() {
 
     });
 }
+
+
+
+
+
 
 async function loadLpjCandidates(
     page = 1

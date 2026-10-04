@@ -10872,10 +10872,50 @@ function canShowDiscordHelper(item) {
 */
 
 let currentPdfPkmPage = 1;
+
 const PDF_PKM_PAGE_SIZE = 7;
 
 
+function getPdfPkmFilters() {
+
+    return {
+
+        search:
+            String(
+                document.getElementById(
+                    "searchPdfPkm"
+                )?.value || ""
+            )
+                .trim()
+                .toLowerCase(),
+
+        startDate:
+            document.getElementById(
+                "pdfStartDate"
+            )?.value || "",
+
+        endDate:
+            document.getElementById(
+                "pdfEndDate"
+            )?.value || "",
+
+        jenisPkm:
+            document.getElementById(
+                "pdfJenisPkm"
+            )?.value || "ALL",
+
+        branches:
+            getSelectedBranches(
+                "pdf"
+            )
+
+    };
+
+}
+
+
 function renderPkmPdfTable() {
+
     const tableBody =
         document.getElementById(
             "pdfPkmTableBody"
@@ -10885,20 +10925,26 @@ function renderPkmPdfTable() {
         return;
     }
 
-    const search =
-        String(
-            document.getElementById(
-                "searchPdfPkm"
-            )?.value || ""
-        )
-            .trim()
-            .toLowerCase();
+
+    const filters =
+        getPdfPkmFilters();
+
 
     let data =
         getBranchPkm()
+
+            /*
+            |------------------------------------------------------
+            | PDF HARUS SUDAH DISETUJUI
+            |------------------------------------------------------
+            */
+
             .filter(function (item) {
+
                 const status =
-                    String(item.status || "")
+                    String(
+                        item.status || ""
+                    )
                         .trim()
                         .toUpperCase();
 
@@ -10906,45 +10952,198 @@ function renderPkmPdfTable() {
                     "ACC",
                     "DISETUJUI"
                 ].includes(status);
+
             })
+
+
+            /*
+            |------------------------------------------------------
+            | SEARCH
+            |------------------------------------------------------
+            */
+
             .filter(function (item) {
-                if (!search) {
+
+                if (!filters.search) {
                     return true;
                 }
 
                 return [
+
                     item.id,
                     item.name,
                     item.branch,
                     item.branchName,
                     item.kegiatan,
                     item.jenisPkm,
-                    item.location
+                    item.type,
+                    item.location,
+                    item.kabupaten,
+                    item.kecamatan,
+                    item.kelurahan
+
                 ]
                     .join(" ")
                     .toLowerCase()
-                    .includes(search);
+                    .includes(
+                        filters.search
+                    );
+
             })
-            .sort(function (first, second) {
+
+
+            /*
+            |------------------------------------------------------
+            | TANGGAL AWAL
+            |------------------------------------------------------
+            */
+
+            .filter(function (item) {
+
+                if (!filters.startDate) {
+                    return true;
+                }
+
+                const itemDate =
+                    String(
+                        item.startDate || ""
+                    ).slice(0, 10);
+
+                return (
+                    itemDate >=
+                    filters.startDate
+                );
+
+            })
+
+
+            /*
+            |------------------------------------------------------
+            | TANGGAL AKHIR
+            |------------------------------------------------------
+            */
+
+            .filter(function (item) {
+
+                if (!filters.endDate) {
+                    return true;
+                }
+
+                const itemDate =
+                    String(
+                        item.startDate || ""
+                    ).slice(0, 10);
+
+                return (
+                    itemDate <=
+                    filters.endDate
+                );
+
+            })
+
+
+            /*
+            |------------------------------------------------------
+            | JENIS PKM
+            |------------------------------------------------------
+            */
+
+            .filter(function (item) {
+
+                if (
+                    filters.jenisPkm ===
+                    "ALL"
+                ) {
+                    return true;
+                }
+
+                return (
+                    String(
+                        item.jenisPkm || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    String(
+                        filters.jenisPkm
+                    )
+                        .trim()
+                        .toUpperCase()
+                );
+
+            })
+
+
+            /*
+            |------------------------------------------------------
+            | CABANG
+            |------------------------------------------------------
+            */
+
+            .filter(function (item) {
+
+                if (
+                    !filters.branches ||
+                    filters.branches.length === 0
+                ) {
+                    return true;
+                }
+
+                return filters.branches
+                    .map(function (branch) {
+                        return String(
+                            branch
+                        )
+                            .trim()
+                            .toUpperCase();
+                    })
+                    .includes(
+                        String(
+                            item.branch || ""
+                        )
+                            .trim()
+                            .toUpperCase()
+                    );
+
+            })
+
+
+            /*
+            |------------------------------------------------------
+            | SORT
+            |------------------------------------------------------
+            */
+
+            .sort(function (
+                first,
+                second
+            ) {
+
                 return (
                     new Date(
                         second.startDate || 0
                     ).getTime() -
+
                     new Date(
                         first.startDate || 0
                     ).getTime()
                 );
+
             });
 
-    const totalData = data.length;
 
-    const totalPages = Math.max(
-        1,
-        Math.ceil(
-            totalData /
-            PDF_PKM_PAGE_SIZE
-        )
-    );
+    const totalData =
+        data.length;
+
+
+    const totalPages =
+        Math.max(
+            1,
+            Math.ceil(
+                totalData /
+                PDF_PKM_PAGE_SIZE
+            )
+        );
+
 
     currentPdfPkmPage =
         Math.min(
@@ -10952,10 +11151,13 @@ function renderPkmPdfTable() {
             totalPages
         );
 
+
     const startIndex =
         (
             currentPdfPkmPage - 1
-        ) * PDF_PKM_PAGE_SIZE;
+        ) *
+        PDF_PKM_PAGE_SIZE;
+
 
     const pageData =
         data.slice(
@@ -10964,113 +11166,413 @@ function renderPkmPdfTable() {
                 PDF_PKM_PAGE_SIZE
         );
 
+
     tableBody.innerHTML =
         pageData
             .map(function (item) {
+
                 const typeText =
-                    Array.isArray(item.type)
-                        ? item.type.join(", ")
-                        : item.type || "-";
+                    Array.isArray(
+                        item.type
+                    )
+                        ? item.type.join(
+                            ", "
+                        )
+                        : item.type ||
+                          "-";
+
 
                 return `
                     <tr>
+
                         <td class="font-bold">
-                            ${escapeHtml(item.id || "-")}
+                            ${escapeHtml(
+                                item.id || "-"
+                            )}
                         </td>
 
                         <td>
-                            <p class="font-black text-slate-900">
-                                ${escapeHtml(item.name || "-")}
+
+                            <p
+                                class="
+                                    font-black
+                                    text-slate-900
+                                "
+                            >
+                                ${escapeHtml(
+                                    item.name || "-"
+                                )}
                             </p>
 
-                            <p class="mt-1 text-xs text-slate-500">
-                                ${escapeHtml(item.kegiatan || "-")}
+                            <p
+                                class="
+                                    mt-1
+                                    text-xs
+                                    text-slate-500
+                                "
+                            >
+                                ${escapeHtml(
+                                    item.kegiatan || "-"
+                                )}
                             </p>
+
                         </td>
 
                         <td>
-                            ${escapeHtml(item.branch || "-")}
+                            ${escapeHtml(
+                                item.branch || "-"
+                            )}
                         </td>
 
                         <td>
-                            ${escapeHtml(typeText)}
+                            ${escapeHtml(
+                                typeText
+                            )}
                         </td>
 
                         <td>
-                            ${formatDateTime(item.startDate)}
+                            ${formatDateTime(
+                                item.startDate
+                            )}
                         </td>
 
                         <td>
-                            ${statusBadge(item.status)}
+                            ${statusBadge(
+                                item.status
+                            )}
                         </td>
 
                         <td class="text-right">
+
                             <button
                                 type="button"
-                                data-download-stored-pdf="${escapeHtml(item.id)}"
-                                class="whitespace-nowrap rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-700"
+                                data-download-stored-pdf="${escapeHtml(
+                                    item.id
+                                )}"
+                                class="
+                                    whitespace-nowrap
+                                    rounded-xl
+                                    bg-red-600
+                                    px-4
+                                    py-2
+                                    text-xs
+                                    font-black
+                                    text-white
+                                    hover:bg-red-700
+                                "
                             >
                                 ↓ Download PDF
                             </button>
+
                         </td>
-                        <td class="text-right">
-                            <button
-                                type="button"
-                                onclick="refreshPkmPdf('${item.id}', this)"
-                                class="..."
-                            >
-                                ↻ Perbarui TTD & PDF
-                            </button>
-                        </td>
+
                     </tr>
                 `;
+
             })
             .join("");
 
+
     document
-        .getElementById("emptyPdfPkm")
+        .getElementById(
+            "emptyPdfPkm"
+        )
         ?.classList.toggle(
             "hidden",
             totalData > 0
         );
 
+
     document.getElementById(
         "pdfPkmPaginationInfo"
     ).textContent =
         totalData
-            ? `Menampilkan ${startIndex + 1}–${Math.min(
+            ? `Menampilkan ${
+                startIndex + 1
+            }–${Math.min(
                 startIndex +
                     PDF_PKM_PAGE_SIZE,
                 totalData
             )} dari ${totalData} dokumen`
             : "Tidak ada dokumen";
 
+
     document.getElementById(
         "currentPdfPkmPage"
     ).textContent =
         currentPdfPkmPage;
+
 
     document.getElementById(
         "previousPdfPkmPage"
     ).disabled =
         currentPdfPkmPage <= 1;
 
+
     document.getElementById(
         "nextPdfPkmPage"
     ).disabled =
-        currentPdfPkmPage >= totalPages;
+        currentPdfPkmPage >=
+        totalPages;
+
 }
 
-document
-    .getElementById("searchPdfPkm")
-    ?.addEventListener(
-        "input",
+/*
+|----------------------------------------------------------------------
+| PDF PKM FILTER
+|----------------------------------------------------------------------
+*/
+
+window.renderBranchFilter(
+    "pdf"
+);
+
+
+/*
+|----------------------------------------------------------------------
+| MOBILE FILTER TOGGLE
+|----------------------------------------------------------------------
+*/
+
+const pdfPkmFilterToggle =
+    document.getElementById(
+        "pdfPkmFilterToggle"
+    );
+
+const pdfPkmFilterContent =
+    document.getElementById(
+        "pdfPkmFilterContent"
+    );
+
+const pdfPkmFilterChevron =
+    document.getElementById(
+        "pdfPkmFilterChevron"
+    );
+
+
+if (
+    pdfPkmFilterToggle &&
+    pdfPkmFilterContent
+) {
+
+    pdfPkmFilterToggle.addEventListener(
+        "click",
         function () {
-            currentPdfPkmPage = 1;
-            renderPkmPdfTable();
+
+            const isHidden =
+                pdfPkmFilterContent
+                    .classList
+                    .contains("hidden");
+
+            pdfPkmFilterContent
+                .classList
+                .toggle(
+                    "hidden",
+                    !isHidden
+                );
+
+            pdfPkmFilterToggle
+                .setAttribute(
+                    "aria-expanded",
+                    String(isHidden)
+                );
+
+            if (pdfPkmFilterChevron) {
+
+                pdfPkmFilterChevron
+                    .classList
+                    .toggle(
+                        "rotate-180",
+                        isHidden
+                    );
+
+            }
+
         }
     );
 
+}
+
+
+/*
+|----------------------------------------------------------------------
+| SEARCH
+|----------------------------------------------------------------------
+*/
+
+document
+    .getElementById(
+        "searchPdfPkm"
+    )
+    ?.addEventListener(
+        "input",
+        function () {
+
+            currentPdfPkmPage = 1;
+
+            renderPkmPdfTable();
+
+        }
+    );
+
+
+/*
+|----------------------------------------------------------------------
+| JENIS PKM
+|----------------------------------------------------------------------
+*/
+
+document
+    .getElementById(
+        "pdfJenisPkm"
+    )
+    ?.addEventListener(
+        "change",
+        function () {
+
+            currentPdfPkmPage = 1;
+
+            renderPkmPdfTable();
+
+        }
+    );
+
+
+/*
+|----------------------------------------------------------------------
+| CABANG
+|----------------------------------------------------------------------
+*/
+
+document
+    .getElementById(
+        "pdfBranchFilter"
+    )
+    ?.addEventListener(
+        "change",
+        function () {
+
+            currentPdfPkmPage = 1;
+
+            renderPkmPdfTable();
+
+        }
+    );
+
+
+/*
+|----------------------------------------------------------------------
+| TANGGAL
+|----------------------------------------------------------------------
+*/
+
+document
+    .getElementById(
+        "pdfStartDate"
+    )
+    ?.addEventListener(
+        "change",
+        function () {
+
+            currentPdfPkmPage = 1;
+
+            renderPkmPdfTable();
+
+        }
+    );
+
+
+document
+    .getElementById(
+        "pdfEndDate"
+    )
+    ?.addEventListener(
+        "change",
+        function () {
+
+            currentPdfPkmPage = 1;
+
+            renderPkmPdfTable();
+
+        }
+    );
+
+
+/*
+|----------------------------------------------------------------------
+| RESET
+|----------------------------------------------------------------------
+*/
+
+document
+    .getElementById(
+        "resetPdfPkmFilter"
+    )
+    ?.addEventListener(
+        "click",
+        function () {
+
+            document.getElementById(
+                "searchPdfPkm"
+            ).value = "";
+
+            document.getElementById(
+                "pdfStartDate"
+            ).value = "";
+
+            document.getElementById(
+                "pdfEndDate"
+            ).value = "";
+
+            document.getElementById(
+                "pdfJenisPkm"
+            ).value = "ALL";
+
+
+            /*
+            | Reset cabang
+            */
+
+            window.renderBranchFilter(
+                "pdf"
+            );
+
+
+            currentPdfPkmPage = 1;
+
+            renderPkmPdfTable();
+
+        }
+    );
+
+
+/*
+|----------------------------------------------------------------------
+| APPLY
+|----------------------------------------------------------------------
+*/
+
+document
+    .getElementById(
+        "applyPdfPkmFilter"
+    )
+    ?.addEventListener(
+        "click",
+        function () {
+
+            currentPdfPkmPage = 1;
+
+            renderPkmPdfTable();
+
+        }
+    );
+
+
+/*
+|----------------------------------------------------------------------
+| PAGINATION
+|----------------------------------------------------------------------
+*/
 
 document
     .getElementById(
@@ -11079,12 +11581,17 @@ document
     ?.addEventListener(
         "click",
         function () {
-            if (currentPdfPkmPage <= 1) {
+
+            if (
+                currentPdfPkmPage <= 1
+            ) {
                 return;
             }
 
             currentPdfPkmPage -= 1;
+
             renderPkmPdfTable();
+
         }
     );
 
@@ -11096,8 +11603,11 @@ document
     ?.addEventListener(
         "click",
         function () {
+
             currentPdfPkmPage += 1;
+
             renderPkmPdfTable();
+
         }
     );
 
