@@ -6876,6 +6876,311 @@ return async function handler(
 }
 })();
 
+
+// ==========================================================================
+// PUSH PKM DISCORD REMINDER
+// ==========================================================================
+
+async function pushPkmDiscordReminderHandler(
+    request,
+    response
+) {
+
+    if (request.method !== "POST") {
+        return response.status(405).json({
+            success: false,
+            message: "Gunakan method POST."
+        });
+    }
+
+    try {
+
+        let body =
+            request.body || {};
+
+        if (typeof body === "string") {
+            body = JSON.parse(body);
+        }
+
+        const pkmId =
+            String(
+                body.pkmId || ""
+            ).trim();
+
+        if (!pkmId) {
+            return response.status(400).json({
+                success: false,
+                message: "PKM ID wajib diisi."
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | AMBIL DATA PKM DARI SUPABASE
+        |--------------------------------------------------------------------------
+        */
+
+        const rows =
+            await supabaseRequest(
+                "/rest/v1/pkm" +
+                "?id_pkm=eq." +
+                encodeURIComponent(pkmId) +
+                "&select=*",
+                {
+                    method: "GET"
+                }
+            );
+
+        if (
+            !Array.isArray(rows) ||
+            rows.length === 0
+        ) {
+            return response.status(404).json({
+                success: false,
+                message:
+                    "Data PKM tidak ditemukan."
+            });
+        }
+
+        const pkm =
+            rows[0];
+
+        /*
+        |--------------------------------------------------------------------------
+        | TENTUKAN TAHAP APPROVAL
+        |--------------------------------------------------------------------------
+        */
+
+        const status =
+            String(
+                pkm.status ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+        const approvalStep =
+            String(
+                pkm.approval_step ||
+                pkm.next_role ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+        let target = "";
+
+        if (
+            approvalStep === "MSMC" ||
+            status.includes("MSMC")
+        ) {
+            target = "MSMC";
+        }
+
+        else if (
+            approvalStep === "MGR_H1" ||
+            status.includes("MGR_H1")
+        ) {
+            target = "MGR";
+        }
+
+        else {
+            return response.status(400).json({
+                success: false,
+                message:
+                    "PKM ini tidak sedang berada pada tahap yang menggunakan reminder Discord."
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | DATA PESAN
+        |--------------------------------------------------------------------------
+        */
+
+        const name =
+            String(
+                pkm.nama ||
+                pkm.nama_pkm ||
+                pkm.name ||
+                "-"
+            ).trim();
+
+        const branch =
+            String(
+                pkm.cabang ||
+                pkm.branch ||
+                "-"
+            ).trim();
+
+        const typePkm =
+            String(
+                pkm.type_pkm ||
+                pkm.typePkm ||
+                "-"
+            ).trim();
+
+        const activityType =
+            String(
+                pkm.jenis_kegiatan ||
+                pkm.activity_type ||
+                "-"
+            ).trim();
+
+        /*
+        |--------------------------------------------------------------------------
+        | LINK APPROVAL
+        |--------------------------------------------------------------------------
+        |
+        | Untuk sementara arahkan ke halaman PKM.
+        | Token approval akan kita sambungkan setelah
+        | Discord dasar berhasil dites.
+        |--------------------------------------------------------------------------
+        */
+
+        const webUrl =
+            String(
+                process.env.PKM_WEB_URL ||
+                ""
+            ).trim();
+
+        const approvalUrl =
+            webUrl
+                ? `${webUrl}/index.html?approvalPkm=${encodeURIComponent(pkmId)}`
+                : "";
+
+        const messageData = {
+
+            content:
+                target === "MSMC"
+                    ? "🔔 **Reminder Approval PKM untuk MSMC**"
+                    : "🔔 **Reminder Approval PKM untuk Manager**",
+
+            embeds: [
+                {
+                    title:
+                        "Pengajuan PKM Menunggu Approval",
+
+                    description:
+                        name,
+
+                    color:
+                        target === "MSMC"
+                            ? 16753920
+                            : 14423100,
+
+                    fields: [
+                        {
+                            name: "ID PKM",
+                            value: pkmId,
+                            inline: true
+                        },
+
+                        {
+                            name: "Cabang",
+                            value: branch,
+                            inline: true
+                        },
+
+                        {
+                            name: "Type",
+                            value: typePkm,
+                            inline: true
+                        },
+
+                        {
+                            name: "Kegiatan",
+                            value: activityType,
+                            inline: false
+                        },
+
+                        {
+                            name: "Tahap",
+                            value:
+                                target === "MSMC"
+                                    ? "Menunggu Approval MSMC"
+                                    : "Menunggu Approval Manager",
+                            inline: false
+                        }
+                    ],
+
+                    footer: {
+                        text:
+                            "CSM Marketing Support"
+                    },
+
+                    timestamp:
+                        new Date().toISOString()
+                }
+            ],
+
+            components:
+                approvalUrl
+                    ? [
+                        {
+                            type: 1,
+
+                            components: [
+                                {
+                                    type: 2,
+                                    style: 5,
+                                    label:
+                                        "Buka Pengajuan",
+                                    url:
+                                        approvalUrl
+                                }
+                            ]
+                        }
+                    ]
+                    : []
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | KIRIM KE DISCORD
+        |--------------------------------------------------------------------------
+        */
+
+        const discordResponse =
+            await fetch(
+                `${process.env.VERCEL_URL
+                    ? `https://${process.env.VERCEL_URL}`
+                    : ""
+                }`,
+                {
+                    method: "POST"
+                }
+            );
+
+        /*
+        | Jangan gunakan internal fetch di sini.
+        | Kita langsung panggil discordHandler logic
+        | melalui helper di bawah.
+        */
+
+        return await sendDiscordFromBackend_(
+            target,
+            messageData
+        );
+
+    } catch (error) {
+
+        console.error(
+            "PUSH PKM DISCORD ERROR:",
+            error
+        );
+
+        return response.status(
+            error.status || 500
+        ).json({
+            success: false,
+            message:
+                error.message ||
+                "Gagal mengirim reminder Discord."
+        });
+    }
+}
+
 // ===== discord =====
 const discordHandler = (() => {
 return async function handler(
@@ -7054,6 +7359,112 @@ return async function handler(
     }
 }
 })();
+
+// ===== whatsapp fonnte =====
+
+async function sendManagerH23WhatsappApproval(pkmData) {
+
+    const fonnteToken =
+        String(
+            process.env.FONNTE_TOKEN || ""
+        ).trim();
+
+    const target =
+        String(
+            process.env.FONNTE_TARGET_MANAGER_H23 || ""
+        )
+            .replace(/[^0-9]/g, "");
+
+    if (!fonnteToken) {
+        throw new Error(
+            "FONNTE_TOKEN belum diatur di Vercel."
+        );
+    }
+
+    if (!target) {
+        throw new Error(
+            "FONNTE_TARGET_MANAGER_H23 belum diatur di Vercel."
+        );
+    }
+
+    const message =
+        "🔔 *Approval PKM Manager H23*\n\n" +
+
+        "ID PKM: " +
+        (pkmData.id || "-") +
+        "\n" +
+
+        "Nama: " +
+        (pkmData.name || "-") +
+        "\n" +
+
+        "Cabang: " +
+        (pkmData.branch || "-") +
+        "\n" +
+
+        "Type: " +
+        (pkmData.typePkm || "-") +
+        "\n" +
+
+        "Kegiatan: " +
+        (pkmData.activityType || "-") +
+        "\n\n" +
+
+        "Silakan buka CSM Marketing Support untuk melakukan approval.";
+
+    const fonnteResponse =
+        await fetch(
+            "https://api.fonnte.com/send",
+            {
+                method: "POST",
+
+                headers: {
+                    Authorization: fonnteToken
+                },
+
+                body: new URLSearchParams({
+                    target: target,
+                    message: message,
+                    countryCode: "62"
+                })
+            }
+        );
+
+    const responseText =
+        await fonnteResponse.text();
+
+    let result;
+
+    try {
+        result = JSON.parse(responseText);
+    } catch (error) {
+        result = {
+            raw: responseText
+        };
+    }
+
+    if (!fonnteResponse.ok) {
+        throw new Error(
+            "Fonnte gagal. HTTP " +
+            fonnteResponse.status +
+            " - " +
+            responseText
+        );
+    }
+
+    if (
+        result &&
+        result.status === false
+    ) {
+        throw new Error(
+            result.reason ||
+            result.message ||
+            "Fonnte menolak pengiriman WhatsApp."
+        );
+    }
+
+    return result;
+}
 
 
 /*
@@ -8779,6 +9190,55 @@ async function approvePkmHandler(
             }
         );
 
+        /* ---------------------------------------------------------
+        H23 → WHATSAPP MANAGER H23
+        --------------------------------------------------------- */
+
+        if (
+            nextRole === "MGR_H23"
+        ) {
+            try {
+
+                await sendManagerH23WhatsappApproval({
+                    id:
+                        pkmId,
+
+                    name:
+                        row.name ||
+                        row.nama ||
+                        "-",
+
+                    branch:
+                        row.branch ||
+                        row.cabang ||
+                        "-",
+
+                    typePkm:
+                        row.type_pkm ||
+                        row.typePkm ||
+                        "-",
+
+                    activityType:
+                        row.activity_type ||
+                        row.activityType ||
+                        "-"
+                });
+
+                console.log(
+                    "[BACKEND] WA MANAGER H23 BERHASIL",
+                    pkmId
+                );
+
+            } catch (waError) {
+
+                console.error(
+                    "[BACKEND] Approval berhasil, tetapi WA Manager H23 gagal:",
+                    waError
+                );
+
+            }
+        }
+
 
         return response
             .status(200)
@@ -9584,46 +10044,27 @@ function crmKpiNormalizeKpb_(value) {
 | GET KPI CRM
 | ========================================================================== */
 
-async function crmKpiGetData_(
-    user,
-    payload
-) {
-
-    payload = payload || {};
-
-    /* ----------------------------------------------------------------------
-    | 1. CABANG
-    | ---------------------------------------------------------------------- */
+async function crmKpiGetData_(user, payload) {
 
     const requestedBranch =
-        crmKpiNormalizeBranch_(
-            payload.branch
-        );
+        crmKpiNormalizeBranch_(payload.branch);
 
     const branch =
         crmKpiIsHO_(user)
-            ? (
-                requestedBranch ||
-                crmKpiNormalizeBranch_(
-                    user.originalBranch ||
-                    user.branch
-                )
-            )
+            ? requestedBranch ||
+              crmKpiNormalizeBranch_(
+                  user.originalBranch
+              )
             : crmKpiNormalizeBranch_(
-                user.originalBranch ||
-                user.branch
-            );
+                  user.originalBranch ||
+                  user.branch
+              );
 
     if (!branch) {
         throw new Error(
             "Cabang KPI tidak valid."
         );
     }
-
-
-    /* ----------------------------------------------------------------------
-    | 2. PERIODE
-    | ---------------------------------------------------------------------- */
 
     const year =
         Number(
@@ -9634,9 +10075,18 @@ async function crmKpiGetData_(
     const month =
         Number(
             payload.month ||
-            (new Date().getMonth() + 1)
+            new Date().getMonth() + 1
         );
 
+    /*
+    |------------------------------------------------------------
+    | SNAPSHOT
+    |------------------------------------------------------------
+    | WEEKLY = input sementara
+    | CLOSING = input final
+    |
+    | Tidak ada lagi filter WEEK.
+    */
     const snapshotType =
         String(
             payload.snapshotType ||
@@ -9645,84 +10095,13 @@ async function crmKpiGetData_(
             .trim()
             .toUpperCase();
 
-    const week =
-        payload.week === null ||
-        payload.week === undefined ||
-        payload.week === ""
-            ? null
-            : Number(payload.week);
-
-
-    /* ----------------------------------------------------------------------
-    | 3. VALIDASI PERIODE
-    | ---------------------------------------------------------------------- */
-
-    if (
-        !Number.isInteger(year) ||
-        year < 2000
-    ) {
-        throw new Error(
-            "Tahun KPI tidak valid."
-        );
-    }
-
-    if (
-        !Number.isInteger(month) ||
-        month < 1 ||
-        month > 12
-    ) {
-        throw new Error(
-            "Bulan KPI tidak valid."
-        );
-    }
-
-    if (
-        !["WEEKLY", "CLOSING"]
-            .includes(snapshotType)
-    ) {
-        throw new Error(
-            "Tipe snapshot KPI tidak valid."
-        );
-    }
-
-    if (
-        snapshotType === "WEEKLY" &&
-        (
-            week === null ||
-            !Number.isInteger(week) ||
-            week < 1 ||
-            week > 6
-        )
-    ) {
-        throw new Error(
-            "Week KPI tidak valid."
-        );
-    }
-
-
-    /* ----------------------------------------------------------------------
-    | 4. QUERY SUPABASE
-    |
-    | Semua indikator diambil sekaligus dari kpi_crm_ho.
-    | Jangan query per indikator.
-    | ---------------------------------------------------------------------- */
-
     let query =
         "/rest/v1/kpi_crm_ho" +
         "?select=*" +
         `&cabang=eq.${encodeURIComponent(branch)}` +
         `&tahun=eq.${year}` +
         `&bulan=eq.${month}` +
-        `&tipe_snapshot=eq.${encodeURIComponent(snapshotType)}`;
-
-    if (snapshotType === "WEEKLY") {
-        query +=
-            `&week=eq.${week}`;
-    }
-
-    query +=
         "&order=id_detail.asc";
-
 
     const rows =
         await supabaseRequest(
@@ -9732,341 +10111,211 @@ async function crmKpiGetData_(
             }
         );
 
+    const data =
+        Object.keys(
+            KPI_CRM_DEFINITIONS
+        ).map(function (code) {
 
-    const supabaseRows =
+            const definition =
+                KPI_CRM_DEFINITIONS[code];
+
+            const matched =
+                Array.isArray(rows)
+                    ? rows.find(function (row) {
+
+                        return (
+                            String(
+                                row.kode_kpi ||
+                                ""
+                            )
+                                .trim()
+                                .toUpperCase() ===
+                            code
+                        );
+
+                    })
+                    : null;
+
+            if (!matched) {
+
+                return {
+                    code,
+
+                    target:
+                        definition.target,
+
+                    actualCrm:
+                        definition.unit === "KPB"
+                            ? [
+                                "",
+                                "",
+                                "",
+                                "",
+                                ""
+                            ]
+                            : "",
+
+                    actualHo:
+                        definition.unit === "KPB"
+                            ? [
+                                "",
+                                "",
+                                "",
+                                "",
+                                ""
+                            ]
+                            : "",
+
+                    scoreCrm: 0,
+                    scoreHo: 0,
+
+                    status: "",
+
+                    snapshotType: "",
+
+                    snapshotNote: "",
+
+                    inputDate: null
+                };
+            }
+
+            const target =
+                crmKpiParseValue_(
+                    matched.target_input
+                );
+
+            const actualCrm =
+                crmKpiParseValue_(
+                    matched.realisasi_crm
+                );
+
+            const actualHo =
+                crmKpiParseValue_(
+                    matched.aktual_ho
+                );
+
+            return {
+
+                code,
+
+                target:
+                    crmKpiHasValue_(target)
+                        ? target
+                        : definition.target,
+
+                actualCrm,
+
+                actualHo,
+
+                scoreCrm:
+                    crmKpiScore_(
+                        definition,
+                        crmKpiHasValue_(target)
+                            ? target
+                            : definition.target,
+                        actualCrm
+                    ),
+
+                scoreHo:
+                    crmKpiScore_(
+                        definition,
+                        crmKpiHasValue_(target)
+                            ? target
+                            : definition.target,
+                        actualHo
+                    ),
+
+                status:
+                    String(
+                        matched.status ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase(),
+
+                snapshotType:
+                    String(
+                        matched.tipe_snapshot ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase(),
+
+                snapshotNote:
+                    String(
+                        matched.catatan ||
+                        ""
+                    ).trim(),
+
+                inputDate:
+                    matched.tanggal_input ||
+                    matched.created_at ||
+                    null
+            };
+        });
+
+    const matchedRows =
         Array.isArray(rows)
             ? rows
             : [];
 
+    const status =
+        matchedRows.length &&
+        matchedRows.every(function (row) {
 
-    /* ----------------------------------------------------------------------
-    | 5. BENTUK DATA 17 KPI
-    | ---------------------------------------------------------------------- */
-
-    const data =
-        Object.keys(
-            KPI_CRM_DEFINITIONS
-        ).map(
-            function (code) {
-
-                const definition =
-                    KPI_CRM_DEFINITIONS[
-                        code
-                    ];
-
-
-                /* ----------------------------------------------------------
-                | Cari record KPI berdasarkan kode
-                | ---------------------------------------------------------- */
-
-                const matched =
-                    supabaseRows.find(
-                        function (row) {
-
-                            return (
-                                String(
-                                    row.kode_kpi ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase() ===
-                                code
-                            );
-                        }
-                    );
-
-
-                /* ----------------------------------------------------------
-                | Jika KPI belum ada di Supabase
-                | tetap kirim baris kosong ke frontend.
-                | ---------------------------------------------------------- */
-
-                if (!matched) {
-
-                    return {
-
-                        code: code,
-
-                        target:
-                            definition.target,
-
-                        actualCrm:
-                            definition.type === "KPB"
-                                ? [
-                                    "",
-                                    "",
-                                    "",
-                                    "",
-                                    ""
-                                ]
-                                : "",
-
-                        actualHo:
-                            definition.type === "KPB"
-                                ? [
-                                    "",
-                                    "",
-                                    "",
-                                    "",
-                                    ""
-                                ]
-                                : "",
-
-                        scoreCrm: "",
-
-                        scoreHo: "",
-
-                        status: "",
-
-                        snapshotType:
-                            snapshotType,
-
-                        snapshotNote: "",
-
-                        periodWeek:
-                            week,
-
-                        inputDate:
-                            null
-                    };
-                }
-
-
-                /* ----------------------------------------------------------
-                | PARSE TARGET
-                | ---------------------------------------------------------- */
-
-                const parsedTarget =
-                    crmKpiParseValue_(
-                        matched.target_input
-                    );
-
-                const target =
-                    crmKpiHasValue_(
-                        parsedTarget
-                    )
-                        ? parsedTarget
-                        : definition.target;
-
-
-                /* ----------------------------------------------------------
-                | PARSE ACTUAL CRM
-                | ---------------------------------------------------------- */
-
-                const parsedActualCrm =
-                    crmKpiParseValue_(
-                        matched.realisasi_crm
-                    );
-
-                const actualCrm =
-                    definition.type === "KPB"
-                        ? crmKpiNormalizeKpb_(
-                            parsedActualCrm
-                        )
-                        : parsedActualCrm;
-
-
-                /* ----------------------------------------------------------
-                | PARSE ACTUAL HO
-                | ---------------------------------------------------------- */
-
-                const parsedActualHo =
-                    crmKpiParseValue_(
-                        matched.aktual_ho
-                    );
-
-                const actualHo =
-                    crmKpiIsHO_(user)
-                        ? (
-                            definition.type === "KPB"
-                                ? crmKpiNormalizeKpb_(
-                                    parsedActualHo
-                                )
-                                : parsedActualHo
-                        )
-                        : "";
-
-
-                /* ----------------------------------------------------------
-                | SCORE CRM
-                | ---------------------------------------------------------- */
-
-                const scoreCrm =
-                    crmKpiHasValue_(
-                        parsedActualCrm
-                    )
-                        ? crmKpiScore_(
-                            definition,
-                            target,
-                            parsedActualCrm
-                        )
-                        : "";
-
-
-                /* ----------------------------------------------------------
-                | SCORE HO
-                | ---------------------------------------------------------- */
-
-                const scoreHo =
-                    crmKpiIsHO_(user) &&
-                    crmKpiHasValue_(
-                        parsedActualHo
-                    )
-                        ? crmKpiScore_(
-                            definition,
-                            target,
-                            parsedActualHo
-                        )
-                        : "";
-
-
-                /* ----------------------------------------------------------
-                | RETURN
-                | ---------------------------------------------------------- */
-
-                return {
-
-                    code: code,
-
-                    target:
-                        target,
-
-                    actualCrm:
-                        actualCrm,
-
-                    actualHo:
-                        actualHo,
-
-                    scoreCrm:
-                        scoreCrm,
-
-                    scoreHo:
-                        scoreHo,
-
-                    status:
-                        String(
-                            matched.status ||
-                            ""
-                        )
-                            .trim()
-                            .toUpperCase(),
-
-                    snapshotType:
-                        String(
-                            matched.tipe_snapshot ||
-                            snapshotType
-                        )
-                            .trim()
-                            .toUpperCase(),
-
-                    snapshotNote:
-                        String(
-                            matched.catatan ||
-                            ""
-                        ).trim(),
-
-                    periodWeek:
-                        matched.week !== null &&
-                        matched.week !== undefined
-                            ? Number(
-                                matched.week
-                            )
-                            : week,
-
-                    inputDate:
-                        matched.tanggal_input ||
-                        matched.created_at ||
-                        null
-                };
-            }
-        );
-
-
-    /* ----------------------------------------------------------------------
-    | 6. STATUS GLOBAL
-    | ---------------------------------------------------------------------- */
-
-    const matchedRows =
-        supabaseRows;
-
-
-    let status = "";
-
-    if (matchedRows.length) {
-
-        const allVerified =
-            matchedRows.every(
-                function (row) {
-
-                    return (
-                        String(
-                            row.status ||
-                            ""
-                        )
-                            .trim()
-                            .toUpperCase() ===
-                        "TERVERIFIKASI"
-                    );
-                }
+            return (
+                String(
+                    row.status ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase() ===
+                "TERVERIFIKASI"
             );
 
-        status =
-            allVerified
-                ? "TERVERIFIKASI"
-                : "MENUNGGU VERIFIKASI MSMC";
-    }
+        })
+            ? "TERVERIFIKASI"
+            : matchedRows.length
+                ? "MENUNGGU VERIFIKASI MSMC"
+                : "";
 
-
-    /* ----------------------------------------------------------------------
-    | 7. SECURITY
-    |
-    | User cabang tidak boleh menerima Actual HO.
-    | ---------------------------------------------------------------------- */
-
-    const canViewHo =
-        crmKpiIsHO_(user);
-
-    if (!canViewHo) {
-
-        data.forEach(
-            function (item) {
-
-                item.actualHo = "";
-
-                item.scoreHo = "";
-            }
-        );
-    }
-
-
-    /* ----------------------------------------------------------------------
-    | 8. RETURN KE FRONTEND
-    | ---------------------------------------------------------------------- */
+    /*
+    | snapshotType sebenarnya mengikuti
+    | record terakhir yang tersimpan.
+    */
+    const latestSnapshot =
+        matchedRows.length
+            ? String(
+                matchedRows[0].tipe_snapshot ||
+                snapshotType
+            )
+                .trim()
+                .toUpperCase()
+            : snapshotType;
 
     return {
 
-        data: data,
+        data,
 
-        status: status,
+        status,
 
         maximumScore: 115,
 
-        branch: branch,
+        branch,
 
-        year: year,
+        year,
 
-        month: month,
+        month,
 
-        week: week,
+        week: null,
 
         snapshotType:
-            snapshotType,
+            latestSnapshot,
 
         canViewHo:
-            canViewHo
+            crmKpiIsHO_(user)
     };
 }
-
 
 /* ==========================================================================
 | SAVE KPI CRM
@@ -10086,9 +10335,8 @@ async function crmKpiSave_(
             .trim()
             .toUpperCase();
 
-    if (
-        role !== "CRM"
-    ) {
+    if (role !== "CRM") {
+
         const error =
             new Error(
                 "Hanya CRM yang dapat mengisi KPI CRM."
@@ -10112,13 +10360,6 @@ async function crmKpiSave_(
     const month =
         Number(payload.month);
 
-    const week =
-        payload.week === null ||
-        payload.week === undefined ||
-        payload.week === ""
-            ? null
-            : Number(payload.week);
-
     const snapshotType =
         String(
             payload.snapshotType ||
@@ -10128,11 +10369,13 @@ async function crmKpiSave_(
             .toUpperCase();
 
     if (
-        snapshotType === "WEEKLY" &&
-        !week
+        ![
+            "WEEKLY",
+            "CLOSING"
+        ].includes(snapshotType)
     ) {
         throw new Error(
-            "Week KPI wajib dipilih."
+            "Snapshot KPI tidak valid."
         );
     }
 
@@ -10144,6 +10387,7 @@ async function crmKpiSave_(
             : [];
 
     if (!metrics.length) {
+
         throw new Error(
             "Data KPI belum diisi."
         );
@@ -10156,17 +10400,24 @@ async function crmKpiSave_(
             ""
         ).trim();
 
-    const snapshotKey =
-        snapshotType === "CLOSING"
-            ? "CLOSING"
-            : `W${week}`;
-
+    /*
+    |------------------------------------------------------------
+    | SATU ID UNTUK SATU PERIODE
+    |------------------------------------------------------------
+    |
+    | Tidak menggunakan NIK.
+    | Tidak menggunakan WEEK.
+    |
+    | Contoh:
+    | Solo-2026-09
+    |
+    */
     const idInput =
         [
-            nik,
+            branch,
             year,
-            String(month).padStart(2, "0"),
-            snapshotKey
+            String(month)
+                .padStart(2, "0")
         ].join("-");
 
     const now =
@@ -10217,13 +10468,18 @@ async function crmKpiSave_(
                 actualCrm
             );
 
+        /*
+        |--------------------------------------------------------
+        | ID DETAIL
+        |--------------------------------------------------------
+        */
         const idDetail =
             `${idInput}-${definition.index}`;
 
         /*
-        | ---------------------------------------------------------------
-        | kpi_crm
-        | ---------------------------------------------------------------
+        |--------------------------------------------------------
+        | KPI CRM
+        |--------------------------------------------------------
         */
 
         const crmRows =
@@ -10261,22 +10517,19 @@ async function crmKpiSave_(
             aktual:
                 actualPercentage / 100,
 
-            skor:
+            target:
+                crmKpiSerializeValue_(
+                    target
+                ),
+
+            score:
                 scoreCrm,
 
-            id_detail_key:
-                `${branch}-${idInput}-${definition.index}-${String(
-                    now
-                ).slice(0, 10).replace(/-/g, "")}`,
+            tipe_snapshot:
+                snapshotType,
 
-            id_indikator:
-                definition.index,
-
-            source:
-                "SUPABASE",
-
-            raw_data:
-                metricPayload
+            week:
+                null
         };
 
         if (
@@ -10322,10 +10575,18 @@ async function crmKpiSave_(
         }
 
         /*
-        | ---------------------------------------------------------------
-        | kpi_crm_ho
-        | ---------------------------------------------------------------
+        |--------------------------------------------------------
+        | KPI CRM HO
+        |--------------------------------------------------------
         */
+
+        const hoRows =
+            await supabaseRequest(
+                `/rest/v1/kpi_crm_ho?id_detail=eq.${encodeURIComponent(idDetail)}&select=id`,
+                {
+                    method: "GET"
+                }
+            );
 
         const hoRecord = {
 
@@ -10348,9 +10609,7 @@ async function crmKpiSave_(
                 month,
 
             week:
-                snapshotType === "CLOSING"
-                    ? null
-                    : week,
+                null,
 
             target_input:
                 crmKpiSerializeValue_(
@@ -10362,12 +10621,11 @@ async function crmKpiSave_(
                     actualCrm
                 ),
 
-            /*
-            | CRM mengedit → verifikasi HO direset.
-            */
-
             aktual_ho:
                 "",
+
+            skor_crm:
+                scoreCrm,
 
             skor_ho:
                 null,
@@ -10399,14 +10657,6 @@ async function crmKpiSave_(
             raw_data:
                 metricPayload
         };
-
-        const hoRows =
-            await supabaseRequest(
-                `/rest/v1/kpi_crm_ho?id_detail=eq.${encodeURIComponent(idDetail)}&select=id`,
-                {
-                    method: "GET"
-                }
-            );
 
         if (
             Array.isArray(hoRows) &&
@@ -10454,14 +10704,17 @@ async function crmKpiSave_(
     }
 
     return {
+
         saved: true,
+
         savedRows,
+
         idInput,
+
         status:
             "MENUNGGU VERIFIKASI MSMC"
     };
 }
-
 
 /* ==========================================================================
 | VERIFY KPI CRM
@@ -10505,13 +10758,6 @@ async function crmKpiVerify_(
     const month =
         Number(payload.month);
 
-    const week =
-        payload.week === null ||
-        payload.week === undefined ||
-        payload.week === ""
-            ? null
-            : Number(payload.week);
-
     const snapshotType =
         String(
             payload.snapshotType ||
@@ -10520,14 +10766,6 @@ async function crmKpiVerify_(
             .trim()
             .toUpperCase();
 
-    if (
-        snapshotType === "WEEKLY" &&
-        !week
-    ) {
-        throw new Error(
-            "Pilih Week yang akan diverifikasi."
-        );
-    }
 
     const metrics =
         Array.isArray(
@@ -10571,15 +10809,7 @@ async function crmKpiVerify_(
             `&kode_kpi=eq.${encodeURIComponent(code)}` +
             `&cabang=eq.${encodeURIComponent(branch)}` +
             `&tahun=eq.${year}` +
-            `&bulan=eq.${month}` +
-            `&tipe_snapshot=eq.${encodeURIComponent(snapshotType)}`;
-
-        if (
-            snapshotType === "WEEKLY"
-        ) {
-            query +=
-                `&week=eq.${week}`;
-        }
+            `&bulan=eq.${month}`;
 
         const rows =
             await supabaseRequest(
@@ -10899,6 +11129,13 @@ module.exports = async function handler(req, res) {
           discordHandler,
           req,
           res
+        );
+
+    case "pushPkmDiscordReminder":
+        return await runHandler(
+            pushPkmDiscordReminderHandler,
+            req,
+            res
         );
 
     case "googleOAuth":

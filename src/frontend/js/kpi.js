@@ -315,13 +315,6 @@ function initializeCrmKpiPeriod() {
     crmKpiPeriodType.value =
         "CLOSING";
 
-    populateCrmKpiWeekOptions();
-
-    crmKpiWeek.value =
-        String(
-            getCurrentCrmKpiWeek()
-        );
-
     updateCrmKpiPeriodTypeUI();
 }
 
@@ -455,7 +448,7 @@ async function executeCrmKpiLoad() {
         true,
         period.snapshotType === "CLOSING"
             ? "Memuat laporan closing..."
-            : `Memuat KPI Week ${period.week}...`
+            : "Memuat KPI bulan berjalan..."
     );
 
     try {
@@ -463,20 +456,10 @@ async function executeCrmKpiLoad() {
             await requestBackend(
                 "getCrmKpiData",
                 {
-                    branch:
-                        period.branch,
-
-                    year:
-                        period.year,
-
-                    month:
-                        period.month,
-
-                    week:
-                        period.week,
-
-                    snapshotType:
-                        period.snapshotType
+                    branch: period.branch,
+                    year: period.year,
+                    month: period.month,
+                    snapshotType: period.snapshotType
                 }
             );
 
@@ -2428,17 +2411,12 @@ async function saveCrmKpi() {
                 month:
                     period.month,
 
-                week:
-                    period.week,
-
                 snapshotType:
                     crmKpiInputMode,
 
                 snapshotNote:
                     crmKpiSnapshotNote
-                        ? crmKpiSnapshotNote
-                            .value
-                            .trim()
+                        ? crmKpiSnapshotNote.value.trim()
                         : "",
 
                 metrics:
@@ -2480,20 +2458,6 @@ async function verifyCrmKpi() {
     const period =
         getSelectedCrmKpiPeriod();
 
-    if (
-        !period.week ||
-        !Number.isFinite(
-            Number(period.week)
-        )
-    ) {
-        showToast(
-            "Periode KPI tidak valid.",
-            "error"
-        );
-
-        return;
-    }
-
     setKpiButtonLoading(
         verifyCrmKpiButton,
         true,
@@ -2512,9 +2476,6 @@ async function verifyCrmKpi() {
 
                 month:
                     period.month,
-
-                week:
-                    period.week,
 
                 snapshotType:
                     period.snapshotType,
@@ -2553,7 +2514,10 @@ async function verifyCrmKpi() {
 
 function updateCrmKpiButtons(status) {
     const periodSelected =
-        Boolean(crmKpiWeek.value);
+        Boolean(
+            crmKpiYear.value &&
+            crmKpiMonth.value
+        );
     const dirtyBadge =
         document.getElementById(
             "crmKpiDirtyBadge"
@@ -3427,48 +3391,24 @@ function getSelectedCrmKpiPeriod() {
             .trim()
             .toUpperCase();
 
-    if (
-        snapshotType ===
-        "CLOSING"
-    ) {
-        return {
-            branch:
-                crmKpiBranch.value,
-
-            year:
-                year,
-
-            month:
-                month,
-
-            week:
-                null,
-
-            snapshotType:
-                "CLOSING"
-        };
-    }
-
     return {
+
         branch:
             crmKpiBranch.value,
 
-        year:
-            year,
+        year,
 
-        month:
-            month,
+        month,
 
         week:
-            Number(
-                crmKpiWeek.value
-            ),
+            null,
 
         snapshotType:
-            "WEEKLY"
+            snapshotType === "CLOSING"
+                ? "CLOSING"
+                : "WEEKLY"
     };
 }
-
 function updateCrmKpiPeriodTypeUI() {
 
     const snapshotType =
