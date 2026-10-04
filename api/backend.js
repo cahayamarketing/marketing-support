@@ -7,6 +7,11 @@ const crypto = require("crypto");
 const PKM_ITEM_DRIVE_ID =
     process.env.PKM_ITEM_DRIVE_ID;
 
+const PKM_ITEM_IMAGES_DRIVE_ID =
+    process.env.PKM_ITEM_IMAGES_DRIVE_ID;    
+
+const LPJ_IMAGES_DRIVE_ID =
+    process.env.LPJ_IMAGES_DRIVE_ID;
 
 function getPkmImagesFolderId() {
 
@@ -18,6 +23,382 @@ function getPkmImagesFolderId() {
     }
 
     return PKM_ITEM_DRIVE_ID;
+}
+
+function getPkmItemImagesDriveClient() {
+
+    const clientId =
+        process.env.GOOGLE_OAUTH_CLIENT_ID;
+
+    const clientSecret =
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+    const redirectUri =
+        process.env.GOOGLE_OAUTH_REDIRECT_URI;
+
+    const refreshToken =
+        process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
+
+    if (
+        !clientId ||
+        !clientSecret ||
+        !redirectUri ||
+        !refreshToken
+    ) {
+
+        const error =
+            new Error(
+                "Konfigurasi Google Drive OAuth PKM ITEM belum lengkap."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    if (!PKM_ITEM_IMAGES_DRIVE_ID) {
+
+        const error =
+            new Error(
+                "PKM_ITEM_IMAGES_DRIVE_ID belum dikonfigurasi."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    const auth =
+        new google.auth.OAuth2(
+            clientId,
+            clientSecret,
+            redirectUri
+        );
+
+    auth.setCredentials({
+        refresh_token:
+            refreshToken
+    });
+
+    return google.drive({
+        version: "v3",
+        auth
+    });
+}
+
+
+async function uploadPkmItemImage({
+    pkmId,
+    itemId,
+    imageData,
+    type
+}) {
+
+    const value =
+        String(
+            imageData || ""
+        ).trim();
+
+    if (!value) {
+        return "";
+    }
+
+    const match =
+        value.match(
+            /^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=\r\n]+)$/i
+        );
+
+    if (!match) {
+
+        const error =
+            new Error(
+                `Format ${type} PKM ITEM tidak valid.`
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+    const rawExtension =
+        match[1].toLowerCase();
+
+    const extension =
+        rawExtension === "jpeg" ||
+        rawExtension === "jpg"
+            ? "jpg"
+            : rawExtension;
+
+    const mimeType =
+        extension === "jpg"
+            ? "image/jpeg"
+            : `image/${extension}`;
+
+    const buffer =
+        Buffer.from(
+            match[2].replace(
+                /\s+/g,
+                ""
+            ),
+            "base64"
+        );
+
+    if (
+        buffer.length >
+        5 * 1024 * 1024
+    ) {
+
+        const error =
+            new Error(
+                `Ukuran ${type} PKM ITEM terlalu besar. Maksimal 5 MB.`
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+    const drive =
+        getPkmItemImagesDriveClient();
+
+    const folderId =
+        PKM_ITEM_IMAGES_DRIVE_ID;
+
+    const safeType =
+        String(
+            type || "FOTO"
+        )
+            .toUpperCase()
+            .replace(
+                /[^A-Z0-9_ -]/g,
+                ""
+            )
+            .replace(
+                /\s+/g,
+                "_"
+            );
+
+    const fileName =
+        `${pkmId}.${itemId}.${safeType}.${Date.now()}.${extension}`;
+
+    const uploaded =
+        await drive.files.create({
+
+            requestBody: {
+
+                name:
+                    fileName,
+
+                parents: [
+                    folderId
+                ],
+
+                mimeType:
+                    mimeType
+            },
+
+            media: {
+
+                mimeType:
+                    mimeType,
+
+                body:
+                    Readable.from(
+                        buffer
+                    )
+            },
+
+            fields:
+                "id,name,mimeType"
+        });
+
+    if (
+        !uploaded.data ||
+        !uploaded.data.id
+    ) {
+
+        const error =
+            new Error(
+                `File ${type} PKM ITEM gagal disimpan ke Google Drive.`
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    return {
+        path:
+            `PKM ITEM_Images/${fileName}`,
+
+        fileId:
+            uploaded.data.id,
+
+        fileName:
+            uploaded.data.name
+    };
+}
+
+
+async function uploadLpjImage({
+    pkmId,
+    lpjId,
+    imageData,
+    type
+}) {
+
+    const value =
+        String(
+            imageData || ""
+        ).trim();
+
+    if (!value) {
+        return "";
+    }
+
+    if (!LPJ_IMAGES_DRIVE_ID) {
+
+        const error =
+            new Error(
+                "LPJ_IMAGES_DRIVE_ID belum dikonfigurasi."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    const match =
+        value.match(
+            /^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=\r\n]+)$/i
+        );
+
+    if (!match) {
+
+        const error =
+            new Error(
+                `Format ${type} LPJ tidak valid.`
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+    const rawExtension =
+        match[1].toLowerCase();
+
+    const extension =
+        rawExtension === "jpeg" ||
+        rawExtension === "jpg"
+            ? "jpg"
+            : rawExtension;
+
+    const mimeType =
+        extension === "jpg"
+            ? "image/jpeg"
+            : `image/${extension}`;
+
+    const buffer =
+        Buffer.from(
+            match[2].replace(
+                /\s+/g,
+                ""
+            ),
+            "base64"
+        );
+
+    if (
+        buffer.length >
+        5 * 1024 * 1024
+    ) {
+
+        const error =
+            new Error(
+                `Ukuran ${type} LPJ terlalu besar. Maksimal 5 MB.`
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+    const drive =
+        getPkmItemImagesDriveClient();
+
+    const safeType =
+        String(
+            type || "FOTO"
+        )
+            .toUpperCase()
+            .replace(
+                /[^A-Z0-9_ -]/g,
+                ""
+            )
+            .replace(
+                /\s+/g,
+                "_"
+            );
+
+    const fileName =
+        `${pkmId}.${lpjId}.${safeType}.${Date.now()}.${extension}`;
+
+    const uploaded =
+        await drive.files.create({
+
+            requestBody: {
+
+                name:
+                    fileName,
+
+                parents: [
+                    LPJ_IMAGES_DRIVE_ID
+                ],
+
+                mimeType:
+                    mimeType
+            },
+
+            media: {
+
+                mimeType:
+                    mimeType,
+
+                body:
+                    Readable.from(
+                        buffer
+                    )
+            },
+
+            fields:
+                "id,name,mimeType"
+        });
+
+    if (
+        !uploaded.data ||
+        !uploaded.data.id
+    ) {
+
+        const error =
+            new Error(
+                `File ${type} LPJ gagal disimpan ke Google Drive.`
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    return {
+        path:
+            `LPJ_Images/${fileName}`,
+
+        fileId:
+            uploaded.data.id,
+
+        fileName:
+            uploaded.data.name
+    };
 }
 
 /* --------------------------------------------------------------------------
@@ -3297,6 +3678,556 @@ return async function handler(
                 });
         }
 
+        /* 
+        |--------------------------------------------------------------------------
+        | CREATE LPJ → SUPABASE
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            requestBody.action ===
+            "createLpj"
+        ) {
+            try {
+
+                console.log(
+                    "[VERCEL] CREATE LPJ SUPABASE",
+                    traceId
+                );
+
+                const payload =
+                    requestBody.payload ||
+                    {};
+
+                const pkmId =
+                    String(
+                        payload.pkmId ||
+                        ""
+                    ).trim();
+
+                if (!pkmId) {
+                    return response
+                        .status(400)
+                        .json({
+                            success: false,
+                            message:
+                                "ID PKM tidak tersedia."
+                        });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | CEK PKM
+                |--------------------------------------------------------------------------
+                */
+
+                const pkmRows =
+                    await supabaseRequest(
+                        "/rest/v1/pkm" +
+                        "?select=id_pkm" +
+                        "&id_pkm=eq." +
+                        encodeURIComponent(pkmId) +
+                        "&limit=1"
+                    );
+
+                if (
+                    !Array.isArray(pkmRows) ||
+                    pkmRows.length === 0
+                ) {
+                    return response
+                        .status(404)
+                        .json({
+                            success: false,
+                            message:
+                                "PKM tidak ditemukan."
+                        });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | CEK APAKAH SUDAH ADA LPJ
+                |--------------------------------------------------------------------------
+                */
+
+                const existingLpj =
+                    await supabaseRequest(
+                        "/rest/v1/lpj" +
+                        "?select=id_lpj" +
+                        "&id_pkm=eq." +
+                        encodeURIComponent(pkmId) +
+                        "&limit=1"
+                    );
+
+                if (
+                    Array.isArray(existingLpj) &&
+                    existingLpj.length > 0
+                ) {
+                    return response
+                        .status(409)
+                        .json({
+                            success: false,
+                            message:
+                                "LPJ untuk PKM ini sudah dibuat."
+                        });
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | GENERATE ID LPJ
+                |--------------------------------------------------------------------------
+                */
+
+                const lpjId =
+                    crypto.randomUUID();
+
+                const now =
+                    new Date().toISOString();
+
+                /*
+                |--------------------------------------------------------------------------
+                | DATA LPJ
+                |--------------------------------------------------------------------------
+                */
+
+                const lpjRecord = {
+
+                    id_lpj:
+                        lpjId,
+
+                    id_pkm:
+                        pkmId,
+
+                    foto_tenda_full:
+                        "",
+
+                    foto_kegiatan_1:
+                        "",
+
+                    foto_kegiatan_2:
+                        "",
+
+                    evaluasi:
+                        String(
+                            payload.evaluation ||
+                            ""
+                        ).trim(),
+
+                    pdf:
+                        "",
+
+                    print:
+                        "",
+
+                    act_db:
+                        Number(
+                            payload.actualDb
+                        ) || 0,
+
+                    act_deal:
+                        Number(
+                            payload.actualDeal
+                        ) || 0,
+
+                    act_ue:
+                        Number(
+                            payload.actualUe
+                        ) || 0,
+
+                    tanggal_lpj:
+                        now,
+
+                    source:
+                        "WEB",
+
+                    created_at:
+                        now,
+
+                    updated_at:
+                        now,
+
+                    synced_at:
+                        now,
+
+                    raw_data:
+                        payload
+                };
+
+                /*
+                |--------------------------------------------------------------------------
+                | INSERT LPJ
+                |--------------------------------------------------------------------------
+                */
+
+                await supabaseRequest(
+                    "/rest/v1/lpj",
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Prefer":
+                                "return=minimal"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                lpjRecord
+                            )
+                    }
+                );
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPLOAD FOTO LPJ KE GOOGLE DRIVE
+                |--------------------------------------------------------------------------
+                */
+
+                const lpjPhotoUpdate = {};
+
+                if (
+                    String(
+                        payload.tentPhoto ||
+                        ""
+                    ).trim()
+                ) {
+
+                    const tentResult =
+                        await uploadLpjImage({
+
+                            pkmId:
+                                pkmId,
+
+                            lpjId:
+                                lpjId,
+
+                            imageData:
+                                payload.tentPhoto,
+
+                            type:
+                                "TENT"
+                        });
+
+                    if (
+                        tentResult &&
+                        tentResult.path
+                    ) {
+                        lpjPhotoUpdate.foto_tenda_full =
+                            tentResult.path;
+                    }
+                }
+
+                if (
+                    String(
+                        payload.activityPhoto1 ||
+                        ""
+                    ).trim()
+                ) {
+
+                    const activity1Result =
+                        await uploadLpjImage({
+
+                            pkmId:
+                                pkmId,
+
+                            lpjId:
+                                lpjId,
+
+                            imageData:
+                                payload.activityPhoto1,
+
+                            type:
+                                "KEGIATAN_1"
+                        });
+
+                    if (
+                        activity1Result &&
+                        activity1Result.path
+                    ) {
+                        lpjPhotoUpdate.foto_kegiatan_1 =
+                            activity1Result.path;
+                    }
+                }
+
+                if (
+                    String(
+                        payload.activityPhoto2 ||
+                        ""
+                    ).trim()
+                ) {
+
+                    const activity2Result =
+                        await uploadLpjImage({
+
+                            pkmId:
+                                pkmId,
+
+                            lpjId:
+                                lpjId,
+
+                            imageData:
+                                payload.activityPhoto2,
+
+                            type:
+                                "KEGIATAN_2"
+                        });
+
+                    if (
+                        activity2Result &&
+                        activity2Result.path
+                    ) {
+                        lpjPhotoUpdate.foto_kegiatan_2 =
+                            activity2Result.path;
+                    }
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPDATE PATH FOTO LPJ
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    Object.keys(
+                        lpjPhotoUpdate
+                    ).length > 0
+                ) {
+
+                    lpjPhotoUpdate.updated_at =
+                        now;
+
+                    lpjPhotoUpdate.synced_at =
+                        now;
+
+                    await supabaseRequest(
+                        "/rest/v1/lpj" +
+                        "?id_lpj=eq." +
+                        encodeURIComponent(
+                            lpjId
+                        ),
+                        {
+                            method:
+                                "PATCH",
+
+                            headers: {
+                                "Prefer":
+                                    "return=minimal"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    lpjPhotoUpdate
+                                )
+                        }
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPDATE PKM ITEM
+                |--------------------------------------------------------------------------
+                */
+
+                const budgetDetails =
+                    Array.isArray(
+                        payload.budgetDetails
+                    )
+                        ? payload.budgetDetails
+                        : [];
+
+                for (
+                    const item
+                    of budgetDetails
+                ) {
+
+                    const itemId =
+                        String(
+                            item.id ||
+                            ""
+                        ).trim();
+
+                    if (!itemId) {
+                        continue;
+                    }
+
+                    const updateItem = {
+
+                        link_lpj:
+                            lpjId,
+
+                        harga_realisasi:
+                            Number(
+                                item.actualPrice
+                            ) || 0,
+
+                        keterangan:
+                            String(
+                                item.note ||
+                                ""
+                            ).trim(),
+
+                        updated_at:
+                            now,
+
+                        synced_at:
+                            now
+                    };
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | UPLOAD GAMBAR DESAIN
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if (
+                        String(
+                            item.designImage ||
+                            ""
+                        ).trim()
+                    ) {
+
+                        const designResult =
+                            await uploadPkmItemImage({
+                                pkmId:
+                                    pkmId,
+
+                                itemId:
+                                    itemId,
+
+                                imageData:
+                                    item.designImage,
+
+                                type:
+                                    "design"
+                            });
+
+                        if (
+                            designResult &&
+                            designResult.path
+                        ) {
+                            updateItem.gambar_desain =
+                                designResult.path;
+                        }
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | UPLOAD FOTO ITEM
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if (
+                        String(
+                            item.photo ||
+                            ""
+                        ).trim()
+                    ) {
+
+                        const photoResult =
+                            await uploadPkmItemImage({
+                                pkmId:
+                                    pkmId,
+
+                                itemId:
+                                    itemId,
+
+                                imageData:
+                                    item.photo,
+
+                                type:
+                                    "photo"
+                            });
+
+                        if (
+                            photoResult &&
+                            photoResult.path
+                        ) {
+                            updateItem.foto =
+                                photoResult.path;
+                        }
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | UPDATE PKM ITEM
+                    |--------------------------------------------------------------------------
+                    */
+
+                    await supabaseRequest(
+                        "/rest/v1/pkm_item" +
+                        "?id=eq." +
+                        encodeURIComponent(
+                            itemId
+                        ),
+                        {
+                            method:
+                                "PATCH",
+
+                            headers: {
+                                "Prefer":
+                                    "return=minimal"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    updateItem
+                                )
+                        }
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | RESPONSE
+                |--------------------------------------------------------------------------
+                */
+
+                console.log(
+                    "[VERCEL] CREATE LPJ SUPABASE SUCCESS",
+                    traceId,
+                    lpjId,
+                    pkmId
+                );
+
+                return response
+                    .status(200)
+                    .json({
+                        success:
+                            true,
+
+                        message:
+                            "LPJ berhasil difinalisasi.",
+
+                        lpjId:
+                            lpjId,
+
+                        pkmId:
+                            pkmId
+                    });
+
+            } catch (error) {
+
+                console.error(
+                    "[VERCEL] CREATE LPJ SUPABASE ERROR",
+                    traceId,
+                    error
+                );
+
+                return response
+                    .status(
+                        error.status ||
+                        500
+                    )
+                    .json({
+                        success:
+                            false,
+
+                        message:
+                            error.message ||
+                            "Gagal menyimpan LPJ ke Supabase."
+                    });
+            }
+        }
+
         /* ================================================================
         PKM PDF → SUPABASE
         PDF tetap berada di GOOGLE DRIVE.
@@ -4076,17 +5007,46 @@ return async function handler(req, res) {
 
             if (type === "LEASING") {
 
+                const rows =
+                    await supabaseRequest(
+                        "/rest/v1/master_leasing" +
+                        "?select=id,init,kode,nama" +
+                        "&order=id.asc"
+                    );
+
+                const headers = [
+                    "INIT",
+                    "KODE",
+                    "NAMA"
+                ];
+
+                const data =
+                    Array.isArray(rows)
+                        ? rows.map(function (row) {
+                            return {
+                                "INIT":
+                                    String(
+                                        row.init ?? ""
+                                    ).trim(),
+
+                                "KODE":
+                                    String(
+                                        row.kode ?? ""
+                                    ).trim(),
+
+                                "NAMA":
+                                    String(
+                                        row.nama ?? ""
+                                    ).trim()
+                            };
+                        })
+                        : [];
+
                 return res.status(200).json({
                     success: true,
                     type: type,
-                    headers: [
-                        "INIT",
-                        "KODE",
-                        "NAMA"
-                    ],
-                    data: [],
-                    message:
-                        "Master Leasing belum dimigrasikan ke Supabase."
+                    headers: headers,
+                    data: data
                 });
             }
 
