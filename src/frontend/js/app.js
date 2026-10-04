@@ -5938,7 +5938,8 @@ function showPage(pageId) {
         "pageSubtitle"
     ).textContent = information.subtitle;
 
-    /*
+
+    /* 
     |--------------------------------------------------------------------------
     | MENU AKTIF
     |--------------------------------------------------------------------------
@@ -5952,6 +5953,13 @@ function showPage(pageId) {
             item.classList.remove("active");
         });
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | AKTIFKAN SUBMENU YANG DIPILIH
+    |--------------------------------------------------------------------------
+    */
+
     document
         .querySelectorAll(
             `[data-page="${pageId}"]`
@@ -5959,6 +5967,60 @@ function showPage(pageId) {
         .forEach(function (item) {
             item.classList.add("active");
         });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PARENT PKM TETAP AKTIF
+    |--------------------------------------------------------------------------
+    */
+
+    const pkmPages = [
+        "pengajuanPage",
+        "listPkmPage",
+        "pdfPkmPage",
+        "lpjPage"
+    ];
+
+    const pkmMenuButton =
+        document.getElementById(
+            "pkmMenuButton"
+        );
+
+    if (
+        pkmMenuButton &&
+        pkmPages.includes(pageId)
+    ) {
+        pkmMenuButton.classList.add(
+            "active"
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PARENT KPI TETAP AKTIF
+    |--------------------------------------------------------------------------
+    */
+
+    const kpiPages = [
+        "crmKpiPage",
+        "sipedeKpiPage"
+    ];
+
+    const kpiMenuButton =
+        document.getElementById(
+            "kpiMenuButton"
+        );
+
+    if (
+        kpiMenuButton &&
+        kpiPages.includes(pageId)
+    ) {
+        kpiMenuButton.classList.add(
+            "active"
+        );
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -11271,6 +11333,282 @@ function renderPkmPdfTable() {
 
             })
             .join("");
+
+    const mobileList =
+        document.getElementById(
+            "pdfPkmMobileList"
+        );
+
+    if (mobileList) {
+
+        mobileList.innerHTML =
+            pageData
+                .map(function (item) {
+
+                    const typeText =
+                        Array.isArray(item.type)
+                            ? item.type.join(", ")
+                            : item.type || "-";
+
+                    return `
+                        <article
+                            class="
+                                overflow-hidden
+                                rounded-2xl
+                                border
+                                border-slate-200
+                                bg-white
+                                p-4
+                                shadow-sm
+                                transition-all
+                                duration-200
+                                active:scale-[0.995]
+                            "
+                        >
+
+                            <!-- HEADER -->
+                            <div
+                                class="
+                                    flex
+                                    items-start
+                                    justify-between
+                                    gap-3
+                                "
+                            >
+
+                                <div class="min-w-0">
+
+                                    <p
+                                        class="
+                                            truncate
+                                            text-[10px]
+                                            font-black
+                                            uppercase
+                                            tracking-[0.08em]
+                                            text-slate-400
+                                        "
+                                    >
+                                        ${escapeHtml(item.id || "-")}
+                                    </p>
+
+                                    <h3
+                                        class="
+                                            mt-1
+                                            line-clamp-2
+                                            text-sm
+                                            font-black
+                                            leading-5
+                                            text-slate-900
+                                        "
+                                    >
+                                        ${escapeHtml(item.name || "-")}
+                                    </h3>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            line-clamp-1
+                                            text-[11px]
+                                            font-medium
+                                            text-slate-500
+                                        "
+                                    >
+                                        ${escapeHtml(item.kegiatan || "-")}
+                                    </p>
+
+                                </div>
+
+                                <div class="shrink-0">
+                                    ${statusBadge(item.status)}
+                                </div>
+
+                            </div>
+
+
+                            <!-- META -->
+                            <div
+                                class="
+                                    mt-4
+                                    grid
+                                    grid-cols-2
+                                    gap-2
+                                "
+                            >
+
+                                <div
+                                    class="
+                                        rounded-xl
+                                        bg-slate-50
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+                                    <p
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-slate-400
+                                        "
+                                    >
+                                        Cabang
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            truncate
+                                            text-xs
+                                            font-black
+                                            text-slate-700
+                                        "
+                                    >
+                                        ${escapeHtml(item.branch || "-")}
+                                    </p>
+                                </div>
+
+
+                                <div
+                                    class="
+                                        rounded-xl
+                                        bg-slate-50
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+                                    <p
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-slate-400
+                                        "
+                                    >
+                                        Type
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            truncate
+                                            text-xs
+                                            font-black
+                                            text-slate-700
+                                        "
+                                    >
+                                        ${escapeHtml(typeText)}
+                                    </p>
+                                </div>
+
+
+                                <div
+                                    class="
+                                        rounded-xl
+                                        bg-slate-50
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+                                    <p
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-slate-400
+                                        "
+                                    >
+                                        Pelaksanaan
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            text-xs
+                                            font-black
+                                            text-slate-700
+                                        "
+                                    >
+                                        ${escapeHtml(
+                                            formatDateTime(
+                                                item.startDate
+                                            )
+                                        )}
+                                    </p>
+                                </div>
+
+
+                                <div
+                                    class="
+                                        rounded-xl
+                                        bg-red-50
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+                                    <p
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-red-400
+                                        "
+                                    >
+                                        Dokumen
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            text-xs
+                                            font-black
+                                            text-red-700
+                                        "
+                                    >
+                                        PDF tersedia
+                                    </p>
+                                </div>
+
+                            </div>
+
+
+                            <!-- ACTION -->
+                            <div class="mt-4">
+
+                                <button
+                                    type="button"
+                                    data-download-stored-pdf="${escapeHtml(item.id)}"
+                                    class="
+                                        w-full
+                                        rounded-xl
+                                        bg-red-600
+                                        px-4
+                                        py-3
+                                        text-xs
+                                        font-black
+                                        text-white
+                                        shadow-sm
+                                        shadow-red-100
+                                        transition
+                                        hover:bg-red-700
+                                        active:scale-[0.98]
+                                    "
+                                >
+                                    ↓ Download PDF
+                                </button>
+
+                            </div>
+
+                        </article>
+                    `;
+
+                })
+                .join("");
+
+    }
 
 
     document
