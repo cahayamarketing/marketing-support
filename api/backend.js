@@ -9019,10 +9019,22 @@ const KPI_CRM_DEFINITIONS = Object.freeze({
 
 
 function crmKpiNormalizeBranch_(value) {
+    const raw = String(value || "").trim().toUpperCase();
 
-    return String(value || "")
-        .trim()
-        .toUpperCase();
+    const branchMap = {
+        SLO: "Solo",
+        RJM: "Rajiman",
+        SRG: "Sragen",
+        KRA: "Karanganyar",
+        KPD: "Karangpandan",
+        WNG: "Wonogiri",
+        NGW: "Ngawi",
+        CRB: "Caruban",
+        STY: "Sutoyo",
+        KSM: "Kusuma"
+    };
+
+    return branchMap[raw] || String(value || "").trim();
 }
 
 
