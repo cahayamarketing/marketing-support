@@ -3225,3 +3225,85 @@ body.modal-open {
     }
 
 }
+
+/* =========================================================
+   MOBILE ONLY - CSM RED THEME
+========================================================= */
+
+@media (max-width: 1023px) {
+
+    /* =========================
+       MOBILE HEADER
+    ========================= */
+
+    .app-header {
+        background: #d71920 !important;
+        border-bottom-color: #b51218 !important;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(90, 0, 0, 0.18);
+    }
+
+    .app-header #pageTitle {
+        color: #ffffff !important;
+    }
+
+    .app-header #pageSubtitle {
+        color: #fee2e2 !important;
+    }
+
+    .app-header .header-menu-button {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .app-header .header-menu-button span {
+        background: #ffffff;
+    }
+
+    .app-header .header-logo-wrapper {
+        background: #ffffff;
+        border-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .app-header .header-account-divider {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+
+    /* =========================
+       MOBILE BOTTOM NAV
+    ========================= */
+
+    #mobileBottomNav {
+        background: #8f0f15 !important;
+        border-top: 1px solid #b51218 !important;
+        box-shadow: 0 -8px 24px rgba(45, 0, 0, 0.25);
+    }
+
+    .mobile-bottom-nav-item {
+        color: #fecaca !important;
+    }
+
+    .mobile-bottom-nav-item.active {
+        color: #ffffff !important;
+        background: rgba(255, 255, 255, 0.10);
+    }
+
+
+    /* =========================
+       TOMBOL +
+    ========================= */
+
+    #mobileCreatePkmButton {
+        background: #d71920 !important;
+        color: #ffffff !important;
+        border: 4px solid #ffffff !important;
+        box-shadow:
+            0 8px 20px rgba(90, 0, 0, 0.30),
+            0 0 0 3px rgba(215, 25, 32, 0.18);
+    }
+
+    #mobileCreatePkmButton:hover {
+        background: #c41219 !important;
+    }
+}
