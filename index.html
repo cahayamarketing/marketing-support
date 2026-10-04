@@ -7111,9 +7111,8 @@
                 <button
                     type="button"
                     data-mobile-nav-page="dashboardPage"
-                    class="mobile-bottom-nav-item"
+                    class="mobile-bottom-nav-item active"
                 >
-
                     <span
                         class="mobile-bottom-nav-icon"
                         data-app-icon="dashboard"
@@ -7122,82 +7121,192 @@
                     <span>
                         Beranda
                     </span>
-
                 </button>
 
 
-                <!-- LIST PKM -->
+                <!-- PKM -->
                 <button
                     type="button"
-                    data-mobile-nav-page="listPkmPage"
+                    id="mobilePkmMenuButton"
                     class="mobile-bottom-nav-item"
+                    aria-expanded="false"
                 >
-
                     <span
                         class="mobile-bottom-nav-icon"
-                        data-app-icon="list"
+                        data-app-icon="clipboard"
                     ></span>
 
                     <span>
-                        List PKM
+                        PKM
                     </span>
-
                 </button>
 
 
-                <!-- AJUKAN PKM -->
+                <!-- TOMBOL + -->
                 <button
                     type="button"
                     id="mobileCreatePkmButton"
                     class="mobile-bottom-nav-create"
                     aria-label="Ajukan PKM"
                 >
-
-                    <span
-                        data-app-icon="submission"
-                    ></span>
-
-                    <span>
+                    <span class="text-2xl font-light">
                         +
                     </span>
 
+                    <span>
+                        Ajukan
+                    </span>
                 </button>
 
 
-                <!-- MONITORING -->
+                <!-- LPJ -->
                 <button
                     type="button"
-                    data-mobile-nav-page="dashboardPage"
-                    data-mobile-monitoring="true"
+                    data-mobile-nav-page="lpjPage"
                     class="mobile-bottom-nav-item"
                 >
+                    <span
+                        class="mobile-bottom-nav-icon"
+                        data-app-icon="lpj"
+                    ></span>
 
+                    <span>
+                        LPJ
+                    </span>
+                </button>
+
+
+                <!-- KPI -->
+                <button
+                    type="button"
+                    id="mobileKpiMenuButton"
+                    class="mobile-bottom-nav-item"
+                    aria-expanded="false"
+                >
                     <span
                         class="mobile-bottom-nav-icon"
                         data-app-icon="chart"
                     ></span>
 
                     <span>
-                        Monitoring
+                        KPI
+                    </span>
+                </button>
+
+            </div>
+
+
+            <!-- ================================================ -->
+            <!-- POPUP PKM -->
+            <!-- ================================================ -->
+
+            <div
+                id="mobilePkmMenu"
+                class="
+                    mobile-bottom-popup
+                    hidden
+                    absolute
+                    bottom-[72px]
+                    left-3
+                    w-[220px]
+                "
+            >
+
+                <div class="mobile-bottom-popup-title">
+                    PKM
+                </div>
+
+
+                <!-- APPROVAL -->
+                <button
+                    type="button"
+                    data-mobile-popup-page="listPkmPage"
+                    class="mobile-bottom-popup-item"
+                >
+
+                    <span
+                        data-app-icon="list"
+                    ></span>
+
+                    <span>
+                        Approval / List PKM
                     </span>
 
                 </button>
 
 
-                <!-- LAINNYA -->
+                <!-- PDF -->
                 <button
                     type="button"
-                    id="mobileMoreButton"
-                    class="mobile-bottom-nav-item"
+                    data-mobile-popup-page="pdfPkmPage"
+                    class="mobile-bottom-popup-item"
                 >
 
                     <span
-                        class="mobile-bottom-nav-icon"
-                        data-app-icon="list"
+                        data-app-icon="pdf"
                     ></span>
 
                     <span>
-                        Lainnya
+                        PDF PKM
+                    </span>
+
+                </button>
+
+            </div>
+
+
+            <!-- ================================================ -->
+            <!-- POPUP KPI -->
+            <!-- ================================================ -->
+
+            <div
+                id="mobileKpiMenu"
+                class="
+                    mobile-bottom-popup
+                    hidden
+                    absolute
+                    bottom-[72px]
+                    right-3
+                    w-[220px]
+                "
+            >
+
+                <div class="mobile-bottom-popup-title">
+                    KPI
+                </div>
+
+
+                <!-- KPI CRM -->
+                <button
+                    type="button"
+                    data-mobile-popup-page="crmKpiPage"
+                    class="mobile-bottom-popup-item"
+                >
+
+                    <span
+                        data-app-icon="chart"
+                    ></span>
+
+                    <span>
+                        KPI CRM
+                    </span>
+
+                </button>
+
+
+                <!-- KPI SIPEDE -->
+                <button
+                    type="button"
+                    data-mobile-popup-page="sipedeKpiPage"
+                    class="mobile-bottom-popup-item"
+                >
+
+                    <span
+                        data-app-icon="chart"
+                    ></span>
+
+                    <span>
+                        KPI SiPede
                     </span>
 
                 </button>

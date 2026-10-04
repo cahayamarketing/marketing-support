@@ -5115,9 +5115,9 @@ document
 sidebarOverlay.addEventListener("click", closeSidebar);
 
 /*
-|-------------------------------------------------------------------------- 
+|--------------------------------------------------------------------------
 | MOBILE BOTTOM NAVIGATION
-|-------------------------------------------------------------------------- 
+|--------------------------------------------------------------------------
 */
 
 document
@@ -5128,68 +5128,29 @@ document
 
         button.addEventListener(
             "click",
-            async function () {
+            function () {
 
                 const pageId =
-                    button.dataset.mobileNavPage;
+                    button.dataset
+                        .mobileNavPage;
 
                 if (!pageId) {
                     return;
                 }
 
-                showPage(pageId);
+                closeMobileBottomMenus();
 
-
-                document
-                    .querySelectorAll(
-                        ".mobile-bottom-nav-item"
-                    )
-                    .forEach(function (item) {
-                        item.classList.remove(
-                            "active"
-                        );
-                    });
-
-                button.classList.add(
-                    "active"
-                );
-
-
-                /*
-                | Monitoring:
-                | buka dashboard lalu scroll
-                | ke bagian status pengajuan.
-                */
+                const result =
+                    showPage(pageId);
 
                 if (
-                    button.dataset.mobileMonitoring ===
-                    "true"
+                    result !== false
                 ) {
 
-                    const monitoringText =
-                        Array.from(
-                            document.querySelectorAll(
-                                "#dashboardPage *"
-                            )
-                        ).find(function (element) {
+                    updateMobileBottomNav(
+                        pageId
+                    );
 
-                            return (
-                                element.textContent
-                                    ?.trim() ===
-                                "Status Pengajuan"
-                            );
-                        });
-
-                    if (monitoringText) {
-
-                        monitoringText
-                            .scrollIntoView({
-                                behavior:
-                                    "smooth",
-                                block:
-                                    "start"
-                            });
-                    }
                 }
 
             }
@@ -5199,15 +5160,223 @@ document
 
 
 /*
-|-------------------------------------------------------------------------- 
-| AJUKAN PKM - TOMBOL TENGAH
-|-------------------------------------------------------------------------- 
+|--------------------------------------------------------------------------
+| UPDATE ACTIVE MOBILE NAV
+|--------------------------------------------------------------------------
+*/
+
+function updateMobileBottomNav(
+    pageId
+) {
+
+    document
+        .querySelectorAll(
+            ".mobile-bottom-nav-item"
+        )
+        .forEach(
+            function (item) {
+
+                item.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+    const matchedButton =
+        document.querySelector(
+            `[data-mobile-nav-page="${pageId}"]`
+        );
+
+
+    if (matchedButton) {
+
+        matchedButton.classList.add(
+            "active"
+        );
+
+    }
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| MENU PKM
+|--------------------------------------------------------------------------
+*/
+
+const mobilePkmMenuButton =
+    document.getElementById(
+        "mobilePkmMenuButton"
+    );
+
+const mobilePkmMenu =
+    document.getElementById(
+        "mobilePkmMenu"
+    );
+
+
+if (
+    mobilePkmMenuButton &&
+    mobilePkmMenu
+) {
+
+    mobilePkmMenuButton.addEventListener(
+        "click",
+        function (event) {
+
+            event.stopPropagation();
+
+            const willOpen =
+                mobilePkmMenu
+                    .classList
+                    .contains("hidden");
+
+            closeMobileBottomMenus();
+
+            if (willOpen) {
+
+                mobilePkmMenu
+                    .classList
+                    .remove("hidden");
+
+                mobilePkmMenuButton
+                    .classList
+                    .add("active");
+
+                mobilePkmMenuButton
+                    .setAttribute(
+                        "aria-expanded",
+                        "true"
+                    );
+
+            }
+
+        }
+    );
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| MENU KPI
+|--------------------------------------------------------------------------
+*/
+
+const mobileKpiMenuButton =
+    document.getElementById(
+        "mobileKpiMenuButton"
+    );
+
+const mobileKpiMenu =
+    document.getElementById(
+        "mobileKpiMenu"
+    );
+
+
+if (
+    mobileKpiMenuButton &&
+    mobileKpiMenu
+) {
+
+    mobileKpiMenuButton.addEventListener(
+        "click",
+        function (event) {
+
+            event.stopPropagation();
+
+            const willOpen =
+                mobileKpiMenu
+                    .classList
+                    .contains("hidden");
+
+            closeMobileBottomMenus();
+
+            if (willOpen) {
+
+                mobileKpiMenu
+                    .classList
+                    .remove("hidden");
+
+                mobileKpiMenuButton
+                    .classList
+                    .add("active");
+
+                mobileKpiMenuButton
+                    .setAttribute(
+                        "aria-expanded",
+                        "true"
+                    );
+
+            }
+
+        }
+    );
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| ITEM POPUP
+|--------------------------------------------------------------------------
+*/
+
+document
+    .querySelectorAll(
+        "[data-mobile-popup-page]"
+    )
+    .forEach(
+        function (button) {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    const pageId =
+                        button.dataset
+                            .mobilePopupPage;
+
+                    closeMobileBottomMenus();
+
+                    if (!pageId) {
+                        return;
+                    }
+
+                    const result =
+                        showPage(pageId);
+
+                    if (
+                        result !== false
+                    ) {
+
+                        updateMobileBottomNav(
+                            pageId
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| TOMBOL + AJUKAN PKM
+|--------------------------------------------------------------------------
 */
 
 const mobileCreatePkmButton =
     document.getElementById(
         "mobileCreatePkmButton"
     );
+
 
 if (
     mobileCreatePkmButton
@@ -5216,6 +5385,8 @@ if (
     mobileCreatePkmButton.addEventListener(
         "click",
         function () {
+
+            closeMobileBottomMenus();
 
             showPage(
                 "pengajuanPage"
@@ -5228,31 +5399,72 @@ if (
 
 
 /*
-|-------------------------------------------------------------------------- 
-| LAINNYA
-|-------------------------------------------------------------------------- 
+|--------------------------------------------------------------------------
+| CLOSE POPUP MOBILE
+|--------------------------------------------------------------------------
 */
 
-const mobileMoreButton =
-    document.getElementById(
-        "mobileMoreButton"
-    );
+function closeMobileBottomMenus() {
 
-if (
-    mobileMoreButton
-) {
+    [
+        mobilePkmMenu,
+        mobileKpiMenu
+    ]
+        .forEach(
+            function (menu) {
 
-    mobileMoreButton.addEventListener(
-        "click",
-        function () {
+                if (menu) {
 
-            openSidebar();
+                    menu.classList.add(
+                        "hidden"
+                    );
 
-        }
-    );
+                }
+
+            }
+        );
+
+
+    [
+        mobilePkmMenuButton,
+        mobileKpiMenuButton
+    ]
+        .forEach(
+            function (button) {
+
+                if (button) {
+
+                    button.classList.remove(
+                        "active"
+                    );
+
+                    button.setAttribute(
+                        "aria-expanded",
+                        "false"
+                    );
+
+                }
+
+            }
+        );
 
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| KLIK LUAR POPUP
+|--------------------------------------------------------------------------
+*/
+
+document.addEventListener(
+    "click",
+    function () {
+
+        closeMobileBottomMenus();
+
+    }
+);
 
 /*
 |-------------------------------------------------------------------------- 
