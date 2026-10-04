@@ -3,6 +3,22 @@
 const { google } = require("googleapis");
 const { Readable } = require("stream");
 
+const PKM_ITEM_DRIVE_ID =
+    process.env.PKM_ITEM_DRIVE_ID;
+
+
+function getPkmImagesFolderId() {
+
+    if (!PKM_ITEM_DRIVE_ID) {
+
+        throw new Error(
+            "PKM_ITEM_DRIVE_ID belum dikonfigurasi."
+        );
+    }
+
+    return PKM_ITEM_DRIVE_ID;
+}
+
 // Supabase helper kept inside the single Vercel Function.
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -5450,14 +5466,6 @@ return async function handler(
 })();
 
 
-// ============================================================
-// PKM APPROVAL SIGNATURE / GOOGLE DRIVE
-// ============================================================
-
-const PKM_ITEM_DRIVE_ID =
-    process.env.PKM_ITEM_DRIVE_ID;
-
-
 /*
 |---------------------------------------------------------------------------
 | GOOGLE DRIVE CLIENT UNTUK TTD PKM
@@ -5526,80 +5534,6 @@ function getPkmItemDriveClient() {
 | CARI / BUAT FOLDER PKM_Images
 |---------------------------------------------------------------------------
 */
-
-async function getOrCreatePkmImagesFolder(
-    drive
-) {
-
-    const escapedRoot =
-        String(
-            PKM_ITEM_DRIVE_ID
-        )
-            .replace(
-                /\\/g,
-                "\\\\"
-            )
-            .replace(
-                /'/g,
-                "\\'"
-            );
-
-
-    const result =
-        await drive.files.list({
-
-            q:
-                `'${escapedRoot}' in parents` +
-                ` and name = 'PKM_Images'` +
-                ` and mimeType = 'application/vnd.google-apps.folder'` +
-                ` and trashed = false`,
-
-            fields:
-                "files(id,name)",
-
-            pageSize:
-                10
-        });
-
-
-    if (
-        result.data.files &&
-        result.data.files.length
-    ) {
-
-        return result
-            .data
-            .files[0]
-            .id;
-    }
-
-
-    const created =
-        await drive.files.create({
-
-            requestBody: {
-
-                name:
-                    "PKM_Images",
-
-                mimeType:
-                    "application/vnd.google-apps.folder",
-
-                parents: [
-                    PKM_ITEM_DRIVE_ID
-                ]
-            },
-
-            fields:
-                "id,name"
-        });
-
-
-    return created
-        .data
-        .id;
-}
-
 
 /*
 |---------------------------------------------------------------------------
@@ -5962,10 +5896,8 @@ async function uploadPkmApprovalSignature({
         getPkmItemDriveClient();
 
 
-    const folderId =
-        await getOrCreatePkmImagesFolder(
-            drive
-        );
+    const imagesFolderId =
+        getPkmImagesFolderId();
 
 
     const now =
@@ -6043,7 +5975,7 @@ async function uploadPkmApprovalSignature({
                     fileName,
 
                 parents: [
-                    folderId
+                    imagesFolderId
                 ],
 
                 mimeType:
