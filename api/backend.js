@@ -9589,6 +9589,12 @@ async function crmKpiGetData_(
     payload
 ) {
 
+    payload = payload || {};
+
+    /* ----------------------------------------------------------------------
+    | 1. CABANG
+    | ---------------------------------------------------------------------- */
+
     const requestedBranch =
         crmKpiNormalizeBranch_(
             payload.branch
@@ -9596,10 +9602,13 @@ async function crmKpiGetData_(
 
     const branch =
         crmKpiIsHO_(user)
-            ? requestedBranch ||
-              crmKpiNormalizeBranch_(
-                  user.originalBranch
-              )
+            ? (
+                requestedBranch ||
+                crmKpiNormalizeBranch_(
+                    user.originalBranch ||
+                    user.branch
+                )
+            )
             : crmKpiNormalizeBranch_(
                 user.originalBranch ||
                 user.branch
@@ -9611,6 +9620,11 @@ async function crmKpiGetData_(
         );
     }
 
+
+    /* ----------------------------------------------------------------------
+    | 2. PERIODE
+    | ---------------------------------------------------------------------- */
+
     const year =
         Number(
             payload.year ||
@@ -9620,7 +9634,7 @@ async function crmKpiGetData_(
     const month =
         Number(
             payload.month ||
-            new Date().getMonth() + 1
+            (new Date().getMonth() + 1)
         );
 
     const snapshotType =
@@ -9638,6 +9652,61 @@ async function crmKpiGetData_(
             ? null
             : Number(payload.week);
 
+
+    /* ----------------------------------------------------------------------
+    | 3. VALIDASI PERIODE
+    | ---------------------------------------------------------------------- */
+
+    if (
+        !Number.isInteger(year) ||
+        year < 2000
+    ) {
+        throw new Error(
+            "Tahun KPI tidak valid."
+        );
+    }
+
+    if (
+        !Number.isInteger(month) ||
+        month < 1 ||
+        month > 12
+    ) {
+        throw new Error(
+            "Bulan KPI tidak valid."
+        );
+    }
+
+    if (
+        !["WEEKLY", "CLOSING"]
+            .includes(snapshotType)
+    ) {
+        throw new Error(
+            "Tipe snapshot KPI tidak valid."
+        );
+    }
+
+    if (
+        snapshotType === "WEEKLY" &&
+        (
+            week === null ||
+            !Number.isInteger(week) ||
+            week < 1 ||
+            week > 6
+        )
+    ) {
+        throw new Error(
+            "Week KPI tidak valid."
+        );
+    }
+
+
+    /* ----------------------------------------------------------------------
+    | 4. QUERY SUPABASE
+    |
+    | Semua indikator diambil sekaligus dari kpi_crm_ho.
+    | Jangan query per indikator.
+    | ---------------------------------------------------------------------- */
+
     let query =
         "/rest/v1/kpi_crm_ho" +
         "?select=*" +
@@ -9646,15 +9715,14 @@ async function crmKpiGetData_(
         `&bulan=eq.${month}` +
         `&tipe_snapshot=eq.${encodeURIComponent(snapshotType)}`;
 
-    if (
-        snapshotType === "WEEKLY"
-    ) {
+    if (snapshotType === "WEEKLY") {
         query +=
             `&week=eq.${week}`;
     }
 
     query +=
         "&order=id_detail.asc";
+
 
     const rows =
         await supabaseRequest(
@@ -9663,6 +9731,17 @@ async function crmKpiGetData_(
                 method: "GET"
             }
         );
+
+
+    const supabaseRows =
+        Array.isArray(rows)
+            ? rows
+            : [];
+
+
+    /* ----------------------------------------------------------------------
+    | 5. BENTUK DATA 17 KPI
+    | ---------------------------------------------------------------------- */
 
     const data =
         Object.keys(
@@ -9675,28 +9754,39 @@ async function crmKpiGetData_(
                         code
                     ];
 
-                const matched =
-                    Array.isArray(rows)
-                        ? rows.find(
-                            function (row) {
 
-                                return (
-                                    String(
-                                        row.kode_kpi ||
-                                        ""
-                                    )
-                                        .trim()
-                                        .toUpperCase() ===
-                                    code
-                                );
-                            }
-                        )
-                        : null;
+                /* ----------------------------------------------------------
+                | Cari record KPI berdasarkan kode
+                | ---------------------------------------------------------- */
+
+                const matched =
+                    supabaseRows.find(
+                        function (row) {
+
+                            return (
+                                String(
+                                    row.kode_kpi ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase() ===
+                                code
+                            );
+                        }
+                    );
+
+
+                /* ----------------------------------------------------------
+                | Jika KPI belum ada di Supabase
+                | tetap kirim baris kosong ke frontend.
+                | ---------------------------------------------------------- */
 
                 if (!matched) {
 
                     return {
-                        code,
+
+                        code: code,
+
                         target:
                             definition.target,
 
@@ -9723,78 +9813,135 @@ async function crmKpiGetData_(
                                 : "",
 
                         scoreCrm: "",
+
                         scoreHo: "",
+
                         status: "",
-                        snapshotType: "",
+
+                        snapshotType:
+                            snapshotType,
+
                         snapshotNote: "",
-                        periodWeek: week
+
+                        periodWeek:
+                            week,
+
+                        inputDate:
+                            null
                     };
                 }
 
-                const target =
+
+                /* ----------------------------------------------------------
+                | PARSE TARGET
+                | ---------------------------------------------------------- */
+
+                const parsedTarget =
                     crmKpiParseValue_(
                         matched.target_input
                     );
 
-                const actualCrm =
+                const target =
+                    crmKpiHasValue_(
+                        parsedTarget
+                    )
+                        ? parsedTarget
+                        : definition.target;
+
+
+                /* ----------------------------------------------------------
+                | PARSE ACTUAL CRM
+                | ---------------------------------------------------------- */
+
+                const parsedActualCrm =
                     crmKpiParseValue_(
                         matched.realisasi_crm
                     );
 
-                const actualHo =
+                const actualCrm =
+                    definition.type === "KPB"
+                        ? crmKpiNormalizeKpb_(
+                            parsedActualCrm
+                        )
+                        : parsedActualCrm;
+
+
+                /* ----------------------------------------------------------
+                | PARSE ACTUAL HO
+                | ---------------------------------------------------------- */
+
+                const parsedActualHo =
                     crmKpiParseValue_(
                         matched.aktual_ho
                     );
 
+                const actualHo =
+                    crmKpiIsHO_(user)
+                        ? (
+                            definition.type === "KPB"
+                                ? crmKpiNormalizeKpb_(
+                                    parsedActualHo
+                                )
+                                : parsedActualHo
+                        )
+                        : "";
+
+
+                /* ----------------------------------------------------------
+                | SCORE CRM
+                | ---------------------------------------------------------- */
+
+                const scoreCrm =
+                    crmKpiHasValue_(
+                        parsedActualCrm
+                    )
+                        ? crmKpiScore_(
+                            definition,
+                            target,
+                            parsedActualCrm
+                        )
+                        : "";
+
+
+                /* ----------------------------------------------------------
+                | SCORE HO
+                | ---------------------------------------------------------- */
+
+                const scoreHo =
+                    crmKpiIsHO_(user) &&
+                    crmKpiHasValue_(
+                        parsedActualHo
+                    )
+                        ? crmKpiScore_(
+                            definition,
+                            target,
+                            parsedActualHo
+                        )
+                        : "";
+
+
+                /* ----------------------------------------------------------
+                | RETURN
+                | ---------------------------------------------------------- */
+
                 return {
 
-                    code,
+                    code: code,
 
                     target:
-                        crmKpiHasValue_(target)
-                            ? target
-                            : definition.target,
+                        target,
 
                     actualCrm:
-                        definition.type === "KPB"
-                            ? crmKpiNormalizeKpb_(
-                                actualCrm
-                            )
-                            : actualCrm,
+                        actualCrm,
 
                     actualHo:
-                        crmKpiIsHO_(user)
-                            ? (
-                                definition.type === "KPB"
-                                    ? crmKpiNormalizeKpb_(
-                                        actualHo
-                                    )
-                                    : actualHo
-                            )
-                            : "",
+                        actualHo,
 
                     scoreCrm:
-                        crmKpiHasValue_(actualCrm)
-                            ? crmKpiScore_(
-                                definition,
-                                crmKpiHasValue_(target)
-                                    ? target
-                                    : definition.target,
-                                actualCrm
-                            )
-                            : "",
+                        scoreCrm,
 
                     scoreHo:
-                        crmKpiIsHO_(user) &&
-                        crmKpiHasValue_(actualHo)
-                            ? crmKpiScore_(
-                                definition,
-                                crmKpiHasValue_(target)
-                                    ? target
-                                    : definition.target,
-                                actualHo
-                            )
-                            : "",
+                        scoreHo,
 
                     status:
                         String(
@@ -9807,7 +9954,7 @@ async function crmKpiGetData_(
                     snapshotType:
                         String(
                             matched.tipe_snapshot ||
-                            ""
+                            snapshotType
                         )
                             .trim()
                             .toUpperCase(),
@@ -9819,10 +9966,12 @@ async function crmKpiGetData_(
                         ).trim(),
 
                     periodWeek:
-                        Number(
-                            matched.week ||
-                            0
-                        ),
+                        matched.week !== null &&
+                        matched.week !== undefined
+                            ? Number(
+                                matched.week
+                            )
+                            : week,
 
                     inputDate:
                         matched.tanggal_input ||
@@ -9832,51 +9981,89 @@ async function crmKpiGetData_(
             }
         );
 
-    const matchedRows =
-        Array.isArray(rows)
-            ? rows
-            : [];
 
-    const status =
-        matchedRows.length &&
-        matchedRows.every(
-            function (row) {
-                return (
-                    String(
-                        row.status ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "TERVERIFIKASI"
-                );
+    /* ----------------------------------------------------------------------
+    | 6. STATUS GLOBAL
+    | ---------------------------------------------------------------------- */
+
+    const matchedRows =
+        supabaseRows;
+
+
+    let status = "";
+
+    if (matchedRows.length) {
+
+        const allVerified =
+            matchedRows.every(
+                function (row) {
+
+                    return (
+                        String(
+                            row.status ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase() ===
+                        "TERVERIFIKASI"
+                    );
+                }
+            );
+
+        status =
+            allVerified
+                ? "TERVERIFIKASI"
+                : "MENUNGGU VERIFIKASI MSMC";
+    }
+
+
+    /* ----------------------------------------------------------------------
+    | 7. SECURITY
+    |
+    | User cabang tidak boleh menerima Actual HO.
+    | ---------------------------------------------------------------------- */
+
+    const canViewHo =
+        crmKpiIsHO_(user);
+
+    if (!canViewHo) {
+
+        data.forEach(
+            function (item) {
+
+                item.actualHo = "";
+
+                item.scoreHo = "";
             }
-        )
-            ? "TERVERIFIKASI"
-            : matchedRows.length
-                ? "MENUNGGU VERIFIKASI MSMC"
-                : "";
+        );
+    }
+
+
+    /* ----------------------------------------------------------------------
+    | 8. RETURN KE FRONTEND
+    | ---------------------------------------------------------------------- */
 
     return {
 
-        data,
+        data: data,
 
-        status,
+        status: status,
 
         maximumScore: 115,
 
-        branch,
+        branch: branch,
 
-        year,
+        year: year,
 
-        month,
+        month: month,
 
-        week,
+        week: week,
 
-        snapshotType,
+        snapshotType:
+            snapshotType,
 
         canViewHo:
-            crmKpiIsHO_(user)
+            canViewHo
     };
 }
 
