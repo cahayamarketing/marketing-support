@@ -1774,7 +1774,7 @@ async function requestBackend(
         // ==========================================
 
         let apiUrl =
-            "/api/gas";
+            "/api/backend";
 
         let fetchOptions = {
             method: "POST",

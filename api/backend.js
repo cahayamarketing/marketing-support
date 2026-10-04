@@ -9015,6 +9015,27 @@ module.exports = async function handler(req, res) {
           res
         );
 
+    case "getCrmKpiData":
+        return await runHandler(
+            crmKpiHandler,
+            req,
+            res
+        );
+
+    case "saveCrmKpi":
+        return await runHandler(
+            crmKpiHandler,
+            req,
+            res
+        );
+
+    case "verifyCrmKpi":
+        return await runHandler(
+            crmKpiHandler,
+            req,
+            res
+        );
+
       default:
         return res.status(400).json({
           success: false,
