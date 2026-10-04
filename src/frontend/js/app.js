@@ -5262,7 +5262,7 @@ if (
 
 const mobileAccountButton =
     document.getElementById(
-        "mobileAccountButton"
+        "userInitial"
     );
 
 const mobileAccountPanel =
