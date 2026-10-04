@@ -2516,28 +2516,60 @@ function renderBranchFilter(prefix) {
 
     container.innerHTML = `
         <details class="relative">
-            <summary class="form-input flex cursor-pointer list-none items-center justify-between font-bold">
-                <span id="${prefix}BranchSummary">Semua cabang</span>
-                <span>⌄</span>
+            <summary
+                class="form-input flex cursor-pointer list-none items-center justify-between font-bold"
+            >
+                <span id="${prefix}BranchSummary">
+                    Semua cabang
+                </span>
+
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
             </summary>
 
-            <div class="absolute left-0 right-0 z-40 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
-                <label class="mb-2 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-slate-50">
-                    <input type="checkbox" data-branch-all="${prefix}" checked>
-                    <span class="font-black text-slate-800">Semua cabang</span>
+            <div
+                class="absolute left-0 right-0 z-40 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl"
+            >
+                <label
+                    class="mb-2 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-slate-50"
+                >
+                    <input
+                        type="checkbox"
+                        data-branch-all="${prefix}"
+                        checked
+                    >
+
+                    <span class="font-black text-slate-800">
+                        Semua cabang
+                    </span>
                 </label>
 
                 <div class="border-t border-slate-100 pt-2">
                     ${sheetBranchOptions.map(function (branch) {
                         return `
-                            <label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-slate-50">
+                            <label
+                                class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-slate-50"
+                            >
                                 <input
                                     type="checkbox"
                                     data-branch-option="${prefix}"
                                     value="${escapeHtml(branch.code)}"
                                 >
+
                                 <span class="text-sm font-bold text-slate-700">
-                                    ${escapeHtml(branch.code)} — ${escapeHtml(branch.name)}
+                                    ${escapeHtml(branch.code)}
+                                    —
+                                    ${escapeHtml(branch.name)}
                                 </span>
                             </label>
                         `;
@@ -5169,6 +5201,12 @@ function updateMobileBottomNav(
     pageId
 ) {
 
+    /*
+    |--------------------------------------------------------------
+    | HAPUS ACTIVE DARI SEMUA MENU
+    |--------------------------------------------------------------
+    */
+
     document
         .querySelectorAll(
             ".mobile-bottom-nav-item"
@@ -5184,9 +5222,78 @@ function updateMobileBottomNav(
         );
 
 
+    /*
+    |--------------------------------------------------------------
+    | MAP HALAMAN KE MENU UTAMA MOBILE
+    |--------------------------------------------------------------
+    */
+
+    const mobileNavPageMap = {
+
+        dashboardPage:
+            "dashboardPage",
+
+        pengajuanPage:
+            "pkm",
+
+        listPkmPage:
+            "pkm",
+
+        pdfPkmPage:
+            "pkm",
+
+        lpjPage:
+            "lpjPage"
+
+    };
+
+
+    const navTarget =
+        mobileNavPageMap[pageId];
+
+
+    /*
+    |--------------------------------------------------------------
+    | PKM
+    |--------------------------------------------------------------
+    */
+
+    if (
+        navTarget === "pkm"
+    ) {
+
+        const pkmButton =
+            document.getElementById(
+                "mobilePkmMenuButton"
+            );
+
+        if (pkmButton) {
+
+            pkmButton.classList.add(
+                "active"
+            );
+
+        }
+
+        return;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------
+    | MENU BIASA
+    |--------------------------------------------------------------
+    */
+
+    if (!navTarget) {
+        return;
+    }
+
+
     const matchedButton =
         document.querySelector(
-            `[data-mobile-nav-page="${pageId}"]`
+            `[data-mobile-nav-page="${navTarget}"]`
         );
 
 
