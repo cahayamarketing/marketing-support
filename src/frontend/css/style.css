@@ -260,6 +260,19 @@ textarea {
         padding-top: 0.65rem;
         padding-bottom: 0.65rem;
     }
+
+    .mobile-create-icon {
+        display: inline-flex;
+        width: 24px;
+        height: 24px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-create-icon svg {
+        width: 24px;
+        height: 24px;
+    }
 }
 
 .nav-item,
@@ -3227,83 +3240,125 @@ body.modal-open {
 }
 
 /* =========================================================
-   MOBILE ONLY - CSM RED THEME
+   MOBILE ONLY - CSM APP SHELL
 ========================================================= */
 
 @media (max-width: 1023px) {
 
-    /* =========================
-       MOBILE HEADER
-    ========================= */
+    /* =========================================
+       HEADER
+    ========================================= */
 
     .app-header {
-        background: #d71920 !important;
-        border-bottom-color: #b51218 !important;
-        color: #ffffff;
-        box-shadow: 0 4px 16px rgba(90, 0, 0, 0.18);
+        height: 68px !important;
+        background:
+            linear-gradient(
+                135deg,
+                #9f1016 0%,
+                #d71920 100%
+            ) !important;
+
+        border-bottom: 1px solid rgba(255,255,255,.12) !important;
+
+        color: #ffffff !important;
+
+        box-shadow:
+            0 4px 16px rgba(90, 0, 0, .18);
     }
 
-    .app-header #pageTitle {
+    .app-header #pageTitle,
+    .app-header #headerUserName {
         color: #ffffff !important;
     }
 
-    .app-header #pageSubtitle {
-        color: #fee2e2 !important;
+    .app-header #pageSubtitle,
+    .app-header #headerBranch {
+        color: rgba(255,255,255,.72) !important;
     }
 
     .app-header .header-menu-button {
-        background: rgba(255, 255, 255, 0.12);
-        border-color: rgba(255, 255, 255, 0.25);
+        background: rgba(255,255,255,.12) !important;
+        border-color: rgba(255,255,255,.18) !important;
     }
 
     .app-header .header-menu-button span {
-        background: #ffffff;
+        background: #ffffff !important;
     }
 
     .app-header .header-logo-wrapper {
         background: #ffffff;
-        border-color: rgba(255, 255, 255, 0.35);
+        border-color: rgba(255,255,255,.20);
+        box-shadow: none;
     }
 
     .app-header .header-account-divider {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(255,255,255,.18);
     }
 
-
-    /* =========================
-       MOBILE BOTTOM NAV
-    ========================= */
+    /* =========================================
+       BOTTOM NAV
+    ========================================= */
 
     #mobileBottomNav {
         background: #8f0f15 !important;
-        border-top: 1px solid #b51218 !important;
-        box-shadow: 0 -8px 24px rgba(45, 0, 0, 0.25);
+
+        border-top:
+            1px solid rgba(255,255,255,.10) !important;
+
+        box-shadow:
+            0 -8px 24px rgba(45,0,0,.22);
     }
 
     .mobile-bottom-nav-item {
-        color: #fecaca !important;
+        color: rgba(255,255,255,.68) !important;
+        background: transparent !important;
+
+        transition:
+            color .18s ease,
+            transform .18s ease;
     }
 
     .mobile-bottom-nav-item.active {
         color: #ffffff !important;
-        background: rgba(255, 255, 255, 0.10);
+        background: transparent !important;
     }
 
+    .mobile-bottom-nav-item.active svg {
+        filter:
+            drop-shadow(
+                0 2px 5px rgba(0,0,0,.18)
+            );
+    }
 
-    /* =========================
+    .mobile-bottom-nav-item:active {
+        transform: scale(.94);
+    }
+
+    /* =========================================
        TOMBOL +
-    ========================= */
+    ========================================= */
 
     #mobileCreatePkmButton {
+        width: 54px !important;
+        height: 54px !important;
+
         background: #d71920 !important;
         color: #ffffff !important;
-        border: 4px solid #ffffff !important;
+
+        border:
+            3px solid #ffffff !important;
+
         box-shadow:
-            0 8px 20px rgba(90, 0, 0, 0.30),
-            0 0 0 3px rgba(215, 25, 32, 0.18);
+            0 7px 18px rgba(80,0,0,.28);
     }
 
     #mobileCreatePkmButton:hover {
         background: #c41219 !important;
+    }
+
+    #mobileCreatePkmButton:active {
+        transform:
+            translateY(-50%)
+            scale(.94);
     }
 }
