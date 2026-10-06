@@ -8194,11 +8194,6 @@ pkmForm.addEventListener("submit", async function (event) {
                 .value
                 .trim(),
 
-        latitude:
-            document.getElementById("latitude").value,
-
-        longitude:
-            document.getElementById("longitude").value,
 
         alasan:
             document.getElementById("alasan")
