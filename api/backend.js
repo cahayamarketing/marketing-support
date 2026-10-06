@@ -7229,6 +7229,776 @@ return async function handler(req, res) {
 }
 })();
 
+const getPkmPdfDataHandler = async (req, res) => {
+    try {
+
+        if (req.method !== "POST") {
+            return res.status(405).json({
+                success: false,
+                message: "Method tidak diizinkan."
+            });
+        }
+
+        const body =
+            typeof req.body === "string"
+                ? JSON.parse(req.body)
+                : (req.body || {});
+
+        const payload =
+            body.payload || {};
+
+        const pkmId =
+            String(
+                payload.pkmId ||
+                body.pkmId ||
+                ""
+            ).trim();
+
+        if (!pkmId) {
+            return res.status(400).json({
+                success: false,
+                message: "ID PKM tidak tersedia."
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | AMBIL DATA PKM
+        |--------------------------------------------------------------------------
+        */
+
+        const rows =
+            await supabaseRequest(
+                "/rest/v1/pkm" +
+                "?id_pkm=eq." +
+                encodeURIComponent(pkmId) +
+                "&limit=1"
+            );
+
+        if (
+            !Array.isArray(rows) ||
+            !rows.length
+        ) {
+            return res.status(404).json({
+                success: false,
+                message: "Data PKM tidak ditemukan."
+            });
+        }
+
+        const row = rows[0];
+
+        /*
+        |--------------------------------------------------------------------------
+        | TYPE PKM
+        |--------------------------------------------------------------------------
+        */
+
+        const typePkm =
+            String(
+                row.type_pkm || ""
+            )
+                .trim()
+                .replace(/\s+/g, "")
+                .toUpperCase();
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDASI MANAGER
+        |--------------------------------------------------------------------------
+        */
+
+        const managerH1 =
+            String(
+                row.acc_manager_h1 || ""
+            ).trim();
+
+        const managerH23 =
+            String(
+                row.acc_manager_h23 || ""
+            ).trim();
+
+        const managerApproved =
+            typePkm === "H23"
+                ? Boolean(managerH23)
+                : Boolean(managerH1);
+
+        if (!managerApproved) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    typePkm === "H23"
+                        ? "PDF hanya tersedia setelah ACC Manager H23."
+                        : "PDF hanya tersedia setelah ACC Manager H1."
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | DATA DANA
+        |--------------------------------------------------------------------------
+        */
+
+        const danaLeasing =
+            Number(row.dana_ls) || 0;
+
+        const danaMd =
+            Number(row.dana_md) || 0;
+
+        const danaCsm =
+            Number(row.dana_csm) || 0;
+
+        const danaLain =
+            Number(row.dana_ll) || 0;
+
+        /*
+        |--------------------------------------------------------------------------
+        | HELPER ARRAY
+        |--------------------------------------------------------------------------
+        */
+
+        const splitValue = value => {
+
+            const text =
+                String(value || "").trim();
+
+            if (!text) {
+                return [];
+            }
+
+            return text
+                .split(",")
+                .map(item => item.trim())
+                .filter(Boolean);
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | BUDGET ITEM
+        |--------------------------------------------------------------------------
+        */
+
+        let budgetDetails = [];
+
+        try {
+
+            const itemRows =
+                await supabaseRequest(
+                    "/rest/v1/pkm_item" +
+                    "?link_pkm=eq." +
+                    encodeURIComponent(pkmId) +
+                    "&select=*"
+                );
+
+            if (Array.isArray(itemRows)) {
+
+                budgetDetails =
+                    itemRows.map(item => ({
+                        id:
+                            String(
+                                item.id || ""
+                            ).trim(),
+
+                        pkmId:
+                            pkmId,
+
+                        itemType:
+                            String(
+                                item.jenis_item ||
+                                ""
+                            ).trim(),
+
+                        itemName:
+                            String(
+                                item.nama_item ||
+                                ""
+                            ).trim(),
+
+                        quantity:
+                            Number(
+                                item.jumlah
+                            ) || 0,
+
+                        totalPrice:
+                            Number(
+                                item.harga_total
+                            ) || 0,
+
+                        actualPrice:
+                            Number(
+                                item.harga_actual ||
+                                item.actual_price
+                            ) || 0,
+
+                        designImage:
+                            String(
+                                item.gambar_desain ||
+                                ""
+                            ).trim(),
+
+                        photo:
+                            String(
+                                item.foto ||
+                                ""
+                            ).trim(),
+
+                        notes:
+                            String(
+                                item.keterangan ||
+                                ""
+                            ).trim()
+                    }));
+
+            }
+
+        } catch (error) {
+
+            console.warn(
+                "[PDF] pkm_item gagal:",
+                error.message
+            );
+
+            budgetDetails = [];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SIGNATURE LOADER
+        |--------------------------------------------------------------------------
+        |
+        | Referensi approval disimpan pada kolom acc_*.
+        | Formatnya bisa berupa:
+        | - URL
+        | - path
+        | - nama file
+        |
+        */
+
+        const emptySignature = role => ({
+            role: role,
+            name: "-",
+            dataUrl: ""
+        });
+
+        const loadSignature =
+            async function (
+                reference,
+                role,
+                fallbackName
+            ) {
+
+                const ref =
+                    String(
+                        reference || ""
+                    ).trim();
+
+                const result = {
+                    role: role,
+                    name:
+                        String(
+                            fallbackName || "-"
+                        ).trim() || "-",
+                    dataUrl: ""
+                };
+
+                if (!ref) {
+                    return result;
+                }
+
+                /*
+                |--------------------------------------------------------------
+                | Jika reference sudah berupa data URL
+                |--------------------------------------------------------------
+                */
+
+                if (
+                    ref.startsWith(
+                        "data:image/"
+                    )
+                ) {
+
+                    result.dataUrl = ref;
+
+                    return result;
+                }
+
+                /*
+                |--------------------------------------------------------------
+                | Ambil nama file dari reference
+                |--------------------------------------------------------------
+                */
+
+                const fileName =
+                    ref
+                        .split("/")
+                        .pop()
+                        .trim();
+
+                if (!fileName) {
+                    return result;
+                }
+
+                /*
+                |--------------------------------------------------------------
+                | GOOGLE DRIVE
+                |--------------------------------------------------------------
+                */
+
+                try {
+
+                    const drive =
+                        getPkmItemDriveClient();
+
+                    /*
+                    | Cari berdasarkan nama file.
+                    */
+
+                    const response =
+                        await drive.files.list({
+
+                            q:
+                                "name = '" +
+                                fileName.replace(
+                                    /'/g,
+                                    "\\'"
+                                ) +
+                                "' and trashed = false",
+
+                            fields:
+                                "files(id,name,mimeType)",
+
+                            pageSize:
+                                10
+
+                        });
+
+                    const files =
+                        response.data &&
+                        Array.isArray(
+                            response.data.files
+                        )
+                            ? response.data.files
+                            : [];
+
+                    if (!files.length) {
+                        return result;
+                    }
+
+                    const file =
+                        files[0];
+
+                    const downloaded =
+                        await drive.files.get({
+
+                            fileId:
+                                file.id,
+
+                            alt:
+                                "media"
+
+                        });
+
+                    let buffer =
+                        downloaded.data;
+
+                    if (
+                        !Buffer.isBuffer(buffer)
+                    ) {
+
+                        if (
+                            buffer instanceof Uint8Array
+                        ) {
+
+                            buffer =
+                                Buffer.from(
+                                    buffer
+                                );
+
+                        } else {
+
+                            return result;
+                        }
+                    }
+
+                    const mimeType =
+                        file.mimeType ||
+                        "image/png";
+
+                    result.dataUrl =
+                        "data:" +
+                        mimeType +
+                        ";base64," +
+                        buffer.toString(
+                            "base64"
+                        );
+
+                    /*
+                    | Nama approver tetap menggunakan fallback.
+                    | Reference ACC tetap menjadi sumber file TTD.
+                    */
+
+                    return result;
+
+                } catch (error) {
+
+                    console.warn(
+                        "[PDF] Gagal mengambil TTD:",
+                        {
+                            role,
+                            fileName,
+                            error:
+                                error.message
+                        }
+                    );
+
+                    return result;
+                }
+            };
+
+        /*
+        |--------------------------------------------------------------------------
+        | TTD CRM
+        |--------------------------------------------------------------------------
+        */
+
+        const crmSignature =
+            await loadSignature(
+                row.acc_crm,
+                "CRM",
+                "-"
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | TTD KACAB
+        |--------------------------------------------------------------------------
+        */
+
+        const kacabSignature =
+            await loadSignature(
+                row.acc_kacab,
+                "KEPALA CABANG",
+                "-"
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | TTD MSMC
+        |--------------------------------------------------------------------------
+        |
+        | Jika acc_msmc berisi reference, gunakan itu.
+        */
+
+        const msmcSignature =
+            await loadSignature(
+                row.acc_msmc,
+                "MSMC",
+                "-"
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | TTD MANAGER
+        |--------------------------------------------------------------------------
+        */
+
+        const managerReference =
+            typePkm === "H23"
+                ? managerH23
+                : managerH1;
+
+        const managerSignature =
+            await loadSignature(
+                managerReference,
+
+                typePkm === "H23"
+                    ? "MANAGER H23"
+                    : "MANAGER H1",
+
+                "-"
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | BUILD OBJECT PKM
+        |--------------------------------------------------------------------------
+        */
+
+        const pkm = {
+
+            id:
+                String(
+                    row.id_pkm || ""
+                ).trim(),
+
+            name:
+                String(
+                    row.nama || ""
+                ).trim(),
+
+            branch:
+                String(
+                    row.cabang || ""
+                ).trim().toUpperCase(),
+
+            branchName:
+                String(
+                    row.cabang || ""
+                ).trim(),
+
+            type:
+                splitValue(
+                    row.type_pkm
+                ),
+
+            jenisPkm:
+                String(
+                    row.jenis_pkm || ""
+                ).trim(),
+
+            kegiatan:
+                String(
+                    row.jenis_kegiatan || ""
+                ).trim(),
+
+            startDate:
+                row.tanggal_mulai || "",
+
+            endDate:
+                row.tanggal_selesai || "",
+
+            createdAt:
+                row.tanggal_pengajuan ||
+                row.created_at ||
+                "",
+
+            location:
+                String(
+                    row.lokasi || ""
+                ).trim(),
+
+            kabupaten:
+                String(
+                    row.kabupaten || ""
+                ).trim(),
+
+            kecamatan:
+                String(
+                    row.kecamatan || ""
+                ).trim(),
+
+            kelurahan:
+                String(
+                    row.kelurahan || ""
+                ).trim(),
+
+            alasan:
+                String(
+                    row.alasan || ""
+                ).trim(),
+
+            konsep:
+                String(
+                    row.konsep || ""
+                ).trim(),
+
+            people:
+                splitValue(
+                    row.people
+                ),
+
+            fokusType:
+                splitValue(
+                    row.fokus_type
+                ),
+
+            programH1:
+                splitValue(
+                    row.program_h1
+                ),
+
+            programH23:
+                splitValue(
+                    row.program_h23
+                ),
+
+            publikasi:
+                splitValue(
+                    row.publikasi
+                ),
+
+            leasing:
+                splitValue(
+                    row.leasing
+                ),
+
+            danaLeasing:
+                danaLeasing,
+
+            danaMd:
+                danaMd,
+
+            danaCsm:
+                danaCsm,
+
+            danaLain:
+                danaLain,
+
+            totalFund:
+                danaLeasing +
+                danaMd +
+                danaCsm +
+                danaLain,
+
+            targetDb:
+                Number(
+                    row.target_db
+                ) || 0,
+
+            targetDeal:
+                Number(
+                    row.target_deal
+                ) || 0,
+
+            targetUe:
+                Number(
+                    row.target_ue
+                ) || 0,
+
+            status:
+                String(
+                    row.status || ""
+                ).trim(),
+
+            approvalStep:
+                "SELESAI",
+
+            approvals: {
+
+                crm:
+                    String(
+                        row.acc_crm || ""
+                    ).trim(),
+
+                kacab:
+                    String(
+                        row.acc_kacab || ""
+                    ).trim(),
+
+                msmc:
+                    String(
+                        row.acc_msmc || ""
+                    ).trim(),
+
+                koordinatorH23:
+                    String(
+                        row.acc_koordinator_h23 ||
+                        ""
+                    ).trim(),
+
+                managerH1:
+                    managerH1,
+
+                managerH23:
+                    managerH23
+            },
+
+            budgetDetails:
+                budgetDetails,
+
+            signatures: {
+
+                crm:
+                    crmSignature,
+
+                kacab:
+                    kacabSignature,
+
+                MSMC:
+                    msmcSignature,
+
+                manager:
+                    managerSignature
+
+            },
+
+            pdf:
+                String(
+                    row.pdf || ""
+                ).trim(),
+
+            print:
+                String(
+                    row.print || ""
+                ).trim()
+        };
+
+        console.log(
+            "[PDF] getPkmPdfData SUCCESS",
+            {
+                pkmId,
+                typePkm,
+
+                signatures: {
+                    crm:
+                        Boolean(
+                            crmSignature.dataUrl
+                        ),
+
+                    kacab:
+                        Boolean(
+                            kacabSignature.dataUrl
+                        ),
+
+                    msmc:
+                        Boolean(
+                            msmcSignature.dataUrl
+                        ),
+
+                    manager:
+                        Boolean(
+                            managerSignature.dataUrl
+                        )
+                },
+
+                budgetItems:
+                    budgetDetails.length
+            }
+        );
+
+        return res.status(200).json({
+
+            success:
+                true,
+
+            pkm:
+                pkm
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "[PDF] getPkmPdfData ERROR:",
+            error
+        );
+
+        return res.status(
+            error.status || 500
+        ).json({
+
+            success:
+                false,
+
+                message:
+                    error.message ||
+                    "Gagal mengambil data PDF PKM."
+
+        });
+    }
+};
+
+
+
 // ===== pkmDownload =====
 const pkmDownloadHandler = (() => {
 
@@ -7739,12 +8509,31 @@ async function pushPkmDiscordReminderHandler(
 
     try {
 
+        /*
+        |--------------------------------------------------------------------------
+        | BODY
+        |--------------------------------------------------------------------------
+        */
+
         let body =
             request.body || {};
 
         if (typeof body === "string") {
-            body = JSON.parse(body);
+            try {
+                body = JSON.parse(body);
+            } catch (error) {
+                return response.status(400).json({
+                    success: false,
+                    message: "Format request tidak valid."
+                });
+            }
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PKM ID
+        |--------------------------------------------------------------------------
+        */
 
         const pkmId =
             String(
@@ -7791,7 +8580,7 @@ async function pushPkmDiscordReminderHandler(
 
         /*
         |--------------------------------------------------------------------------
-        | TENTUKAN TAHAP APPROVAL
+        | STATUS PKM
         |--------------------------------------------------------------------------
         */
 
@@ -7812,28 +8601,59 @@ async function pushPkmDiscordReminderHandler(
                 .trim()
                 .toUpperCase();
 
+        console.log(
+            "[PUSH DISCORD] PKM:",
+            pkmId,
+            "STATUS:",
+            status,
+            "APPROVAL_STEP:",
+            approvalStep
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | TENTUKAN TARGET DISCORD
+        |--------------------------------------------------------------------------
+        */
+
         let target = "";
 
         if (
             approvalStep === "MSMC" ||
             status.includes("MSMC")
         ) {
+
             target = "MSMC";
+
         }
 
         else if (
             approvalStep === "MGR_H1" ||
             status.includes("MGR_H1")
         ) {
+
             target = "MGR";
+
         }
 
         else {
+
             return response.status(400).json({
                 success: false,
+
                 message:
-                    "PKM ini tidak sedang berada pada tahap yang menggunakan reminder Discord."
+                    "PKM ini tidak sedang berada pada tahap yang menggunakan reminder Discord.",
+
+                pkmId:
+                    pkmId,
+
+                status:
+                    status || null,
+
+                approvalStep:
+                    approvalStep || null
             });
+
         }
 
         /*
@@ -7875,11 +8695,6 @@ async function pushPkmDiscordReminderHandler(
         |--------------------------------------------------------------------------
         | LINK APPROVAL
         |--------------------------------------------------------------------------
-        |
-        | Untuk sementara arahkan ke halaman PKM.
-        | Token approval akan kita sambungkan setelah
-        | Discord dasar berhasil dites.
-        |--------------------------------------------------------------------------
         */
 
         const webUrl =
@@ -7892,6 +8707,12 @@ async function pushPkmDiscordReminderHandler(
             webUrl
                 ? `${webUrl}/index.html?approvalPkm=${encodeURIComponent(pkmId)}`
                 : "";
+
+        /*
+        |--------------------------------------------------------------------------
+        | MESSAGE DISCORD
+        |--------------------------------------------------------------------------
+        */
 
         const messageData = {
 
@@ -7914,38 +8735,64 @@ async function pushPkmDiscordReminderHandler(
                             : 14423100,
 
                     fields: [
+
                         {
-                            name: "ID PKM",
-                            value: pkmId,
-                            inline: true
+                            name:
+                                "ID PKM",
+
+                            value:
+                                pkmId,
+
+                            inline:
+                                true
                         },
 
                         {
-                            name: "Cabang",
-                            value: branch,
-                            inline: true
+                            name:
+                                "Cabang",
+
+                            value:
+                                branch,
+
+                            inline:
+                                true
                         },
 
                         {
-                            name: "Type",
-                            value: typePkm,
-                            inline: true
+                            name:
+                                "Type",
+
+                            value:
+                                typePkm,
+
+                            inline:
+                                true
                         },
 
                         {
-                            name: "Kegiatan",
-                            value: activityType,
-                            inline: false
+                            name:
+                                "Kegiatan",
+
+                            value:
+                                activityType,
+
+                            inline:
+                                false
                         },
 
                         {
-                            name: "Tahap",
+                            name:
+                                "Tahap",
+
                             value:
                                 target === "MSMC"
                                     ? "Menunggu Approval MSMC"
                                     : "Menunggu Approval Manager",
-                            inline: false
+
+                            inline:
+                                false
                         }
+
                     ],
 
                     footer: {
@@ -7962,14 +8809,20 @@ async function pushPkmDiscordReminderHandler(
                 approvalUrl
                     ? [
                         {
-                            type: 1,
+                            type:
+                                1,
 
                             components: [
                                 {
-                                    type: 2,
-                                    style: 5,
+                                    type:
+                                        2,
+
+                                    style:
+                                        5,
+
                                     label:
                                         "Buka Pengajuan",
+
                                     url:
                                         approvalUrl
                                 }
@@ -7985,22 +8838,13 @@ async function pushPkmDiscordReminderHandler(
         |--------------------------------------------------------------------------
         */
 
-        const discordResponse =
-            await fetch(
-                `${process.env.VERCEL_URL
-                    ? `https://${process.env.VERCEL_URL}`
-                    : ""
-                }`,
-                {
-                    method: "POST"
-                }
-            );
-
-        /*
-        | Jangan gunakan internal fetch di sini.
-        | Kita langsung panggil discordHandler logic
-        | melalui helper di bawah.
-        */
+        console.log(
+            "[PUSH DISCORD] Sending:",
+            {
+                pkmId,
+                target
+            }
+        );
 
         return await sendDiscordFromBackend_(
             target,
@@ -8015,11 +8859,14 @@ async function pushPkmDiscordReminderHandler(
         );
 
         return response.status(
-            error.status || 500
+            error?.status || 500
         ).json({
-            success: false,
+
+            success:
+                false,
+
             message:
-                error.message ||
+                error?.message ||
                 "Gagal mengirim reminder Discord."
         });
     }
@@ -11967,12 +12814,18 @@ module.exports = async function handler(req, res) {
           res
         );
 
-      case "getPkmPdfData":
-      case "pkmDownload":
+    case "getPkmPdfData":
         return await runHandler(
-          pkmDownloadHandler,
-          req,
-          res
+            getPkmPdfDataHandler,
+            req,
+            res
+        );
+
+    case "pkmDownload":
+        return await runHandler(
+            pkmDownloadHandler,
+            req,
+            res
         );
 
       case "discord":
