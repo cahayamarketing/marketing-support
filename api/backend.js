@@ -13,6 +13,9 @@ const PKM_ITEM_IMAGES_DRIVE_ID =
 const LPJ_IMAGES_DRIVE_ID =
     process.env.LPJ_IMAGES_DRIVE_ID;
 
+const PKM_DRIVE_FOLDER_ID =
+    process.env.PKM_DRIVE_FOLDER_ID;
+
 function getPkmImagesFolderId() {
 
     if (!PKM_ITEM_DRIVE_ID) {
@@ -86,6 +89,486 @@ function getPkmItemImagesDriveClient() {
     });
 }
 
+function getPkmPdfDriveClient() {
+
+    const clientId =
+        process.env.GOOGLE_OAUTH_CLIENT_ID;
+
+    const clientSecret =
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+    const redirectUri =
+        process.env.GOOGLE_OAUTH_REDIRECT_URI;
+
+    const refreshToken =
+        process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
+
+    if (
+        !clientId ||
+        !clientSecret ||
+        !redirectUri ||
+        !refreshToken
+    ) {
+        const error =
+            new Error(
+                "Konfigurasi Google Drive OAuth PDF belum lengkap."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    if (!PKM_DRIVE_FOLDER_ID) {
+        const error =
+            new Error(
+                "PKM_DRIVE_FOLDER_ID belum dikonfigurasi."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    const auth =
+        new google.auth.OAuth2(
+            clientId,
+            clientSecret,
+            redirectUri
+        );
+
+    auth.setCredentials({
+        refresh_token:
+            refreshToken
+    });
+
+    return google.drive({
+        version: "v3",
+        auth
+    });
+}
+
+
+async function savePkmPdf({
+    pkmId,
+    fileName,
+    pdfBase64
+}) {
+
+    if (!pkmId) {
+        const error =
+            new Error(
+                "ID PKM tidak tersedia."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+    if (!pdfBase64) {
+        const error =
+            new Error(
+                "Data PDF tidak tersedia."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+    if (!PKM_DRIVE_FOLDER_ID) {
+        const error =
+            new Error(
+                "PKM_DRIVE_FOLDER_ID belum dikonfigurasi."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+
+    /*
+    |----------------------------------------------------------------------
+    | BERSIHKAN BASE64
+    |----------------------------------------------------------------------
+    */
+
+    const cleanBase64 =
+        String(
+            pdfBase64
+        )
+            .replace(
+                /^data:application\/pdf;base64,/i,
+                ""
+            )
+            .replace(
+                /\s+/g,
+                ""
+            );
+
+
+    let pdfBuffer;
+
+    try {
+
+        pdfBuffer =
+            Buffer.from(
+                cleanBase64,
+                "base64"
+            );
+
+    } catch (error) {
+
+        const err =
+            new Error(
+                "Format data PDF tidak valid."
+            );
+
+        err.status = 400;
+
+        throw err;
+    }
+
+
+    if (
+        !pdfBuffer.length
+    ) {
+
+        const error =
+            new Error(
+                "File PDF kosong."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+
+    /*
+    |----------------------------------------------------------------------
+    | BATAS UKURAN
+    |----------------------------------------------------------------------
+    */
+
+    if (
+        pdfBuffer.length >
+        2.8 * 1024 * 1024
+    ) {
+
+        const error =
+            new Error(
+                "Ukuran PDF melebihi batas 2.8 MB."
+            );
+
+        error.status = 400;
+
+        throw error;
+    }
+
+
+    /*
+    |----------------------------------------------------------------------
+    | NAMA FILE
+    |----------------------------------------------------------------------
+    */
+
+    const safeFileName =
+        String(
+            fileName ||
+            `${pkmId}.PKM.pdf`
+        )
+            .replace(
+                /[<>:"/\\|?*\x00-\x1F]/g,
+                "_"
+            )
+            .trim();
+
+
+    const finalFileName =
+        safeFileName
+            .toLowerCase()
+            .endsWith(".pdf")
+                ? safeFileName
+                : `${safeFileName}.pdf`;
+
+
+    /*
+    |----------------------------------------------------------------------
+    | GOOGLE DRIVE
+    |----------------------------------------------------------------------
+    */
+
+    const drive =
+        getPkmPdfDriveClient();
+
+
+    /*
+    |----------------------------------------------------------------------
+    | HAPUS FILE PDF LAMA DENGAN NAMA SAMA
+    |----------------------------------------------------------------------
+    */
+
+    const escapedName =
+        finalFileName
+            .replace(
+                /\\/g,
+                "\\\\"
+            )
+            .replace(
+                /'/g,
+                "\\'"
+            );
+
+    const escapedFolder =
+        String(
+            PKM_DRIVE_FOLDER_ID
+        )
+            .replace(
+                /\\/g,
+                "\\\\"
+            )
+            .replace(
+                /'/g,
+                "\\'"
+            );
+
+
+    const existing =
+        await drive.files.list({
+
+            q:
+                `'${escapedFolder}' in parents` +
+                ` and name = '${escapedName}'` +
+                ` and trashed = false`,
+
+            fields:
+                "files(id,name)",
+
+            pageSize:
+                20
+        });
+
+
+    const oldFiles =
+        existing.data.files || [];
+
+
+    for (
+        const oldFile
+        of oldFiles
+    ) {
+
+        await drive.files.update({
+
+            fileId:
+                oldFile.id,
+
+            requestBody: {
+                trashed:
+                    true
+            }
+        });
+
+    }
+
+
+    /*
+    |----------------------------------------------------------------------
+    | UPLOAD PDF
+    |----------------------------------------------------------------------
+    */
+
+    const uploaded =
+        await drive.files.create({
+
+            requestBody: {
+
+                name:
+                    finalFileName,
+
+                parents: [
+                    PKM_DRIVE_FOLDER_ID
+                ],
+
+                mimeType:
+                    "application/pdf"
+            },
+
+            media: {
+
+                mimeType:
+                    "application/pdf",
+
+                body:
+                    Readable.from(
+                        pdfBuffer
+                    )
+            },
+
+            fields:
+                "id,name,mimeType,webViewLink"
+        });
+
+
+    if (
+        !uploaded.data ||
+        !uploaded.data.id
+    ) {
+
+        const error =
+            new Error(
+                "PDF gagal disimpan ke Google Drive."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+
+    const fileId =
+        uploaded.data.id;
+
+
+    const pdfUrl =
+        uploaded.data.webViewLink ||
+        `https://drive.google.com/file/d/${fileId}/view`;
+
+
+    /*
+    |----------------------------------------------------------------------
+    | SET DESKRIPSI FILE
+    |----------------------------------------------------------------------
+    */
+
+    try {
+
+        await drive.files.update({
+
+            fileId:
+                fileId,
+
+            requestBody: {
+
+                description:
+                    JSON.stringify({
+
+                        type:
+                            "PKM_PDF",
+
+                        pkmId:
+                            pkmId,
+
+                        generatedAt:
+                            new Date()
+                                .toISOString()
+
+                    })
+            }
+        });
+
+    } catch (error) {
+
+        console.warn(
+            "[PKM PDF] Gagal set description:",
+            error.message
+        );
+
+    }
+
+
+    /*
+    |----------------------------------------------------------------------
+    | SIMPAN LINK KE SUPABASE
+    |----------------------------------------------------------------------
+    */
+
+    await supabaseRequest(
+        "/rest/v1/pkm" +
+        "?id_pkm=eq." +
+        encodeURIComponent(
+            pkmId
+        ),
+        {
+
+            method:
+                "PATCH",
+
+            headers: {
+
+                "Content-Type":
+                    "application/json",
+
+                "Prefer":
+                    "return=minimal"
+
+            },
+
+            body:
+                JSON.stringify({
+
+                    pdf:
+                        pdfUrl,
+
+                    link:
+                        pdfUrl,
+
+                    print:
+                        `/PKM/${finalFileName}`
+
+                })
+
+        }
+    );
+
+
+    console.log(
+        "[PKM PDF] BERHASIL UPLOAD",
+        {
+            pkmId,
+            fileId,
+            fileName:
+                finalFileName,
+            pdfUrl
+        }
+    );
+
+
+    return {
+
+        saved:
+            true,
+
+        pkmId:
+
+            pkmId,
+
+        fileId:
+
+            fileId,
+
+        fileName:
+
+            finalFileName,
+
+        pdfUrl:
+
+            pdfUrl,
+
+        path:
+
+            `/PKM/${finalFileName}`,
+
+        createdAt:
+
+            new Date()
+                .toISOString()
+
+    };
+}
 
 async function uploadPkmItemImage({
     pkmId,
@@ -4228,6 +4711,68 @@ return async function handler(
             }
         }
 
+        if (
+            requestBody.action ===
+            "savePkmPdf"
+        ) {
+
+            try {
+
+                const payload =
+                    requestBody.payload ||
+                    {};
+
+                const result =
+                    await savePkmPdf({
+
+                        pkmId:
+                            payload.pkmId,
+
+                        fileName:
+                            payload.fileName,
+
+                        pdfBase64:
+                            payload.pdfBase64
+
+                    });
+
+                return response
+                    .status(200)
+                    .json({
+
+                        success:
+                            true,
+
+                        ...result
+
+                    });
+
+            } catch (error) {
+
+                console.error(
+                    "[VERCEL] SAVE PKM PDF ERROR",
+                    traceId,
+                    error
+                );
+
+                return response
+                    .status(
+                        error.status ||
+                        500
+                    )
+                    .json({
+
+                        success:
+                            false,
+
+                        message:
+                            error.message ||
+                            "Gagal menyimpan PDF ke Google Drive."
+
+                    });
+            }
+        }
+
         /* ================================================================
         PKM PDF → SUPABASE
         PDF tetap berada di GOOGLE DRIVE.
@@ -6413,37 +6958,41 @@ const PKM_DRIVE_FOLDER_ID =
 
 function getDriveClient() {
 
+    const clientId =
+        process.env.GOOGLE_OAUTH_CLIENT_ID;
+
+    const clientSecret =
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+    const redirectUri =
+        process.env.GOOGLE_OAUTH_REDIRECT_URI;
+
+    const refreshToken =
+        process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
+
     if (
-        !GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-        !GOOGLE_PRIVATE_KEY ||
+        !clientId ||
+        !clientSecret ||
+        !redirectUri ||
+        !refreshToken ||
         !PKM_DRIVE_FOLDER_ID
     ) {
         throw new Error(
-            "Google Drive environment variable belum lengkap."
+            "Konfigurasi Google Drive OAuth belum lengkap."
         );
     }
 
-
     const auth =
-        new google.auth.GoogleAuth({
+        new google.auth.OAuth2(
+            clientId,
+            clientSecret,
+            redirectUri
+        );
 
-            credentials: {
-
-                client_email:
-                    GOOGLE_SERVICE_ACCOUNT_EMAIL,
-
-                private_key:
-                    GOOGLE_PRIVATE_KEY.replace(
-                        /\\n/g,
-                        "\n"
-                    )
-            },
-
-            scopes: [
-                "https://www.googleapis.com/auth/drive.readonly"
-            ]
-        });
-
+    auth.setCredentials({
+        refresh_token:
+            refreshToken
+    });
 
     return google.drive({
         version: "v3",
