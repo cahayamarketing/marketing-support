@@ -5068,6 +5068,7 @@ const managedHandler = (() => {
 
         const token =
             clean(
+                req.body?.token ||
                 req.headers?.authorization
             )
                 .replace(/^Bearer\s+/i, "")
