@@ -7502,68 +7502,6 @@ function chooseLocation(location) {
         "success"
     );
 }
-
-document
-    .getElementById("useMyLocationButton")
-    .addEventListener("click", function () {
-        if (!navigator.geolocation) {
-            showToast(
-                "Browser tidak mendukung fitur lokasi."
-            );
-
-            return;
-        }
-
-        setMapStatus(
-            "Mengambil lokasi perangkat...",
-            "loading"
-        );
-
-        navigator.geolocation.getCurrentPosition(
-            async function (position) {
-                const latitude =
-                    position.coords.latitude;
-
-                const longitude =
-                    position.coords.longitude;
-
-                await selectLocationFromCoordinates(
-                    latitude,
-                    longitude
-                );
-            },
-
-            function (error) {
-                let message =
-                    "Lokasi perangkat tidak dapat diambil.";
-
-                if (error.code === 1) {
-                    message =
-                        "Izin lokasi ditolak oleh pengguna.";
-                }
-
-                if (error.code === 2) {
-                    message =
-                        "Lokasi perangkat tidak tersedia.";
-                }
-
-                if (error.code === 3) {
-                    message =
-                        "Permintaan lokasi terlalu lama.";
-                }
-
-                setMapStatus(message, "error");
-                showToast(message);
-            },
-
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 60000
-            }
-        );
-    });
-
 /*
 |--------------------------------------------------------------------------
 | FUNCTION DETAIL BUDGET
