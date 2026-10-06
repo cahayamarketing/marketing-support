@@ -7954,12 +7954,13 @@ const getPkmPdfDataHandler = async (req, res) => {
                             }
                         );
 
-
                     const chunks = [];
 
                     for await (
-                        const chunk of downloaded.data
+                        const chunk
+                        of downloaded.data
                     ) {
+
                         chunks.push(
                             Buffer.isBuffer(chunk)
                                 ? chunk
@@ -7967,37 +7968,39 @@ const getPkmPdfDataHandler = async (req, res) => {
                         );
                     }
 
-
                     const buffer =
                         Buffer.concat(chunks);
-
 
                     console.log(
                         "[PDF][TTD][DOWNLOAD_SUCCESS]",
                         {
                             role,
-
                             fileId:
                                 file.id,
-
                             fileName,
-
                             bytes:
                                 buffer.length
                         }
                     );
 
+                    if (!buffer.length) {
 
-                    /*
-                    |--------------------------------------------------------------------------
-                    | BUAT DATA URL
-                    |--------------------------------------------------------------------------
-                    */
+                        console.warn(
+                            "[PDF][TTD][EMPTY_BUFFER]",
+                            {
+                                role,
+                                fileId:
+                                    file.id,
+                                fileName
+                            }
+                        );
+
+                        return result;
+                    }
 
                     const mimeType =
                         file.mimeType ||
                         "image/png";
-
 
                     result.dataUrl =
                         "data:" +
@@ -8007,30 +8010,23 @@ const getPkmPdfDataHandler = async (req, res) => {
                             "base64"
                         );
 
-
                     console.log(
                         "[PDF][TTD][DATAURL_SUCCESS]",
                         {
                             role,
-
                             fileId:
                                 file.id,
-
                             fileName,
-
                             bytes:
                                 buffer.length,
-
                             dataUrlLength:
                                 result.dataUrl.length,
-
                             hasDataUrl:
                                 Boolean(
                                     result.dataUrl
                                 )
                         }
                     );
-
 
                     return result;
 
@@ -9871,6 +9867,7 @@ async function uploadPkmApprovalSignature({
     pkmId,
     role,
     userNik,
+    approverName,
     signatureMode,
     signatureData
 }) {
@@ -10042,7 +10039,25 @@ async function uploadPkmApprovalSignature({
                 ],
 
                 mimeType:
-                    image.mimeType
+                    image.mimeType,
+
+                description:
+                    JSON.stringify({
+                        approverNik:
+                            String(
+                                userNik || "-"
+                            ).trim() || "-",
+
+                        approverName:
+                            String(
+                                approverName || "-"
+                            ).trim() || "-",
+
+                        role:
+                            String(
+                                role || "-"
+                            ).trim() || "-"
+                    })
             },
 
             media: {
@@ -11108,21 +11123,21 @@ async function approvePkmHandler(
 
         const uploadedSignature =
             await uploadPkmApprovalSignature({
+                pkmId,
+                role,
+                userNik,
 
-                pkmId:
-                    pkmId,
+                approverName:
+                    String(
+                        user.nama_marketing ||
+                        user.nama ||
+                        user.name ||
+                        user.full_name ||
+                        "-"
+                    ).trim() || "-",
 
-                role:
-                    role,
-
-                userNik:
-                    userNik,
-
-                signatureMode:
-                    signatureMode,
-
-                signatureData:
-                    signatureData
+                signatureMode,
+                signatureData
             });
 
 
