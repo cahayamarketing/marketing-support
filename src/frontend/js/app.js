@@ -6026,6 +6026,9 @@ function showPage(pageId) {
     */
 
     if (pageId === "pengajuanPage") {
+
+        setLoggedInUserBranch();
+        
         /*
         | Muat berurutan supaya Apps Script
         | tidak menerima banyak request bersamaan.

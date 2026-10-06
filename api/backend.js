@@ -1886,17 +1886,6 @@ return async function handler(
         });
     }
 
-    const appsScriptUrl =
-        process.env.GAS_WEB_APP_URL;
-
-    if (!appsScriptUrl) {
-        return response.status(500).json({
-            success: false,
-            message:
-                "GAS_WEB_APP_URL belum diatur di Vercel."
-        });
-    }
-
     const traceId =
         `${Date.now()}-${Math.random()
             .toString(36)
@@ -4877,6 +4866,17 @@ return async function handler(
                     });
             }
         }
+
+        const appsScriptUrl =
+            process.env.GAS_WEB_APP_URL;
+
+        if (!appsScriptUrl) {
+            return response.status(500).json({
+                success: false,
+                message:
+                    "GAS_WEB_APP_URL belum diatur di Vercel."
+            });
+        }    
 
 
         /*
@@ -11743,6 +11743,20 @@ module.exports = async function handler(req, res) {
     case "verifyCrmKpi":
         return await runHandler(
             crmKpiHandler,
+            req,
+            res
+        );
+
+    case "getLpjCandidates":
+        return await runHandler(
+            gasHandler,
+            req,
+            res
+        );
+
+    case "createLpj":
+        return await runHandler(
+            gasHandler,
             req,
             res
         );
