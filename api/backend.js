@@ -7617,22 +7617,29 @@ const getPkmPdfDataHandler = async (req, res) => {
                     ).trim();
 
                 const result = {
-                    role: role,
+                    role:
+                        String(
+                            role || "-"
+                        ).trim(),
+
                     name:
                         String(
                             fallbackName || "-"
                         ).trim() || "-",
-                    dataUrl: ""
+
+                    dataUrl:
+                        ""
                 };
 
                 if (!ref) {
                     return result;
                 }
 
+
                 /*
-                |--------------------------------------------------------------------------
+                |----------------------------------------------------------------------
                 | DATA URL
-                |--------------------------------------------------------------------------
+                |----------------------------------------------------------------------
                 */
 
                 if (
@@ -7641,15 +7648,17 @@ const getPkmPdfDataHandler = async (req, res) => {
                     )
                 ) {
 
-                    result.dataUrl = ref;
+                    result.dataUrl =
+                        ref;
 
                     return result;
                 }
 
+
                 /*
-                |--------------------------------------------------------------------------
-                | JIKA URL LANGSUNG
-                |--------------------------------------------------------------------------
+                |----------------------------------------------------------------------
+                | URL LANGSUNG
+                |----------------------------------------------------------------------
                 */
 
                 if (
@@ -7701,14 +7710,14 @@ const getPkmPdfDataHandler = async (req, res) => {
                                     error.message
                             }
                         );
-
                     }
                 }
 
+
                 /*
-                |--------------------------------------------------------------------------
+                |----------------------------------------------------------------------
                 | AMBIL NAMA FILE
-                |--------------------------------------------------------------------------
+                |----------------------------------------------------------------------
                 */
 
                 const fileName =
@@ -7725,10 +7734,11 @@ const getPkmPdfDataHandler = async (req, res) => {
                     return result;
                 }
 
+
                 /*
-                |--------------------------------------------------------------------------
+                |----------------------------------------------------------------------
                 | GOOGLE DRIVE
-                |--------------------------------------------------------------------------
+                |----------------------------------------------------------------------
                 */
 
                 try {
@@ -7736,27 +7746,35 @@ const getPkmPdfDataHandler = async (req, res) => {
                     const drive =
                         getPkmItemDriveClient();
 
+
+                    /*
+                    |------------------------------------------------------------------
+                    | CARI FILE
+                    |------------------------------------------------------------------
+                    */
+
+                    const escapedFileName =
+                        fileName.replace(
+                            /'/g,
+                            "\\'"
+                        );
+
+
                     const response =
                         await drive.files.list({
 
                             q:
                                 "name = '" +
-                                fileName.replace(
-                                    /'/g,
-                                    "\\'"
-                                ) +
+                                escapedFileName +
                                 "' and trashed = false",
 
                             fields:
                                 "files(id,name,mimeType,description,modifiedTime)",
 
                             pageSize:
-                                20,
-
-                            orderBy:
-                                "modifiedTime desc"
-
+                                20
                         });
+
 
                     const files =
                         response.data &&
@@ -7766,59 +7784,78 @@ const getPkmPdfDataHandler = async (req, res) => {
                             ? response.data.files
                             : [];
 
+
                     if (!files.length) {
 
                         console.warn(
-                            "[PDF] TTD tidak ditemukan:",
+                            "[PDF] TTD tidak ditemukan di Drive:",
                             {
                                 role,
-                                fileName,
-                                reference: ref
+                                fileName
                             }
                         );
 
                         return result;
                     }
 
+
                     const file =
                         files[0];
 
+
+                    console.log(
+                        "[PDF] TTD FILE DITEMUKAN:",
+                        {
+                            role,
+                            fileId:
+                                file.id,
+                            fileName:
+                                file.name,
+                            mimeType:
+                                file.mimeType
+                        }
+                    );
+
+
                     /*
-                    |--------------------------------------------------------------------------
-                    | AMBIL NAMA APPROVER DARI DESCRIPTION
-                    |--------------------------------------------------------------------------
+                    |------------------------------------------------------------------
+                    | NAMA APPROVER
+                    |
+                    | Jika description mempunyai metadata nama,
+                    | gunakan nama tersebut.
+                    |------------------------------------------------------------------
                     */
 
-                    try {
+                    if (
+                        file.description
+                    ) {
 
-                        const description =
-                            JSON.parse(
-                                file.description ||
-                                "{}"
-                            );
+                        try {
 
-                        result.name =
-                            String(
-                                description.name ||
-                                description.approverName ||
-                                fallbackName ||
-                                "-"
-                            ).trim() || "-";
+                            const metadata =
+                                JSON.parse(
+                                    file.description
+                                );
 
-                    } catch (error) {
+                            result.name =
+                                String(
+                                    metadata.approverName ||
+                                    metadata.name ||
+                                    fallbackName ||
+                                    "-"
+                                ).trim() || "-";
 
-                        result.name =
-                            String(
-                                fallbackName ||
-                                "-"
-                            ).trim() || "-";
+                        } catch (error) {
 
+                            // Description bukan JSON.
+                        }
                     }
 
+
                     /*
-                    |--------------------------------------------------------------------------
-                    | DOWNLOAD FILE TTD
-                    |--------------------------------------------------------------------------
+                    |------------------------------------------------------------------
+                    | DOWNLOAD FILE
+                    |------------------------------------------------------------------
                     */
 
                     const downloaded =
@@ -7829,14 +7866,17 @@ const getPkmPdfDataHandler = async (req, res) => {
 
                             alt:
                                 "media"
-
                         });
+
 
                     let buffer =
                         downloaded.data;
 
+
                     if (
-                        !Buffer.isBuffer(buffer)
+                        !Buffer.isBuffer(
+                            buffer
+                        )
                     ) {
 
                         if (
@@ -7850,14 +7890,23 @@ const getPkmPdfDataHandler = async (req, res) => {
 
                         } else {
 
-                            return result;
+                            console.warn(
+                                "[PDF] Format TTD tidak valid:",
+                                {
+                                    role,
+                                    fileName
+                                }
+                            );
 
+                            return result;
                         }
                     }
+
 
                     const mimeType =
                         file.mimeType ||
                         "image/png";
+
 
                     result.dataUrl =
                         "data:" +
@@ -7867,19 +7916,27 @@ const getPkmPdfDataHandler = async (req, res) => {
                             "base64"
                         );
 
+
+                    /*
+                    |------------------------------------------------------------------
+                    | LOG HASIL
+                    |------------------------------------------------------------------
+                    */
+
                     console.log(
                         "[PDF] TTD berhasil dimuat:",
                         {
                             role,
                             fileName,
-                            name:
-                                result.name,
                             hasDataUrl:
                                 Boolean(
                                     result.dataUrl
-                                )
+                                ),
+                            name:
+                                result.name
                         }
                     );
+
 
                     return result;
 
@@ -7890,7 +7947,6 @@ const getPkmPdfDataHandler = async (req, res) => {
                         {
                             role,
                             fileName,
-                            reference: ref,
                             error:
                                 error.message
                         }
