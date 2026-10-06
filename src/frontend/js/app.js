@@ -6028,7 +6028,7 @@ function showPage(pageId) {
     if (pageId === "pengajuanPage") {
 
         setLoggedInUserBranch();
-        
+
         /*
         | Muat berurutan supaya Apps Script
         | tidak menerima banyak request bersamaan.
@@ -14118,6 +14118,24 @@ function getMissingFields() {
                 .trim()
         ) {
             missingFields.push("Kabupaten/kota");
+        }
+
+        if (
+            !document
+                .getElementById("kecamatan")
+                .value
+                .trim()
+        ) {
+            missingFields.push("Kecamatan");
+        }
+
+        if (
+            !document
+                .getElementById("kelurahan")
+                .value
+                .trim()
+        ) {
+            missingFields.push("Kelurahan");
         }
 
         if (!selectedPeople.length) {

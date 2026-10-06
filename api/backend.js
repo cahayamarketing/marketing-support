@@ -5937,6 +5937,13 @@ const masterHandler = (() => {
                 !type
             ) {
 
+                const leasingRows =
+                    await supabaseRequest(
+                        "/rest/v1/master_leasing" +
+                        "?select=init,kode,nama" +
+                        "&order=init.asc"
+                    );
+
                 const pkmTypes =
                     await supabaseRequest(
                         "/rest/v1/master_pkm" +
@@ -5963,7 +5970,33 @@ const masterHandler = (() => {
 
                 const result = {
 
-                    leasing: [],
+                    leasing:
+                        Array.isArray(leasingRows)
+                            ? leasingRows
+                                .map(function (row) {
+                                    return {
+                                        init:
+                                            String(
+                                                row.init || ""
+                                            ).trim(),
+
+                                        code:
+                                            String(
+                                                row.kode || ""
+                                            ).trim(),
+
+                                        name:
+                                            String(
+                                                row.nama || ""
+                                            ).trim()
+                                    };
+                                })
+                                .filter(function (item) {
+                                    return Boolean(
+                                        item.name
+                                    );
+                                })
+                            : [],
 
                     focusTypes:
                         unitRows

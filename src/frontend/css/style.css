@@ -3364,3 +3364,67 @@ body.modal-open {
 .publication:checked + .publication-card .publication-check {
     display: block;
 }
+
+/* =========================================================
+   TYPE PKM - SELECTED STATE
+   H1 / H23 / H123
+   ========================================================= */
+
+label:has(> input.type-pkm:checked) > div {
+    border-color: #dc2626 !important;
+    background: #fef2f2 !important;
+    box-shadow:
+        0 0 0 2px rgba(220, 38, 38, 0.10),
+        0 6px 16px rgba(220, 38, 38, 0.08);
+}
+
+/* Icon H1 / H23 / H123 */
+label:has(> input.type-pkm:checked) > div > div:first-child > div:first-child {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+/* Lingkaran pilihan */
+label:has(> input.type-pkm:checked) > div > div:last-child {
+    border-color: #dc2626 !important;
+    background: #dc2626 !important;
+}
+
+label:has(> input.type-pkm:checked) > div > div:last-child svg {
+    opacity: 1 !important;
+}
+
+/* Keyboard focus */
+label:has(> input.type-pkm:focus-visible) > div {
+    outline: 3px solid rgba(220, 38, 38, 0.18);
+    outline-offset: 2px;
+}
+
+/* =========================================================
+   PUBLIKASI - SELECTED STATE
+   ========================================================= */
+
+label:has(> input.publication:checked) > div {
+    border-color: #dc2626 !important;
+    background: #fef2f2 !important;
+    box-shadow:
+        0 0 0 2px rgba(220, 38, 38, 0.10),
+        0 6px 16px rgba(220, 38, 38, 0.08);
+}
+
+/* Kotak checkbox */
+label:has(> input.publication:checked) > div > div:last-child {
+    border-color: #dc2626 !important;
+    background: #dc2626 !important;
+}
+
+/* Icon centang */
+label:has(> input.publication:checked) > div > div:last-child svg {
+    opacity: 1 !important;
+}
+
+/* Keyboard focus */
+label:has(> input.publication:focus-visible) > div {
+    outline: 3px solid rgba(220, 38, 38, 0.18);
+    outline-offset: 2px;
+}
