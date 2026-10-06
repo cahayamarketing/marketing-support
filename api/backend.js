@@ -9232,9 +9232,17 @@ async function pushPkmDiscordReminderHandler(
         |--------------------------------------------------------------------------
         */
 
+        const payload =
+            body.payload &&
+            typeof body.payload === "object"
+                ? body.payload
+                : body;
+
         const pkmId =
             String(
-                body.pkmId || ""
+                payload.pkmId ||
+                body.pkmId ||
+                ""
             ).trim();
 
         if (!pkmId) {
