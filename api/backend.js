@@ -12847,14 +12847,14 @@ module.exports = async function handler(req, res) {
           res
         );
 
-    case "getPkmPdfData":
+      case "getPkmPdfData":
         return await runHandler(
             getPkmPdfDataHandler,
             req,
             res
         );
 
-    case "pkmDownload":
+      case "pkmDownload":
         return await runHandler(
             pkmDownloadHandler,
             req,

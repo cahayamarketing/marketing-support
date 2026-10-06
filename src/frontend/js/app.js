@@ -1799,26 +1799,32 @@ async function requestBackend(
             action === "getPkmPdfData"
         ) {
 
-            const params =
-                new URLSearchParams();
-
-            if (
-                payload.pkmId
-            ) {
-
-                params.set(
-                    "pkmId",
-                    payload.pkmId
-                );
-            }
-
             apiUrl =
-                `/api/pkm-download?${params.toString()}`;
+                "/api/backend";
 
             fetchOptions = {
 
                 method:
-                    "GET",
+                    "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+
+                        action:
+                            "getPkmPdfData",
+
+                        token:
+                            sessionToken,
+
+                        payload:
+                            payload
+
+                    }),
 
                 signal:
                     controller.signal,
@@ -5657,12 +5663,6 @@ function showPage(pageId) {
         renderPkmPdfTable();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | REFRESH MAP
-    |--------------------------------------------------------------------------
-    */
-
     if (pageId === "pengajuanPage") {
 
         setLoggedInUserBranch();
@@ -5690,16 +5690,6 @@ function showPage(pageId) {
                     "error"
                 );
             });
-
-        window.setTimeout(function () {
-            if (isBtlSelected()) {
-                initializeLocationMap();
-
-                if (locationMap) {
-                    locationMap.invalidateSize();
-                }
-            }
-        }, 150);
     }
 
     /*
@@ -6536,26 +6526,6 @@ function fillAutomaticAtlLocation() {
     */
 
     lokasiInput.dataset.autoFilled = "true";
-
-    /*
-    |----------------------------------------------------------------------
-    | ATL TIDAK MENGGUNAKAN TITIK MAP
-    |----------------------------------------------------------------------
-    */
-
-    const latitude =
-        document.getElementById("latitude");
-
-    const longitude =
-        document.getElementById("longitude");
-
-    if (latitude) {
-        latitude.value = "";
-    }
-
-    if (longitude) {
-        longitude.value = "";
-    }
 }
 
 
@@ -6591,13 +6561,10 @@ function clearAutomaticAtlLocation() {
 
 function clearBtlFields() {
     const fieldIds = [
-        "locationSearch",
         "lokasi",
         "kabupaten",
         "kecamatan",
-        "kelurahan",
-        "latitude",
-        "longitude"
+        "kelurahan"
     ];
 
     fieldIds.forEach(function (fieldId) {
@@ -6630,31 +6597,6 @@ function clearBtlFields() {
         .forEach(function (checkbox) {
             checkbox.checked = false;
         });
-
-    /*
-    |--------------------------------------------------------------------------
-    | HAPUS MARKER MAP
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        locationMarker &&
-        locationMap
-    ) {
-        locationMap.removeLayer(
-            locationMarker
-        );
-
-        locationMarker = null;
-    }
-
-    if (
-        typeof setMapStatus === "function"
-    ) {
-        setMapStatus(
-            "Belum ada titik lokasi yang dipilih."
-        );
-    }
 }
 
 
@@ -6714,14 +6656,6 @@ function updateBtlSections() {
 
     if (btlSelected) {
         clearAutomaticAtlLocation();
-
-        window.setTimeout(function () {
-            initializeLocationMap();
-
-            if (locationMap) {
-                locationMap.invalidateSize();
-            }
-        }, 150);
     }
 
     /*
@@ -7119,27 +7053,6 @@ document
 
 
 
-function chooseLocation(location) {
-    const latitude = Number(location.lat);
-    const longitude = Number(location.lon);
-
-    fillLocationFields(location);
-
-    placeLocationMarker(
-        latitude,
-        longitude,
-        location.display_name || "Lokasi kegiatan"
-    );
-
-    document
-        .getElementById("locationResults")
-        .classList.add("hidden");
-
-    setMapStatus(
-        "Lokasi berhasil dipilih dari hasil pencarian.",
-        "success"
-    );
-}
 /*
 |--------------------------------------------------------------------------
 | FUNCTION DETAIL BUDGET
@@ -7969,30 +7882,6 @@ function resetPkmForm() {
     document
         .getElementById("targetUeContainer")
         .classList.add("hidden");
-
-    document
-        .getElementById("locationResults")
-        .classList.add("hidden");
-
-    document.getElementById("latitude").value = "";
-    document.getElementById("longitude").value = "";
-
-    setMapStatus(
-        "Belum ada titik lokasi yang dipilih."
-    );
-
-    if (locationMarker && locationMap) {
-        locationMap.removeLayer(locationMarker);
-        locationMarker = null;
-
-        locationMap.setView(
-            [
-                defaultMapLocation.latitude,
-                defaultMapLocation.longitude
-            ],
-            defaultMapLocation.zoom
-        );
-    }
 
     selectedPeople = [];
     renderSelectedPeople();
