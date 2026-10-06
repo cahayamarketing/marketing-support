@@ -4917,31 +4917,32 @@ const gasHandler = (() => {
 })();
 
 // ===== managed =====
+// ===== managed =====
 const managedHandler = (() => {
 
+    function clean(value) {
+        if (
+            value === null ||
+            value === undefined
+        ) {
+            return "";
+        }
 
-
-function clean(value) {
-    if (value === null || value === undefined) {
-        return "";
+        return String(value).trim();
     }
 
-    return String(value).trim();
-}
 
-function isMasterNik(nik) {
-    return clean(nik) === "910000";
-}
-
-return async function handler(req, res) {
-    if (req.method !== "GET") {
-        return res.status(405).json({
-            success: false,
-            message: "Method tidak diizinkan."
-        });
+    function isMasterNik(nik) {
+        return clean(nik) === "910000";
     }
 
-    try {
+
+    // ==========================================================
+    // GET MANAGED ACCOUNTS
+    // ==========================================================
+
+    async function getManagedAccounts() {
+
         const rows = await supabaseRequest(
             "/rest/v1/salesman" +
             "?select=" +
@@ -4959,80 +4960,652 @@ return async function handler(req, res) {
             "&limit=2000"
         );
 
-        const accounts = Array.isArray(rows)
-            ? rows
-                .filter(function (row) {
-                    return clean(row.nik);
-                })
-                .map(function (row) {
-                    const nik = clean(row.nik);
 
-                    return {
-                        nik: nik,
+        const accounts =
+            Array.isArray(rows)
+                ? rows
+                    .filter(function (row) {
+                        return clean(row.nik);
+                    })
+                    .map(function (row) {
 
-                        name: clean(
-                            row.nama_marketing
-                        ),
+                        const nik =
+                            clean(row.nik);
 
-                        branch: clean(
-                            row.cab
-                        ),
+                        return {
+                            nik: nik,
 
-                        jabatan: clean(
-                            row.jab
-                        ),
+                            name:
+                                clean(
+                                    row.nama_marketing
+                                ),
 
-                        role: clean(
-                            row.role_pkm
-                        ).toUpperCase(),
+                            branch:
+                                clean(
+                                    row.cab
+                                ),
 
-                        status: (
-                            clean(row.status) ||
-                            "AKTIF"
-                        )
-                            .toUpperCase()
-                            .replace(/\s+/g, ""),
+                            jabatan:
+                                clean(
+                                    row.jab
+                                ),
 
-                        hasSignature: Boolean(
-                            clean(row.ttd_file_id) ||
-                            clean(row.ttd_url)
-                        ),
+                            role:
+                                clean(
+                                    row.role_pkm
+                                )
+                                    .toUpperCase(),
 
-                        isMaster: isMasterNik(nik)
-                    };
-                })
-                .sort(function (a, b) {
-                    return a.name.localeCompare(
-                        b.name,
-                        "id"
-                    );
-                })
-            : [];
+                            status:
+                                (
+                                    clean(
+                                        row.status
+                                    ) ||
+                                    "AKTIF"
+                                )
+                                    .toUpperCase()
+                                    .replace(
+                                        /\s+/g,
+                                        ""
+                                    ),
 
-        return res.status(200).json({
+                            hasSignature:
+                                Boolean(
+                                    clean(
+                                        row.ttd_file_id
+                                    ) ||
+                                    clean(
+                                        row.ttd_url
+                                    )
+                                ),
+
+                            isMaster:
+                                isMasterNik(
+                                    nik
+                                )
+                        };
+                    })
+                    .sort(function (a, b) {
+
+                        return a.name.localeCompare(
+                            b.name,
+                            "id"
+                        );
+
+                    })
+                : [];
+
+
+        return {
             success: true,
+
             message:
                 "Data akun berhasil diambil dari Supabase.",
-            accounts: accounts,
-            total: accounts.length
-        });
 
-    } catch (error) {
-        console.error(
-            "MANAGED ACCOUNTS API ERROR:",
-            error
+            accounts:
+                accounts,
+
+            total:
+                accounts.length
+        };
+    }
+
+
+    // ==========================================================
+    // UPDATE MANAGED ACCOUNT
+    // ==========================================================
+
+    async function updateManagedAccount(
+        req,
+        payload
+    ) {
+
+        /*
+        |----------------------------------------------------------
+        | TOKEN / MASTER USER
+        |----------------------------------------------------------
+        */
+
+        const token =
+            clean(
+                req.headers?.authorization
+            )
+                .replace(/^Bearer\s+/i, "")
+                .trim();
+
+
+        if (!token) {
+            const error =
+                new Error(
+                    "Token autentikasi wajib diisi."
+                );
+
+            error.status = 401;
+
+            throw error;
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | PAYLOAD
+        |----------------------------------------------------------
+        */
+
+        const originalNik =
+            clean(
+                payload.originalNik
+            );
+
+        const newNik =
+            clean(
+                payload.nik
+            );
+
+        const name =
+            clean(
+                payload.name
+            );
+
+        const branch =
+            clean(
+                payload.branch
+            )
+                .toUpperCase();
+
+
+        let role =
+            clean(
+                payload.role
+            )
+                .toUpperCase();
+
+
+        const status =
+            (
+                clean(
+                    payload.status
+                ) ||
+                "AKTIF"
+            )
+                .toUpperCase()
+                .replace(
+                    /\s+/g,
+                    ""
+                );
+
+
+        /*
+        |----------------------------------------------------------
+        | VALIDASI
+        |----------------------------------------------------------
+        */
+
+        if (
+            !originalNik ||
+            !newNik ||
+            !name ||
+            !branch
+        ) {
+
+            const error =
+                new Error(
+                    "NIK, nama, dan cabang wajib diisi."
+                );
+
+            error.status = 400;
+
+            throw error;
+        }
+
+
+        const allowedRoles = [
+            "",
+            "CRM",
+            "KACAB",
+            "MSMC",
+            "MGR_H1",
+            "MGR_H23",
+            "PIC_H23"
+        ];
+
+
+        if (
+            !allowedRoles.includes(
+                role
+            )
+        ) {
+
+            const error =
+                new Error(
+                    `Role approval tidak valid: "${role}"`
+                );
+
+            error.status = 400;
+
+            throw error;
+        }
+
+
+        if (
+            ![
+                "AKTIF",
+                "NONAKTIF"
+            ].includes(
+                status
+            )
+        ) {
+
+            const error =
+                new Error(
+                    "Status akun tidak valid."
+                );
+
+            error.status = 400;
+
+            throw error;
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | AKUN MASTER
+        |----------------------------------------------------------
+        */
+
+        if (
+            isMasterNik(
+                originalNik
+            ) &&
+            newNik !== originalNik
+        ) {
+
+            const error =
+                new Error(
+                    "NIK akun master tidak boleh diubah."
+                );
+
+            error.status = 400;
+
+            throw error;
+        }
+
+
+        if (
+            isMasterNik(
+                originalNik
+            ) &&
+            status !== "AKTIF"
+        ) {
+
+            const error =
+                new Error(
+                    "Akun master tidak boleh dinonaktifkan."
+                );
+
+            error.status = 400;
+
+            throw error;
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | VALIDASI CABANG
+        |----------------------------------------------------------
+        */
+
+        if (
+            [
+                "CRM",
+                "KACAB"
+            ].includes(
+                role
+            ) &&
+            branch === "HO"
+        ) {
+
+            const error =
+                new Error(
+                    "CRM dan KACAB harus menggunakan cabang, bukan HO."
+                );
+
+            error.status = 400;
+
+            throw error;
+        }
+
+
+        if (
+            [
+                "MSMC",
+                "MGR_H1",
+                "MGR_H23",
+                "PIC_H23"
+            ].includes(
+                role
+            ) &&
+            branch !== "HO"
+        ) {
+
+            const error =
+                new Error(
+                    "MSMC, Manager, dan PIC H23 harus menggunakan cabang HO."
+                );
+
+            error.status = 400;
+
+            throw error;
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | CEK AKUN LAMA
+        |----------------------------------------------------------
+        */
+
+        const existingRows =
+            await supabaseRequest(
+                "/rest/v1/salesman" +
+                "?nik=eq." +
+                encodeURIComponent(
+                    originalNik
+                ) +
+                "&select=*" +
+                "&limit=1"
+            );
+
+
+        if (
+            !Array.isArray(
+                existingRows
+            ) ||
+            !existingRows.length
+        ) {
+
+            const error =
+                new Error(
+                    "Akun yang akan diedit tidak ditemukan."
+                );
+
+            error.status = 404;
+
+            throw error;
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | CEK NIK BARU
+        |----------------------------------------------------------
+        */
+
+        if (
+            newNik !== originalNik
+        ) {
+
+            const duplicateRows =
+                await supabaseRequest(
+                    "/rest/v1/salesman" +
+                    "?nik=eq." +
+                    encodeURIComponent(
+                        newNik
+                    ) +
+                    "&select=nik" +
+                    "&limit=1"
+                );
+
+
+            if (
+                Array.isArray(
+                    duplicateRows
+                ) &&
+                duplicateRows.length
+            ) {
+
+                const error =
+                    new Error(
+                        "NIK baru sudah digunakan oleh akun lain."
+                    );
+
+                error.status = 400;
+
+                throw error;
+            }
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | UPDATE SUPABASE
+        |----------------------------------------------------------
+        */
+
+        const updateData = {
+
+            nik:
+                newNik,
+
+            nama_marketing:
+                name,
+
+            cab:
+                branch,
+
+            role_pkm:
+                role,
+
+            status:
+                status
+
+        };
+
+
+        /*
+        | Jika frontend mengirim jabatan,
+        | pertahankan nilai tersebut.
+        */
+
+        if (
+            Object.prototype.hasOwnProperty.call(
+                payload,
+                "jabatan"
+            )
+        ) {
+
+            updateData.jab =
+                clean(
+                    payload.jabatan
+                );
+        }
+
+
+        await supabaseRequest(
+
+            "/rest/v1/salesman" +
+            "?nik=eq." +
+            encodeURIComponent(
+                originalNik
+            ),
+
+            {
+                method:
+                    "PATCH",
+
+                headers: {
+                    "Prefer":
+                        "return=minimal"
+                },
+
+                body:
+                    JSON.stringify(
+                        updateData
+                    )
+            }
         );
 
-        return res.status(
-            error.status || 500
-        ).json({
-            success: false,
+
+        /*
+        |----------------------------------------------------------
+        | RETURN
+        |----------------------------------------------------------
+        */
+
+        return {
+            success: true,
+
             message:
-                error.message ||
-                "Gagal mengambil data akun dari Supabase."
-        });
+                "Akun berhasil diperbarui.",
+
+            account: {
+                nik:
+                    newNik,
+
+                name:
+                    name,
+
+                branch:
+                    branch,
+
+                role:
+                    role,
+
+                status:
+                    status
+            }
+        };
     }
-}
+
+
+    // ==========================================================
+    // ROUTER MANAGED
+    // ==========================================================
+
+    return async function handler(
+        req,
+        res
+    ) {
+
+        try {
+
+            /*
+            |======================================================
+            | GET
+            |======================================================
+            */
+
+            if (
+                req.method === "GET"
+            ) {
+
+                const result =
+                    await getManagedAccounts();
+
+                return res
+                    .status(200)
+                    .json(result);
+            }
+
+
+            /*
+            |======================================================
+            | POST
+            |======================================================
+            */
+
+            if (
+                req.method === "POST"
+            ) {
+
+                const body =
+                    req.body || {};
+
+                const payload =
+                    body.payload || {};
+
+
+                /*
+                | Hanya updateManagedAccount
+                | yang diproses di POST.
+                */
+
+                if (
+                    clean(
+                        body.action
+                    ) !==
+                    "updateManagedAccount"
+                ) {
+
+                    return res
+                        .status(400)
+                        .json({
+                            success: false,
+
+                            message:
+                                "Action managed tidak valid."
+                        });
+                }
+
+
+                const result =
+                    await updateManagedAccount(
+                        req,
+                        payload
+                    );
+
+
+                return res
+                    .status(200)
+                    .json(result);
+            }
+
+
+            /*
+            |======================================================
+            | METHOD LAIN
+            |======================================================
+            */
+
+            res.setHeader(
+                "Allow",
+                "GET, POST"
+            );
+
+            return res
+                .status(405)
+                .json({
+                    success: false,
+
+                    message:
+                        "Method tidak diizinkan."
+                });
+
+
+        } catch (error) {
+
+            console.error(
+                "MANAGED ACCOUNTS API ERROR:",
+                error
+            );
+
+
+            return res
+                .status(
+                    error.status ||
+                    500
+                )
+                .json({
+
+                    success: false,
+
+                    message:
+                        error.message ||
+                        "Gagal memproses akun."
+                });
+        }
+    };
+
 })();
 
 // ===== master =====
