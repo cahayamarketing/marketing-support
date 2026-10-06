@@ -1241,6 +1241,119 @@ async function createAndStorePkmPdf(
         pdfData.pkm
     );
 
+    console.log(
+        "[PDF][TTD][CLIENT_FINAL]",
+        {
+            pkmId: pkmId,
+
+            signaturesExist:
+                Boolean(
+                    pdfData.pkm &&
+                    pdfData.pkm.signatures
+                ),
+
+            CRM: {
+                exists:
+                    Boolean(
+                        pdfData.pkm?.signatures?.crm
+                    ),
+
+                name:
+                    pdfData.pkm?.signatures?.crm?.name ||
+                    "-",
+
+                role:
+                    pdfData.pkm?.signatures?.crm?.role ||
+                    "-",
+
+                hasDataUrl:
+                    Boolean(
+                        pdfData.pkm?.signatures?.crm?.dataUrl
+                    ),
+
+                dataUrlLength:
+                    pdfData.pkm?.signatures?.crm?.dataUrl
+                        ? pdfData.pkm.signatures.crm.dataUrl.length
+                        : 0
+            },
+
+            KACAB: {
+                exists:
+                    Boolean(
+                        pdfData.pkm?.signatures?.kacab
+                    ),
+
+                name:
+                    pdfData.pkm?.signatures?.kacab?.name ||
+                    "-",
+
+                role:
+                    pdfData.pkm?.signatures?.kacab?.role ||
+                    "-",
+
+                hasDataUrl:
+                    Boolean(
+                        pdfData.pkm?.signatures?.kacab?.dataUrl
+                    ),
+
+                dataUrlLength:
+                    pdfData.pkm?.signatures?.kacab?.dataUrl
+                        ? pdfData.pkm.signatures.kacab.dataUrl.length
+                        : 0
+            },
+
+            MSMC: {
+                exists:
+                    Boolean(
+                        pdfData.pkm?.signatures?.MSMC
+                    ),
+
+                name:
+                    pdfData.pkm?.signatures?.MSMC?.name ||
+                    "-",
+
+                role:
+                    pdfData.pkm?.signatures?.MSMC?.role ||
+                    "-",
+
+                hasDataUrl:
+                    Boolean(
+                        pdfData.pkm?.signatures?.MSMC?.dataUrl
+                    ),
+
+                dataUrlLength:
+                    pdfData.pkm?.signatures?.MSMC?.dataUrl
+                        ? pdfData.pkm.signatures.MSMC.dataUrl.length
+                        : 0
+            },
+
+            MANAGER: {
+                exists:
+                    Boolean(
+                        pdfData.pkm?.signatures?.manager
+                    ),
+
+                name:
+                    pdfData.pkm?.signatures?.manager?.name ||
+                    "-",
+
+                role:
+                    pdfData.pkm?.signatures?.manager?.role ||
+                    "-",
+
+                hasDataUrl:
+                    Boolean(
+                        pdfData.pkm?.signatures?.manager?.dataUrl
+                    ),
+
+                dataUrlLength:
+                    pdfData.pkm?.signatures?.manager?.dataUrl
+                        ? pdfData.pkm.signatures.manager.dataUrl.length
+                        : 0
+            }
+        }
+    );
+
     const generated =
         generatePkmPdf(
             pdfData.pkm,
