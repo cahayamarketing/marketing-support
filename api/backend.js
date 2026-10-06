@@ -7940,49 +7940,59 @@ const getPkmPdfDataHandler = async (req, res) => {
                     */
 
                     const downloaded =
-                        await drive.files.get({
+                        await drive.files.get(
+                            {
+                                fileId:
+                                    file.id,
+
+                                alt:
+                                    "media"
+                            },
+                            {
+                                responseType:
+                                    "stream"
+                            }
+                        );
+
+
+                    const chunks = [];
+
+                    for await (
+                        const chunk of downloaded.data
+                    ) {
+                        chunks.push(
+                            Buffer.isBuffer(chunk)
+                                ? chunk
+                                : Buffer.from(chunk)
+                        );
+                    }
+
+
+                    const buffer =
+                        Buffer.concat(chunks);
+
+
+                    console.log(
+                        "[PDF][TTD][DOWNLOAD_SUCCESS]",
+                        {
+                            role,
 
                             fileId:
                                 file.id,
 
-                            alt:
-                                "media"
-                        });
+                            fileName,
 
-
-                    let buffer =
-                        downloaded.data;
-
-
-                    if (
-                        !Buffer.isBuffer(
-                            buffer
-                        )
-                    ) {
-
-                        if (
-                            buffer instanceof Uint8Array
-                        ) {
-
-                            buffer =
-                                Buffer.from(
-                                    buffer
-                                );
-
-                        } else {
-
-                            console.warn(
-                                "[PDF] Format TTD tidak valid:",
-                                {
-                                    role,
-                                    fileName
-                                }
-                            );
-
-                            return result;
+                            bytes:
+                                buffer.length
                         }
-                    }
+                    );
 
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | BUAT DATA URL
+                    |--------------------------------------------------------------------------
+                    */
 
                     const mimeType =
                         file.mimeType ||
@@ -7998,23 +8008,26 @@ const getPkmPdfDataHandler = async (req, res) => {
                         );
 
 
-                    /*
-                    |------------------------------------------------------------------
-                    | LOG HASIL
-                    |------------------------------------------------------------------
-                    */
-
                     console.log(
-                        "[PDF] TTD berhasil dimuat:",
+                        "[PDF][TTD][DATAURL_SUCCESS]",
                         {
                             role,
+
+                            fileId:
+                                file.id,
+
                             fileName,
+
+                            bytes:
+                                buffer.length,
+
+                            dataUrlLength:
+                                result.dataUrl.length,
+
                             hasDataUrl:
                                 Boolean(
                                     result.dataUrl
-                                ),
-                            name:
-                                result.name
+                                )
                         }
                     );
 
