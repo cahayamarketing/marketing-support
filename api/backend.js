@@ -11349,6 +11349,13 @@ module.exports = async function handler(req, res) {
           req,
           res
         );
+    
+      case "updateManagedAccount":
+        return await runHandler(
+            managedHandler,
+            req,
+            res
+        );  
 
       case "getMasterData":
       case "getReferenceMasters":
