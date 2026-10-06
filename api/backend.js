@@ -7630,9 +7630,9 @@ const getPkmPdfDataHandler = async (req, res) => {
                 }
 
                 /*
-                |--------------------------------------------------------------
-                | Jika reference sudah berupa data URL
-                |--------------------------------------------------------------
+                |--------------------------------------------------------------------------
+                | DATA URL
+                |--------------------------------------------------------------------------
                 */
 
                 if (
@@ -7647,13 +7647,76 @@ const getPkmPdfDataHandler = async (req, res) => {
                 }
 
                 /*
-                |--------------------------------------------------------------
-                | Ambil nama file dari reference
-                |--------------------------------------------------------------
+                |--------------------------------------------------------------------------
+                | JIKA URL LANGSUNG
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    /^https?:\/\//i.test(ref)
+                ) {
+
+                    try {
+
+                        const response =
+                            await fetch(ref);
+
+                        if (
+                            response.ok
+                        ) {
+
+                            const arrayBuffer =
+                                await response.arrayBuffer();
+
+                            const buffer =
+                                Buffer.from(
+                                    arrayBuffer
+                                );
+
+                            const contentType =
+                                response.headers.get(
+                                    "content-type"
+                                ) ||
+                                "image/png";
+
+                            result.dataUrl =
+                                "data:" +
+                                contentType +
+                                ";base64," +
+                                buffer.toString(
+                                    "base64"
+                                );
+
+                            return result;
+                        }
+
+                    } catch (error) {
+
+                        console.warn(
+                            "[PDF] Gagal mengambil URL TTD:",
+                            {
+                                role,
+                                ref,
+                                error:
+                                    error.message
+                            }
+                        );
+
+                    }
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | AMBIL NAMA FILE
+                |--------------------------------------------------------------------------
                 */
 
                 const fileName =
                     ref
+                        .replace(
+                            /\\/g,
+                            "/"
+                        )
                         .split("/")
                         .pop()
                         .trim();
@@ -7663,19 +7726,15 @@ const getPkmPdfDataHandler = async (req, res) => {
                 }
 
                 /*
-                |--------------------------------------------------------------
+                |--------------------------------------------------------------------------
                 | GOOGLE DRIVE
-                |--------------------------------------------------------------
+                |--------------------------------------------------------------------------
                 */
 
                 try {
 
                     const drive =
                         getPkmItemDriveClient();
-
-                    /*
-                    | Cari berdasarkan nama file.
-                    */
 
                     const response =
                         await drive.files.list({
@@ -7689,10 +7748,13 @@ const getPkmPdfDataHandler = async (req, res) => {
                                 "' and trashed = false",
 
                             fields:
-                                "files(id,name,mimeType)",
+                                "files(id,name,mimeType,description,modifiedTime)",
 
                             pageSize:
-                                10
+                                20,
+
+                            orderBy:
+                                "modifiedTime desc"
 
                         });
 
@@ -7705,11 +7767,59 @@ const getPkmPdfDataHandler = async (req, res) => {
                             : [];
 
                     if (!files.length) {
+
+                        console.warn(
+                            "[PDF] TTD tidak ditemukan:",
+                            {
+                                role,
+                                fileName,
+                                reference: ref
+                            }
+                        );
+
                         return result;
                     }
 
                     const file =
                         files[0];
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | AMBIL NAMA APPROVER DARI DESCRIPTION
+                    |--------------------------------------------------------------------------
+                    */
+
+                    try {
+
+                        const description =
+                            JSON.parse(
+                                file.description ||
+                                "{}"
+                            );
+
+                        result.name =
+                            String(
+                                description.name ||
+                                description.approverName ||
+                                fallbackName ||
+                                "-"
+                            ).trim() || "-";
+
+                    } catch (error) {
+
+                        result.name =
+                            String(
+                                fallbackName ||
+                                "-"
+                            ).trim() || "-";
+
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | DOWNLOAD FILE TTD
+                    |--------------------------------------------------------------------------
+                    */
 
                     const downloaded =
                         await drive.files.get({
@@ -7741,6 +7851,7 @@ const getPkmPdfDataHandler = async (req, res) => {
                         } else {
 
                             return result;
+
                         }
                     }
 
@@ -7756,20 +7867,30 @@ const getPkmPdfDataHandler = async (req, res) => {
                             "base64"
                         );
 
-                    /*
-                    | Nama approver tetap menggunakan fallback.
-                    | Reference ACC tetap menjadi sumber file TTD.
-                    */
+                    console.log(
+                        "[PDF] TTD berhasil dimuat:",
+                        {
+                            role,
+                            fileName,
+                            name:
+                                result.name,
+                            hasDataUrl:
+                                Boolean(
+                                    result.dataUrl
+                                )
+                        }
+                    );
 
                     return result;
 
                 } catch (error) {
 
-                    console.warn(
+                    console.error(
                         "[PDF] Gagal mengambil TTD:",
                         {
                             role,
                             fileName,
+                            reference: ref,
                             error:
                                 error.message
                         }
