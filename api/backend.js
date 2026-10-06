@@ -6679,6 +6679,315 @@ return async function handler(req, res) {
 }
 })();
 
+
+// ============================================================
+// CURRENT PKM APPROVER NAMES
+// ============================================================
+//
+// Nama approver TIDAK diambil dari metadata file TTD.
+//
+// TTD  : tetap menggunakan reference acc_* historis
+// NAMA : menggunakan salesman yang SAAT INI memiliki role approval
+//
+// CRM / KACAB  -> berdasarkan cabang PKM
+// MSMC          -> berdasarkan role approval
+// MGR_H1        -> berdasarkan role approval
+// MGR_H23       -> berdasarkan role approval
+// ============================================================
+
+async function getCurrentPkmApproverNames(cabang) {
+
+    const branch =
+        String(cabang || "")
+            .trim()
+            .toUpperCase();
+
+
+    const result = {
+
+        crm:
+            "-",
+
+        kacab:
+            "-",
+
+        msmc:
+            "-",
+
+        managerH1:
+            "-",
+
+        managerH23:
+            "-"
+    };
+
+
+    if (!branch) {
+        return result;
+    }
+
+
+    try {
+
+        /*
+        |----------------------------------------------------------
+        | Ambil user yang memiliki role approval PKM
+        |----------------------------------------------------------
+        */
+
+        const query =
+            "/rest/v1/salesman" +
+            "?select=nik,nama_marketing,cab,role_pkm,status" +
+            "&limit=2000";
+
+
+        const rows =
+            await supabaseRequest(
+                query
+            );
+
+
+        if (
+            !Array.isArray(rows)
+        ) {
+            return result;
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | Normalisasi
+        |----------------------------------------------------------
+        */
+
+        const users =
+            rows
+                .map(function (row) {
+
+                    return {
+
+                        nik:
+                            String(
+                                row.nik || ""
+                            ).trim(),
+
+                        name:
+                            String(
+                                row.nama_marketing || ""
+                            ).trim(),
+
+                        cab:
+                            String(
+                                row.cab || ""
+                            )
+                                .trim()
+                                .toUpperCase(),
+
+                        role:
+                            normalizeApprovalRole(
+                                row.role_pkm
+                            ),
+
+                        status:
+                            String(
+                                row.status || ""
+                            )
+                                .trim()
+                                .toUpperCase()
+                    };
+
+                })
+                .filter(function (user) {
+
+                    return (
+                        user.name &&
+                        user.role
+                    );
+
+                });
+
+
+        /*
+        |----------------------------------------------------------
+        | User aktif saja
+        |
+        | Kalau status kosong, tetap dianggap valid.
+        | Kalau ada status, jangan ambil RESIGN.
+        |----------------------------------------------------------
+        */
+
+        const activeUsers =
+            users.filter(function (user) {
+
+                return (
+                    !user.status ||
+                    ![
+                        "RESIGN",
+                        "NONAKTIF",
+                        "NON AKTIF",
+                        "INACTIVE"
+                    ].includes(
+                        user.status
+                    )
+                );
+
+            });
+
+
+        /*
+        |----------------------------------------------------------
+        | CRM
+        |----------------------------------------------------------
+        */
+
+        const crm =
+            activeUsers.find(function (user) {
+
+                return (
+                    user.role === "CRM" &&
+                    user.cab === branch
+                );
+
+            });
+
+
+        if (crm) {
+
+            result.crm =
+                crm.name;
+
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | KACAB
+        |----------------------------------------------------------
+        */
+
+        const kacab =
+            activeUsers.find(function (user) {
+
+                return (
+                    user.role === "KACAB" &&
+                    user.cab === branch
+                );
+
+            });
+
+
+        if (kacab) {
+
+            result.kacab =
+                kacab.name;
+
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | MSMC
+        |----------------------------------------------------------
+        |
+        | MSMC tidak dikunci ke cabang.
+        | Ambil user MSMC yang aktif saat ini.
+        |----------------------------------------------------------
+        */
+
+        const msmc =
+            activeUsers.find(function (user) {
+
+                return (
+                    user.role === "MSMC"
+                );
+
+            });
+
+
+        if (msmc) {
+
+            result.msmc =
+                msmc.name;
+
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | MANAGER H1
+        |----------------------------------------------------------
+        */
+
+        const managerH1 =
+            activeUsers.find(function (user) {
+
+                return (
+                    user.role === "MGR_H1"
+                );
+
+            });
+
+
+        if (managerH1) {
+
+            result.managerH1 =
+                managerH1.name;
+
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | MANAGER H23
+        |----------------------------------------------------------
+        */
+
+        const managerH23 =
+            activeUsers.find(function (user) {
+
+                return (
+                    user.role === "MGR_H23"
+                );
+
+            });
+
+
+        if (managerH23) {
+
+            result.managerH23 =
+                managerH23.name;
+
+        }
+
+
+        console.log(
+            "[PDF][CURRENT APPROVERS]",
+            {
+                branch,
+                result
+            }
+        );
+
+
+        return result;
+
+    } catch (error) {
+
+        console.error(
+            "[PDF][CURRENT APPROVERS] GAGAL:",
+            {
+                branch,
+                error:
+                    error?.message ||
+                    error
+            }
+        );
+
+
+        return result;
+    }
+}
+
 // ===== pkm =====
 const pkmHandler = (() => {
 
@@ -7902,35 +8211,16 @@ const getPkmPdfDataHandler = async (req, res) => {
                     |------------------------------------------------------------------
                     | NAMA APPROVER
                     |
-                    | Jika description mempunyai metadata nama,
-                    | gunakan nama tersebut.
+                    | Nama TIDAK diambil dari metadata Drive.
+                    |
+                    | Nama berasal dari user yang saat ini memiliki akses approval.
                     |------------------------------------------------------------------
                     */
 
-                    if (
-                        file.description
-                    ) {
-
-                        try {
-
-                            const metadata =
-                                JSON.parse(
-                                    file.description
-                                );
-
-                            result.name =
-                                String(
-                                    metadata.approverName ||
-                                    metadata.name ||
-                                    fallbackName ||
-                                    "-"
-                                ).trim() || "-";
-
-                        } catch (error) {
-
-                            // Description bukan JSON.
-                        }
-                    }
+                    result.name =
+                        String(
+                            fallbackName || "-"
+                        ).trim() || "-";
 
 
                     /*
@@ -8046,45 +8336,58 @@ const getPkmPdfDataHandler = async (req, res) => {
                 }
             };
 
-        /*
-        |--------------------------------------------------------------------------
-        | TTD CRM
-        |--------------------------------------------------------------------------
-        */
+        // ============================================================
+        // NAMA APPROVER SAAT INI
+        // ============================================================
+
+        const currentApprovers =
+            await getCurrentPkmApproverNames(
+                row.cabang
+            );
+
+
+        // ============================================================
+        // TTD CRM
+        //
+        // TTD tetap mengambil file historis dari acc_crm.
+        // Nama menggunakan CRM yang saat ini memiliki akses.
+        // ============================================================
 
         const crmSignature =
             await loadSignature(
                 row.acc_crm,
                 "CRM",
-                "-"
+                currentApprovers.crm
             );
 
-        /*
-        |--------------------------------------------------------------------------
-        | TTD KACAB
-        |--------------------------------------------------------------------------
-        */
+
+        // ============================================================
+        // TTD KACAB
+        //
+        // TTD tetap mengambil file historis dari acc_kacab.
+        // Nama menggunakan KACAB yang saat ini memiliki akses.
+        // ============================================================
 
         const kacabSignature =
             await loadSignature(
                 row.acc_kacab,
                 "KEPALA CABANG",
-                "-"
+                currentApprovers.kacab
             );
 
-        /*
-        |--------------------------------------------------------------------------
-        | TTD MSMC
-        |--------------------------------------------------------------------------
-        |
-        | Jika acc_msmc berisi reference, gunakan itu.
-        */
+
+        // ============================================================
+        // TTD MSMC
+        //
+        // TTD tetap mengambil file historis dari acc_msmc.
+        // Nama menggunakan MSMC yang saat ini memiliki akses.
+        // ============================================================
 
         const msmcSignature =
             await loadSignature(
                 row.acc_msmc,
                 "MSMC",
-                "-"
+                currentApprovers.msmc
             );
 
         /*
@@ -8106,7 +8409,9 @@ const getPkmPdfDataHandler = async (req, res) => {
                     ? "MANAGER H23"
                     : "MANAGER H1",
 
-                "-"
+                typePkm === "H23"
+                    ? currentApprovers.managerH23
+                    : currentApprovers.managerH1
             );
 
         /*
