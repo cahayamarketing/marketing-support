@@ -7760,19 +7760,58 @@ const getPkmPdfDataHandler = async (req, res) => {
                         );
 
 
+                    const imagesFolderId =
+                        getPkmImagesFolderId();
+
+                    const safeFileName =
+                        fileName.replace(
+                            /'/g,
+                            "\\'"
+                        );
+
+                    const query =
+                        "'" +
+                        imagesFolderId +
+                        "' in parents and " +
+                        "name = '" +
+                        safeFileName +
+                        "' and " +
+                        "trashed = false";
+
+                    console.log(
+                        "[PDF][TTD][DRIVE_SEARCH]",
+                        {
+                            role,
+                            fileName,
+                            imagesFolderId,
+                            query
+                        }
+                    );
+
                     const response =
                         await drive.files.list({
 
                             q:
-                                "name = '" +
-                                escapedFileName +
-                                "' and trashed = false",
+                                query,
 
                             fields:
-                                "files(id,name,mimeType,description,modifiedTime)",
+                                "files(id,name,mimeType,description,modifiedTime,size,parents)",
 
                             pageSize:
-                                20
+                                20,
+
+                            orderBy:
+                                "modifiedTime desc",
+
+                            includeItemsFromAllDrives:
+                                true,
+
+                            supportsAllDrives:
+                                true,
+
+                            corpora:
+                                "allDrives"
+
                         });
 
 
@@ -7783,6 +7822,48 @@ const getPkmPdfDataHandler = async (req, res) => {
                         )
                             ? response.data.files
                             : [];
+
+                    console.log(
+                        "[PDF][TTD][DRIVE_SEARCH_RESULT]",
+                        {
+                            role,
+                            requestedFile:
+                                fileName,
+
+                            folderId:
+                                imagesFolderId,
+
+                            found:
+                                files.length,
+
+                            files:
+                                files.map(
+                                    function (file) {
+
+                                        return {
+                                            id:
+                                                file.id,
+
+                                            name:
+                                                file.name,
+
+                                            mimeType:
+                                                file.mimeType,
+
+                                            size:
+                                                file.size,
+
+                                            parents:
+                                                file.parents,
+
+                                            modifiedTime:
+                                                file.modifiedTime
+                                        };
+
+                                    }
+                                )
+                        }
+                    );
 
 
                     if (!files.length) {
