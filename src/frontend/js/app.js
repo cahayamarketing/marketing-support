@@ -8484,6 +8484,42 @@ pkmForm.addEventListener("submit", async function (event) {
 
 });
 
+
+function setLoggedInUserBranch() {
+
+    const cabangInput =
+        document.getElementById("cabang");
+
+    if (!cabangInput) {
+        return;
+    }
+
+    const branch =
+        String(
+            currentUser?.originalBranch ||
+            currentUser?.branch ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const branchName =
+        String(
+            currentUser?.branchName ||
+            branch ||
+            ""
+        )
+            .trim();
+
+    cabangInput.value =
+        branch
+            ? `${branch} — ${branchName}`
+            : "";
+
+    cabangInput.readOnly = true;
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | RESET FORM
@@ -8510,8 +8546,7 @@ function resetPkmForm() {
     resetBudgetDetailForm();
     renderBudgetDetails();
 
-    document.getElementById("cabang").value =
-        `${currentUser.branch} — ${currentUser.branchName}`;
+    setLoggedInUserBranch();
 
     document
         .getElementById("programH1Container")
