@@ -570,6 +570,98 @@ async function savePkmPdf({
     };
 }
 
+const savePkmPdfHandler = async (req, res) => {
+    try {
+
+        if (req.method !== "POST") {
+            return res.status(405).json({
+                success: false,
+                message: "Method tidak diizinkan."
+            });
+        }
+
+        const body =
+            typeof req.body === "string"
+                ? JSON.parse(req.body)
+                : (req.body || {});
+
+        const payload =
+            body.payload || {};
+
+        const pkmId =
+            String(
+                payload.pkmId ||
+                body.pkmId ||
+                ""
+            ).trim();
+
+        const fileName =
+            String(
+                payload.fileName ||
+                body.fileName ||
+                ""
+            ).trim();
+
+        const pdfBase64 =
+            String(
+                payload.pdfBase64 ||
+                body.pdfBase64 ||
+                ""
+            ).trim();
+
+        if (!pkmId) {
+            return res.status(400).json({
+                success: false,
+                message: "ID PKM tidak tersedia."
+            });
+        }
+
+        if (!pdfBase64) {
+            return res.status(400).json({
+                success: false,
+                message: "Data PDF tidak tersedia."
+            });
+        }
+
+        console.log(
+            "[PKM PDF] SAVE REQUEST",
+            {
+                pkmId,
+                fileName,
+                pdfLength: pdfBase64.length
+            }
+        );
+
+        const result =
+            await savePkmPdf({
+                pkmId,
+                fileName,
+                pdfBase64
+            });
+
+        return res.status(200).json({
+            success: true,
+            ...result
+        });
+
+    } catch (error) {
+
+        console.error(
+            "[PKM PDF] SAVE ERROR:",
+            error
+        );
+
+        return res.status(
+            error.status || 500
+        ).json({
+            success: false,
+            message:
+                error.message ||
+                "Gagal menyimpan PDF PKM."
+        });
+    }
+};
+
 async function uploadPkmItemImage({
     pkmId,
     itemId,
@@ -12857,6 +12949,13 @@ module.exports = async function handler(req, res) {
       case "pkmDownload":
         return await runHandler(
             pkmDownloadHandler,
+            req,
+            res
+        );
+
+      case "savePkmPdf":
+        return await runHandler(
+            savePkmPdfHandler,
             req,
             res
         );
