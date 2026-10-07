@@ -9577,6 +9577,13 @@ async function sendPkmApprovalDiscordAuto_(
             .trim()
             .toUpperCase();
 
+
+    /*
+    |----------------------------------------------------------------------
+    | ROLE DISCORD
+    |----------------------------------------------------------------------
+    */
+
     if (
         ![
             "MSMC",
@@ -9594,10 +9601,18 @@ async function sendPkmApprovalDiscordAuto_(
         };
     }
 
+
     const target =
         normalizedRole === "MSMC"
             ? "MSMC"
             : "MGR";
+
+
+    /*
+    |----------------------------------------------------------------------
+    | DATA PKM
+    |----------------------------------------------------------------------
+    */
 
     const pkmId =
         String(
@@ -9634,22 +9649,187 @@ async function sendPkmApprovalDiscordAuto_(
             "-"
         ).trim();
 
+
+    /*
+    |----------------------------------------------------------------------
+    | DANA
+    |----------------------------------------------------------------------
+    */
+
+    const danaLs =
+        Number(
+            pkm?.danaLs ||
+            pkm?.dana_ls ||
+            0
+        ) || 0;
+
+    const danaMd =
+        Number(
+            pkm?.danaMd ||
+            pkm?.dana_md ||
+            0
+        ) || 0;
+
+    const danaCsm =
+        Number(
+            pkm?.danaCsm ||
+            pkm?.dana_csm ||
+            0
+        ) || 0;
+
+    const danaLl =
+        Number(
+            pkm?.danaLl ||
+            pkm?.dana_ll ||
+            0
+        ) || 0;
+
+    const totalDana =
+        danaLs +
+        danaMd +
+        danaCsm +
+        danaLl;
+
+
+    const formatRupiah =
+        function (value) {
+
+            return new Intl.NumberFormat(
+                "id-ID",
+                {
+                    style: "currency",
+                    currency: "IDR",
+                    maximumFractionDigits: 0
+                }
+            ).format(
+                Number(value) || 0
+            );
+        };
+
+
+    /*
+    |----------------------------------------------------------------------
+    | PEOPLE
+    |----------------------------------------------------------------------
+    */
+
+    let peopleText = "-";
+
+    if (
+        Array.isArray(
+            pkm?.people
+        )
+    ) {
+
+        peopleText =
+            pkm.people
+                .map(
+                    function (person) {
+
+                        if (
+                            typeof person ===
+                            "string"
+                        ) {
+                            return person
+                                .trim();
+                        }
+
+                        if (
+                            person &&
+                            typeof person ===
+                            "object"
+                        ) {
+
+                            return String(
+                                person.nama ||
+                                person.name ||
+                                person.nama_marketing ||
+                                "-"
+                            ).trim();
+                        }
+
+                        return "";
+                    }
+                )
+                .filter(Boolean)
+                .join(", ");
+
+    } else {
+
+        peopleText =
+            String(
+                pkm?.people ||
+                "-"
+            ).trim();
+    }
+
+
+    /*
+    |----------------------------------------------------------------------
+    | LOKASI
+    |----------------------------------------------------------------------
+    */
+
+    const lokasi =
+        String(
+            pkm?.lokasi ||
+            pkm?.location ||
+            "-"
+        ).trim();
+
+
+    /*
+    |----------------------------------------------------------------------
+    | TARGET
+    |----------------------------------------------------------------------
+    */
+
+    const targetDb =
+        Number(
+            pkm?.targetDb ||
+            pkm?.target_db ||
+            0
+        ) || 0;
+
+    const targetDeal =
+        Number(
+            pkm?.targetDeal ||
+            pkm?.target_deal ||
+            0
+        ) || 0;
+
+
+    /*
+    |----------------------------------------------------------------------
+    | APPROVAL SEBELUMNYA
+    |----------------------------------------------------------------------
+    */
+
     const approvedBy =
         String(
             pkm?.approvedBy ||
             "-"
         ).trim();
 
+
+    /*
+    |----------------------------------------------------------------------
+    | VALIDASI ID
+    |----------------------------------------------------------------------
+    */
+
     if (!pkmId) {
+
         throw new Error(
             "ID PKM untuk Discord otomatis tidak ditemukan."
         );
     }
 
+
     /*
-    |--------------------------------------------------------------------------
-    | LINK APPROVAL
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
+    | URL APPROVAL
+    |----------------------------------------------------------------------
     */
 
     const webUrl =
@@ -9658,7 +9838,11 @@ async function sendPkmApprovalDiscordAuto_(
             "https://marketing-support-system-phi.vercel.app"
         )
             .trim()
-            .replace(/\/+$/, "");
+            .replace(
+                /\/+$/,
+                ""
+            );
+
 
     const approvalToken =
         createDiscordApprovalToken_(
@@ -9666,46 +9850,45 @@ async function sendPkmApprovalDiscordAuto_(
             normalizedRole
         );
 
+
     const approvalUrl =
         `${webUrl}/index.html` +
         `?approvalPkm=${encodeURIComponent(pkmId)}` +
         `&approvalToken=${encodeURIComponent(approvalToken)}`;
 
+
     /*
-    |--------------------------------------------------------------------------
-    | LABEL
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
+    | LABEL TAHAP
+    |----------------------------------------------------------------------
     */
 
     const approvalLabel =
         normalizedRole === "MSMC"
             ? "MSMC"
-            : "Manager";
+            : "Manager H1";
+
 
     /*
-    |--------------------------------------------------------------------------
-    | PESAN DISCORD
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
+    | DISCORD MESSAGE
+    |----------------------------------------------------------------------
     */
 
     const messageData = {
 
         content:
-            "🔔 **Pengajuan PKM menunggu Approval " +
-            approvalLabel +
-            "**",
+            `🔔 **Approval PKM — ${approvalLabel}**`,
 
         embeds: [
 
             {
 
                 title:
-                    pkmId +
-                    " — " +
                     pkmName,
 
                 description:
-                    "Pengajuan PKM telah diteruskan dan membutuhkan proses persetujuan.",
+                    `Pengajuan PKM **${pkmId}** membutuhkan persetujuan Anda.`,
 
                 color:
                     normalizedRole === "MSMC"
@@ -9727,10 +9910,10 @@ async function sendPkmApprovalDiscordAuto_(
 
                     {
                         name:
-                            "Type PKM",
+                            "Tipe PKM / Jenis Kegiatan",
 
                         value:
-                            typePkm || "-",
+                            `${typePkm || "-"} / ${activityType || "-"}`,
 
                         inline:
                             true
@@ -9738,10 +9921,12 @@ async function sendPkmApprovalDiscordAuto_(
 
                     {
                         name:
-                            "Jenis kegiatan",
+                            "Dana",
 
                         value:
-                            activityType || "-",
+                            formatRupiah(
+                                totalDana
+                            ),
 
                         inline:
                             true
@@ -9749,7 +9934,40 @@ async function sendPkmApprovalDiscordAuto_(
 
                     {
                         name:
-                            "Approval sebelumnya",
+                            "Orang",
+
+                        value:
+                            peopleText || "-",
+
+                        inline:
+                            false
+                    },
+
+                    {
+                        name:
+                            "Lokasi",
+
+                        value:
+                            lokasi || "-",
+
+                        inline:
+                            false
+                    },
+
+                    {
+                        name:
+                            "Target DB / DEAL",
+
+                        value:
+                            `**DB:** ${targetDb}    **DEAL:** ${targetDeal}`,
+
+                        inline:
+                            false
+                    },
+
+                    {
+                        name:
+                            "Approval Sebelumnya",
 
                         value:
                             approvedBy || "-",
@@ -9760,11 +9978,10 @@ async function sendPkmApprovalDiscordAuto_(
 
                     {
                         name:
-                            "Tahap berikutnya",
+                            "Tahap Berikutnya",
 
                         value:
-                            "Approval " +
-                            approvalLabel,
+                            `Approval ${approvalLabel}`,
 
                         inline:
                             true
@@ -9780,7 +9997,8 @@ async function sendPkmApprovalDiscordAuto_(
                 },
 
                 timestamp:
-                    new Date().toISOString()
+                    new Date()
+                        .toISOString()
 
             }
 
@@ -9790,18 +10008,15 @@ async function sendPkmApprovalDiscordAuto_(
 
             {
 
-                type:
-                    1,
+                type: 1,
 
                 components: [
 
                     {
 
-                        type:
-                            2,
+                        type: 2,
 
-                        style:
-                            5,
+                        style: 5,
 
                         label:
                             "Buka & Tanda Tangan",
@@ -9819,16 +10034,12 @@ async function sendPkmApprovalDiscordAuto_(
 
     };
 
-    console.log(
-        "[AUTO DISCORD] Sending:",
-        {
-            pkmId,
-            nextRole:
-                normalizedRole,
-            target,
-            approvalUrl
-        }
-    );
+
+    /*
+    |----------------------------------------------------------------------
+    | KIRIM DISCORD
+    |----------------------------------------------------------------------
+    */
 
     const result =
         await sendDiscordFromBackend_(
@@ -9836,19 +10047,24 @@ async function sendPkmApprovalDiscordAuto_(
             messageData
         );
 
-    console.log(
-        "[AUTO DISCORD] BERHASIL:",
-        {
-            pkmId,
-            nextRole:
-                normalizedRole,
-            target,
-            messageId:
-                result?.messageId || null
-        }
-    );
 
-    return result;
+    return {
+
+        success:
+            true,
+
+        sent:
+            true,
+
+        target:
+            target,
+
+        messageId:
+            result?.id ||
+            null
+
+    };
+
 }
 
 // ==========================================================================
@@ -12387,12 +12603,45 @@ async function approvePkmHandler(
                             row.jenis_kegiatan ||
                             row.activity_type ||
                             "-",
-                        
-                        approvedBy:
-                            user?.name ||
-                            user?.nama ||
-                            user?.username ||
+
+                        danaLs:
+                            row.dana_ls ||
+                            0,
+
+                        danaMd:
+                            row.dana_md ||
+                            0,
+
+                        danaCsm:
+                            row.dana_csm ||
+                            0,
+
+                        danaLl:
+                            row.dana_ll ||
+                            0,
+
+                        people:
+                            row.people ||
                             "-",
+
+                        lokasi:
+                            row.lokasi ||
+                            "-",
+
+                        targetDb:
+                            row.target_db ||
+                            0,
+
+                        targetDeal:
+                            row.target_deal ||
+                            0,
+
+                        approvedBy:
+                            user?.nama_marketing ||
+                            user?.nama ||
+                            user?.name ||
+                            user?.full_name ||
+                            "-"
                     }
                 );
 
