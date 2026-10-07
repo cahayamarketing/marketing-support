@@ -9368,6 +9368,272 @@ async function sendDiscordFromBackend_(
     };
 }
 
+
+// ============================================================
+// DISCORD APPROVAL TOKEN
+// ============================================================
+
+function normalizeDiscordApprovalRole_(role) {
+
+    const normalized =
+        String(role || "")
+            .trim()
+            .toUpperCase();
+
+    if (
+        normalized === "MSMC" ||
+        normalized === "MGR_H1"
+    ) {
+        return normalized;
+    }
+
+    throw new Error(
+        "Role approval Discord tidak valid."
+    );
+}
+
+
+function getDiscordApprovalSecret_() {
+
+    const secret =
+        String(
+            process.env.DISCORD_APPROVAL_SECRET ||
+            process.env.DISCORD_NOTIFY_SECRET ||
+            process.env.SUPABASE_SERVICE_ROLE_KEY ||
+            ""
+        ).trim();
+
+    if (!secret) {
+        throw new Error(
+            "Secret approval Discord belum dikonfigurasi."
+        );
+    }
+
+    return secret;
+}
+
+
+function base64UrlEncode_(value) {
+
+    return Buffer
+        .from(
+            String(value),
+            "utf8"
+        )
+        .toString("base64")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
+}
+
+
+function base64UrlDecode_(value) {
+
+    let normalized =
+        String(value || "")
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+
+    while (
+        normalized.length % 4
+    ) {
+        normalized += "=";
+    }
+
+    return Buffer
+        .from(
+            normalized,
+            "base64"
+        )
+        .toString("utf8");
+}
+
+
+function createDiscordApprovalToken_(
+    pkmId,
+    role
+) {
+
+    const normalizedRole =
+        normalizeDiscordApprovalRole_(
+            role
+        );
+
+    const payload = {
+        pkmId:
+            String(
+                pkmId || ""
+            ).trim(),
+
+        role:
+            normalizedRole,
+
+        nonce:
+            crypto
+                .randomBytes(16)
+                .toString("hex"),
+
+        expiresAt:
+            Date.now() +
+            (
+                24 *
+                60 *
+                60 *
+                1000
+            )
+    };
+
+    if (!payload.pkmId) {
+        throw new Error(
+            "ID PKM untuk token Discord tidak tersedia."
+        );
+    }
+
+    const encodedPayload =
+        base64UrlEncode_(
+            JSON.stringify(
+                payload
+            )
+        );
+
+    const signature =
+        crypto
+            .createHmac(
+                "sha256",
+                getDiscordApprovalSecret_()
+            )
+            .update(
+                encodedPayload
+            )
+            .digest("base64")
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/g, "");
+
+    return (
+        encodedPayload +
+        "." +
+        signature
+    );
+}
+
+
+function getDiscordApprovalTokenData_(
+    approvalToken
+) {
+
+    const token =
+        String(
+            approvalToken || ""
+        ).trim();
+
+    if (!token) {
+        throw new Error(
+            "Token approval Discord tidak tersedia."
+        );
+    }
+
+    const parts =
+        token.split(".");
+
+    if (
+        parts.length !== 2
+    ) {
+        throw new Error(
+            "Token approval Discord tidak valid."
+        );
+    }
+
+    const encodedPayload =
+        parts[0];
+
+    const providedSignature =
+        parts[1];
+
+    const expectedSignature =
+        crypto
+            .createHmac(
+                "sha256",
+                getDiscordApprovalSecret_()
+            )
+            .update(
+                encodedPayload
+            )
+            .digest("base64")
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/g, "");
+
+    const providedBuffer =
+        Buffer.from(
+            providedSignature
+        );
+
+    const expectedBuffer =
+        Buffer.from(
+            expectedSignature
+        );
+
+    if (
+        providedBuffer.length !==
+        expectedBuffer.length ||
+        !crypto.timingSafeEqual(
+            providedBuffer,
+            expectedBuffer
+        )
+    ) {
+        throw new Error(
+            "Token approval Discord tidak valid."
+        );
+    }
+
+    let payload;
+
+    try {
+
+        payload =
+            JSON.parse(
+                base64UrlDecode_(
+                    encodedPayload
+                )
+            );
+
+    } catch (error) {
+
+        throw new Error(
+            "Isi token approval Discord tidak valid."
+        );
+    }
+
+    if (
+        !payload ||
+        !payload.pkmId ||
+        !payload.role
+    ) {
+        throw new Error(
+            "Data token approval Discord tidak lengkap."
+        );
+    }
+
+    if (
+        Number(
+            payload.expiresAt || 0
+        ) <
+        Date.now()
+    ) {
+        throw new Error(
+            "Link approval Discord sudah kedaluwarsa."
+        );
+    }
+
+    payload.role =
+        normalizeDiscordApprovalRole_(
+            payload.role
+        );
+
+    return payload;
+}
+
 // ============================================================
 // AUTO DISCORD PKM APPROVAL
 // ============================================================
@@ -9489,9 +9755,15 @@ async function sendPkmApprovalDiscordAuto_(
             ""
         ).trim();
 
+    const approvalToken =
+        createDiscordApprovalToken_(
+            pkmId,
+            normalizedRole
+        );
+
     const approvalUrl =
         webUrl
-            ? `${webUrl}/index.html?approvalPkm=${encodeURIComponent(pkmId)}`
+            ? `${webUrl}/index.html?approvalPkm=${encodeURIComponent(pkmId)}&approvalToken=${encodeURIComponent(approvalToken)}`
             : "";
 
 
@@ -9626,7 +9898,7 @@ async function sendPkmApprovalDiscordAuto_(
                                         5,
 
                                     label:
-                                        "Buka Pengajuan",
+                                        "Buka & Tanda Tangan",
 
                                     url:
                                         approvalUrl
@@ -12342,6 +12614,362 @@ async function approvePkmHandler(
 }
 
 
+/* --------------------------------------------------------------------------
+| GET DISCORD APPROVAL
+| -------------------------------------------------------------------------- */
+
+async function getDiscordApprovalHandler(
+    request,
+    response
+) {
+
+    try {
+
+        if (request.method !== "POST") {
+            return response.status(405).json({
+                success: false,
+                message: "Method tidak diizinkan."
+            });
+        }
+
+
+        const body =
+            request.body || {};
+
+        const payload =
+            body.payload || {};
+
+
+        const pkmId =
+            String(
+                payload.pkmId || ""
+            ).trim();
+
+
+        const approvalToken =
+            String(
+                payload.approvalToken || ""
+            ).trim();
+
+
+        if (!pkmId) {
+            return response.status(400).json({
+                success: false,
+                message: "ID PKM wajib diisi."
+            });
+        }
+
+
+        if (!approvalToken) {
+            return response.status(401).json({
+                success: false,
+                message: "Token approval Discord tidak ditemukan."
+            });
+        }
+
+
+        /* ---------------------------------------------------------
+        | VALIDASI TOKEN DISCORD
+        | --------------------------------------------------------- */
+
+        const tokenData =
+            getDiscordApprovalTokenData_(
+                approvalToken
+            );
+
+
+        if (
+            String(tokenData.pkmId || "").trim() !==
+            pkmId
+        ) {
+            return response.status(403).json({
+                success: false,
+                message: "Token approval tidak sesuai dengan PKM."
+            });
+        }
+
+
+        const tokenRole =
+            String(
+                tokenData.role || ""
+            )
+                .trim()
+                .toUpperCase();
+
+
+        /* ---------------------------------------------------------
+        | AMBIL DATA PKM
+        | --------------------------------------------------------- */
+
+        const rows =
+            await supabaseRequest(
+                "/rest/v1/pkm" +
+                "?id_pkm=eq." +
+                encodeURIComponent(pkmId) +
+                "&select=*",
+                {
+                    method: "GET"
+                }
+            );
+
+
+        if (
+            !Array.isArray(rows) ||
+            !rows.length
+        ) {
+            return response.status(404).json({
+                success: false,
+                message: "Data PKM tidak ditemukan."
+            });
+        }
+
+
+        const pkm =
+            rows[0];
+
+
+        /* ---------------------------------------------------------
+        | CEK TAHAP APPROVAL AKTUAL
+        | --------------------------------------------------------- */
+
+        const approvalState =
+            getPkmApprovalState(pkm);
+
+
+        const currentRole =
+            String(
+                approvalState?.currentRole || ""
+            )
+                .trim()
+                .toUpperCase();
+
+
+        if (
+            currentRole !== tokenRole
+        ) {
+            return response.status(403).json({
+                success: false,
+                message:
+                    "PKM sudah tidak berada pada tahap approval ini.",
+                currentRole,
+                tokenRole
+            });
+        }
+
+
+        /* ---------------------------------------------------------
+        | CARI USER APPROVER
+        | --------------------------------------------------------- */
+
+        const profileRows =
+            await supabaseRequest(
+                "/rest/v1/v_user_profile" +
+                "?approval_role=eq." +
+                encodeURIComponent(tokenRole) +
+                "&select=*"
+            );
+
+
+        if (
+            !Array.isArray(profileRows) ||
+            !profileRows.length
+        ) {
+            return response.status(404).json({
+                success: false,
+                message:
+                    `User dengan role ${tokenRole} tidak ditemukan.`
+            });
+        }
+
+
+        /*
+        | Jangan memfilter login_allowed di query.
+        | Kalau nilainya NULL, tetap dianggap boleh.
+        */
+
+        const profile =
+            profileRows.find(
+                item =>
+                    item.login_allowed !== false
+            ) ||
+            profileRows[0];
+
+
+        if (
+            profile.login_allowed === false
+        ) {
+            return response.status(403).json({
+                success: false,
+                message:
+                    "Akun approver tidak diizinkan untuk login."
+            });
+        }
+
+
+        /* ---------------------------------------------------------
+        | BUAT SESSION TOKEN SEMENTARA
+        | --------------------------------------------------------- */
+
+        const sessionToken =
+            crypto
+                .randomBytes(32)
+                .toString("hex");
+
+
+        /* ---------------------------------------------------------
+        | FORMAT USER SAMA SEPERTI LOGIN NORMAL
+        | --------------------------------------------------------- */
+
+        const user = {
+
+            id:
+                profile.nik,
+
+            nik:
+                profile.nik,
+
+            username:
+                profile.nik,
+
+            name:
+                profile.nama_marketing ||
+                profile.nama ||
+                "",
+
+            jabatan:
+                profile.jab ||
+                "",
+
+            pos:
+                profile.pos ||
+                "",
+
+            originalBranch:
+                profile.cab ||
+                "",
+
+            branch:
+                String(
+                    profile.cab || ""
+                )
+                    .trim()
+                    .toUpperCase() === "HO"
+                    ? "ALL"
+                    : String(
+                        profile.cab || ""
+                    )
+                        .trim()
+                        .toUpperCase(),
+
+            branchName:
+                String(
+                    profile.cab || ""
+                )
+                    .trim()
+                    .toUpperCase() === "HO"
+                    ? "SEMUA CABANG"
+                    : profile.cab || "",
+
+            role:
+                profile.approval_role ||
+                tokenRole,
+
+            approvalRole:
+                profile.approval_role ||
+                tokenRole,
+
+            canApprove:
+                profile.can_approve === true,
+
+            loginAllowed:
+                profile.login_allowed !== false,
+
+            access:
+                String(
+                    profile.sebagai ||
+                    "USER"
+                ).toUpperCase(),
+
+            leaderId:
+                profile.id_tl ||
+                "",
+
+            leaderName:
+                profile.tl ||
+                "",
+
+            status:
+                String(
+                    profile.status ||
+                    "AKTIF"
+                ).toUpperCase(),
+
+            rolePkm:
+                profile.role_pkm ||
+                "",
+
+            authUserId:
+                profile.auth_user_id ||
+                null
+        };
+
+
+        /* ---------------------------------------------------------
+        | RESPONSE
+        | --------------------------------------------------------- */
+
+        return response.status(200).json({
+
+            success: true,
+
+            result: {
+
+                success: true,
+
+                message:
+                    "Approval Discord berhasil diverifikasi.",
+
+                sessionToken,
+
+                user,
+
+                pkm,
+
+                approvalRole:
+                    tokenRole,
+
+                expiresAt:
+                    tokenData.expiresAt
+
+            }
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "[BACKEND] GET DISCORD APPROVAL ERROR",
+            error
+        );
+
+
+        return response.status(
+            error.status || 500
+        ).json({
+
+            success: false,
+
+            message:
+                error.message ||
+                "Gagal memproses approval Discord."
+
+        });
+
+    }
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | APPROVE PKM FROM DISCORD
@@ -14210,6 +14838,13 @@ module.exports = async function handler(req, res) {
     case "getApprovalNotifications":
         return await runHandler(
             approvalNotificationHandler,
+            req,
+            res
+        );
+
+    case "getDiscordApproval":
+        return await runHandler(
+            getDiscordApprovalHandler,
             req,
             res
         );

@@ -11848,7 +11848,15 @@ async function openApprovalModal(
 
     if (canProcess) {
 
-        await prepareApprovalSignature();
+        if (isDiscordApprovalMode) {
+
+            prepareDiscordApprovalSignature();
+
+        } else {
+
+            await prepareApprovalSignature();
+
+        }
 
     } else {
 
