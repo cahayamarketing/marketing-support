@@ -8267,10 +8267,55 @@ const getPkmPdfDataHandler = async (req, res) => {
         // NAMA APPROVER SAAT INI
         // ============================================================
 
-        const currentApprovers =
-            await getCurrentPkmApproverNames(
-                row.cabang
-            );
+        const approvalNames = {
+
+            crm:
+                String(
+                    row.nama_approval_crm ||
+                    "-"
+                ).trim(),
+
+            kacab:
+                String(
+                    row.nama_approval_kacab ||
+                    "-"
+                ).trim(),
+
+            msmc:
+                String(
+                    row.nama_approval_msmc ||
+                    "-"
+                ).trim(),
+
+            koordinatorH23:
+                String(
+                    row.nama_approval_koordinator_h23 ||
+                    "-"
+                ).trim(),
+
+            managerH1:
+                String(
+                    row.nama_approval_manager_h1 ||
+                    "-"
+                ).trim(),
+
+            managerH23:
+                String(
+                    row.nama_approval_manager_h23 ||
+                    "-"
+                ).trim()
+        };
+
+
+        console.log(
+            "[PDF][HISTORICAL APPROVERS]",
+            {
+                pkmId:
+                    row.id_pkm,
+
+                approvalNames
+            }
+        );
 
 
         // ============================================================
@@ -8284,9 +8329,8 @@ const getPkmPdfDataHandler = async (req, res) => {
             await loadSignature(
                 row.acc_crm,
                 "CRM",
-                currentApprovers.crm
+                approvalNames.crm
             );
-
 
         // ============================================================
         // TTD KACAB
@@ -8299,7 +8343,7 @@ const getPkmPdfDataHandler = async (req, res) => {
             await loadSignature(
                 row.acc_kacab,
                 "KEPALA CABANG",
-                currentApprovers.kacab
+                approvalNames.kacab
             );
 
 
@@ -8314,7 +8358,7 @@ const getPkmPdfDataHandler = async (req, res) => {
             await loadSignature(
                 row.acc_msmc,
                 "MSMC",
-                currentApprovers.msmc
+                approvalNames.msmc
             );
 
         /*
@@ -8337,8 +8381,8 @@ const getPkmPdfDataHandler = async (req, res) => {
                     : "MANAGER H1",
 
                 typePkm === "H23"
-                    ? currentApprovers.managerH23
-                    : currentApprovers.managerH1
+                    ? approvalNames.managerH23
+                    : approvalNames.managerH1
             );
 
         /*
@@ -8524,6 +8568,27 @@ const getPkmPdfDataHandler = async (req, res) => {
 
                 managerH23:
                     managerH23
+            },
+
+            approvalNames: {
+
+                crm:
+                    approvalNames.crm,
+
+                kacab:
+                    approvalNames.kacab,
+
+                msmc:
+                    approvalNames.msmc,
+
+                koordinatorH23:
+                    approvalNames.koordinatorH23,
+
+                managerH1:
+                    approvalNames.managerH1,
+
+                managerH23:
+                    approvalNames.managerH23
             },
 
             budgetDetails:
@@ -11513,6 +11578,33 @@ function getApprovalDateColumn(role) {
     return map[role] || null;
 }
 
+function getApprovalNameColumn(role) {
+
+    const map = {
+
+        CRM:
+            "nama_approval_crm",
+
+        KACAB:
+            "nama_approval_kacab",
+
+        MSMC:
+            "nama_approval_msmc",
+
+        PIC_H23:
+            "nama_approval_koordinator_h23",
+
+        MGR_H1:
+            "nama_approval_manager_h1",
+
+        MGR_H23:
+            "nama_approval_manager_h23"
+
+    };
+
+    return map[role] || null;
+}
+
 
 function getApprovalRoleFromUser(user) {
 
@@ -12514,6 +12606,11 @@ async function approvePkmHandler(
                 role
             );
 
+        const nameColumn =
+            getApprovalNameColumn(
+                role
+            );
+
 
         if (
             !approvalColumn
@@ -12532,6 +12629,16 @@ async function approvePkmHandler(
         }
 
 
+        const approverName =
+            String(
+                user.nama_marketing ||
+                user.nama ||
+                user.name ||
+                user.full_name ||
+                "-"
+            ).trim() || "-";
+
+
         const updateRecord = {
 
             [approvalColumn]:
@@ -12541,6 +12648,27 @@ async function approvePkmHandler(
                 now
         };
 
+
+        if (
+            dateColumn
+        ) {
+
+            updateRecord[
+                dateColumn
+            ] =
+                now;
+        }
+
+
+        if (
+            nameColumn
+        ) {
+
+            updateRecord[
+                nameColumn
+            ] =
+                approverName;
+}
 
         if (
             dateColumn
@@ -13009,9 +13137,9 @@ async function getDiscordApprovalHandler(
                 "/rest/v1/v_user_profile" +
                 "?approval_role=eq." +
                 encodeURIComponent(tokenRole) +
+                "&can_approve=eq.true" +
                 "&select=*"
             );
-
 
         if (
             !Array.isArray(profileRows) ||
@@ -13030,12 +13158,149 @@ async function getDiscordApprovalHandler(
         | Kalau nilainya NULL, tetap dianggap boleh.
         */
 
+        const eligibleProfiles =
+            profileRows.filter(
+                item => {
+
+                    const loginAllowed =
+                        item.login_allowed !== false;
+
+                    const status =
+                        String(
+                            item.status || "AKTIF"
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                    return (
+                        loginAllowed &&
+                        (
+                            !status ||
+                            status === "AKTIF"
+                        )
+                    );
+                }
+            );
+
+
+        console.log(
+            "[DISCORD APPROVAL] USER APPROVER TERSEDIA",
+            eligibleProfiles.map(
+                item => ({
+                    nik:
+                        item.nik,
+
+                    nama:
+                        item.nama_marketing,
+
+                    approvalRole:
+                        item.approval_role,
+
+                    canApprove:
+                        item.can_approve,
+
+                    loginAllowed:
+                        item.login_allowed,
+
+                    status:
+                        item.status,
+
+                    cab:
+                        item.cab
+                })
+            )
+        );
+
+
+        if (
+            eligibleProfiles.length === 0
+        ) {
+
+            return response.status(404).json({
+
+                success:
+                    false,
+
+                message:
+                    `Tidak ada user aktif yang memiliki hak approval ${tokenRole}.`
+            });
+        }
+
+
+        if (
+            eligibleProfiles.length > 1
+        ) {
+
+            console.error(
+                "[DISCORD APPROVAL] MULTIPLE APPROVER",
+                {
+                    role:
+                        tokenRole,
+
+                    users:
+                        eligibleProfiles.map(
+                            item => ({
+                                nik:
+                                    item.nik,
+
+                                nama:
+                                    item.nama_marketing
+                            })
+                        )
+                }
+            );
+
+            return response.status(409).json({
+
+                success:
+                    false,
+
+                message:
+                    `Terdapat lebih dari satu user aktif dengan hak approval ${tokenRole}. Tentukan satu approver terlebih dahulu.`,
+
+                approvalRole:
+                    tokenRole
+            });
+        }
+
+
         const profile =
-            profileRows.find(
-                item =>
-                    item.login_allowed !== false
-            ) ||
-            profileRows[0];
+            eligibleProfiles[0];
+
+        console.log(
+            "[DISCORD APPROVAL] AKUN YANG DIPAKAI",
+            {
+                pkmId:
+                    pkmId,
+
+                approvalRole:
+                    tokenRole,
+
+                nik:
+                    profile.nik,
+
+                namaMarketing:
+                    profile.nama_marketing,
+
+                nama:
+                    profile.nama,
+
+                jabatan:
+                    profile.jab,
+
+                cabang:
+                    profile.cab,
+
+                canApprove:
+                    profile.can_approve,
+
+                loginAllowed:
+                    profile.login_allowed,
+
+                status:
+                    profile.status
+            }
+        );
 
 
         if (
@@ -13075,9 +13340,18 @@ async function getDiscordApprovalHandler(
                 profile.nik,
 
             name:
-                profile.nama_marketing ||
-                profile.nama ||
-                "",
+                typeof profile.nama_marketing === "string"
+                    ? profile.nama_marketing
+                    : typeof profile.nama === "string"
+                        ? profile.nama
+                        : typeof profile.nama_marketing === "object"
+                            ? (
+                                profile.nama_marketing?.nama ||
+                                profile.nama_marketing?.name ||
+                                profile.nama_marketing?.value ||
+                                ""
+                            )
+                            : "",
 
             jabatan:
                 profile.jab ||
