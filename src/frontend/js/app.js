@@ -9412,13 +9412,22 @@ function renderPkmTable() {
                     |--------------------------------------------------------------
                     */
 
-                    const discordHelperButton =
-                        canShowDiscordHelper(item)
+                    const discordPkmId =
+                        String(
+                            item.id ||
+                            item.id_pkm ||
+                            item.pkmId ||
+                            item.pkm_id ||
+                            ""
+                        ).trim();
 
+                    const discordHelperButton =
+                        canShowDiscordHelper(item) &&
+                        discordPkmId
                             ? `
                                 <button
                                     type="button"
-                                    data-push-discord="${escapeHtml(item.id)}"
+                                    data-push-discord="${escapeHtml(discordPkmId)}"
                                     class="
                                         inline-flex
                                         h-10
@@ -9841,8 +9850,25 @@ function renderPkmTable() {
                 "click",
                 async function () {
                     const pkmId =
-                        button.dataset
-                            .pushDiscord;
+                        String(
+                            button.dataset.pushDiscord ||
+                            ""
+                        ).trim();
+
+                    if (!pkmId) {
+
+                        console.error(
+                            "[PUSH DISCORD] PKM ID kosong.",
+                            button
+                        );
+
+                        showToast(
+                            "ID PKM tidak ditemukan. Silakan refresh halaman.",
+                            "error"
+                        );
+
+                        return;
+                    }
 
                     const originalContent =
                         button.innerHTML;
@@ -10075,11 +10101,23 @@ function renderPkmTable() {
 
 
                     const pkmId =
-                        discordButton.dataset
-                            .pushDiscord;
-
+                        String(
+                            discordButton.dataset.pushDiscord ||
+                            ""
+                        ).trim();
 
                     if (!pkmId) {
+
+                        console.error(
+                            "[PUSH DISCORD] Mobile PKM ID kosong.",
+                            discordButton
+                        );
+
+                        showToast(
+                            "ID PKM tidak ditemukan. Silakan refresh halaman.",
+                            "error"
+                        );
+
                         return;
                     }
 

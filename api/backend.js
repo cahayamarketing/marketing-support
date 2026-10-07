@@ -9187,6 +9187,499 @@ return async function handler(
 }
 })();
 
+// ============================================================
+// DISCORD SENDER INTERNAL
+// ============================================================
+
+async function sendDiscordFromBackend_(
+    target,
+    messageData
+) {
+
+    const normalizedTarget =
+        String(
+            target || ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const botToken =
+        String(
+            process.env.DISCORD_BOT_TOKEN || ""
+        ).trim();
+
+    if (!botToken) {
+
+        const error =
+            new Error(
+                "DISCORD_BOT_TOKEN belum diatur."
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    const channelMap = {
+
+        MSMC:
+            process.env.DISCORD_CHANNEL_MSMC,
+
+        MGR:
+            process.env.DISCORD_CHANNEL_MANAGER
+
+    };
+
+    const channelId =
+        String(
+            channelMap[
+                normalizedTarget
+            ] || ""
+        ).trim();
+
+    if (!channelId) {
+
+        const error =
+            new Error(
+                `Channel Discord untuk target ${normalizedTarget} belum diatur.`
+            );
+
+        error.status = 500;
+
+        throw error;
+    }
+
+    const discordResponse =
+        await fetch(
+            "https://discord.com/api/v10/channels/" +
+            encodeURIComponent(
+                channelId
+            ) +
+            "/messages",
+            {
+                method:
+                    "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+
+                    Authorization:
+                        "Bot " +
+                        botToken
+                },
+
+                body:
+                    JSON.stringify(
+                        messageData
+                    )
+            }
+        );
+
+    const responseText =
+        await discordResponse.text();
+
+    let discordResult = {};
+
+    try {
+
+        discordResult =
+            responseText
+                ? JSON.parse(
+                    responseText
+                )
+                : {};
+
+    } catch (parseError) {
+
+        discordResult = {
+            raw:
+                responseText
+        };
+
+    }
+
+    if (
+        !discordResponse.ok
+    ) {
+
+        console.error(
+            "[DISCORD] API ERROR:",
+            {
+                status:
+                    discordResponse.status,
+
+                response:
+                    discordResult
+            }
+        );
+
+        const error =
+            new Error(
+                discordResult?.message ||
+                `Discord API gagal (${discordResponse.status}).`
+            );
+
+        error.status =
+            discordResponse.status >= 400 &&
+            discordResponse.status < 500
+                ? 400
+                : 500;
+
+        throw error;
+    }
+
+    console.log(
+        "[DISCORD] MESSAGE SENT:",
+        {
+            target:
+                normalizedTarget,
+
+            channelId:
+                channelId,
+
+            messageId:
+                discordResult?.id || null
+        }
+    );
+
+    return {
+        success:
+            true,
+
+        message:
+            "Reminder Discord berhasil dikirim.",
+
+        target:
+            normalizedTarget,
+
+        channelId:
+            channelId,
+
+        messageId:
+            discordResult?.id ||
+            null
+    };
+}
+
+// ============================================================
+// AUTO DISCORD PKM APPROVAL
+// ============================================================
+
+async function sendPkmApprovalDiscordAuto_(
+    nextRole,
+    pkm
+) {
+
+    const normalizedRole =
+        String(
+            nextRole || ""
+        )
+            .trim()
+            .toUpperCase();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hanya 2 tahap yang menggunakan Discord otomatis:
+    |
+    | MSMC
+    | MGR_H1
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        ![
+            "MSMC",
+            "MGR_H1"
+        ].includes(
+            normalizedRole
+        )
+    ) {
+
+        return {
+            success:
+                false,
+
+            sent:
+                false,
+
+            reason:
+                "Tahap ini tidak menggunakan Discord otomatis."
+        };
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | TARGET CHANNEL
+    |--------------------------------------------------------------------------
+    */
+
+    const target =
+        normalizedRole === "MSMC"
+            ? "MSMC"
+            : "MGR";
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DATA PKM
+    |--------------------------------------------------------------------------
+    */
+
+    const pkmId =
+        String(
+            pkm?.id ||
+            pkm?.id_pkm ||
+            ""
+        ).trim();
+
+    const name =
+        String(
+            pkm?.name ||
+            pkm?.nama ||
+            "-"
+        ).trim();
+
+    const branch =
+        String(
+            pkm?.branch ||
+            pkm?.cabang ||
+            "-"
+        ).trim();
+
+    const typePkm =
+        String(
+            pkm?.typePkm ||
+            pkm?.type_pkm ||
+            "-"
+        ).trim();
+
+    const activityType =
+        String(
+            pkm?.activityType ||
+            pkm?.jenis_kegiatan ||
+            "-"
+        ).trim();
+
+
+    if (!pkmId) {
+
+        throw new Error(
+            "ID PKM untuk Discord otomatis tidak ditemukan."
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LINK WEBSITE
+    |--------------------------------------------------------------------------
+    */
+
+    const webUrl =
+        String(
+            process.env.PKM_WEB_URL ||
+            ""
+        ).trim();
+
+    const approvalUrl =
+        webUrl
+            ? `${webUrl}/index.html?approvalPkm=${encodeURIComponent(pkmId)}`
+            : "";
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LABEL
+    |--------------------------------------------------------------------------
+    */
+
+    const approvalLabel =
+        normalizedRole === "MSMC"
+            ? "MSMC"
+            : "Manager H1";
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MESSAGE
+    |--------------------------------------------------------------------------
+    */
+
+    const messageData = {
+
+        content:
+            normalizedRole === "MSMC"
+                ? "🔔 **Reminder Approval PKM untuk MSMC**"
+                : "🔔 **Reminder Approval PKM untuk Manager H1**",
+
+        embeds: [
+
+            {
+
+                title:
+                    "Pengajuan PKM Menunggu Approval",
+
+                description:
+                    name,
+
+                color:
+                    normalizedRole === "MSMC"
+                        ? 16753920
+                        : 14423100,
+
+                fields: [
+
+                    {
+                        name:
+                            "ID PKM",
+
+                        value:
+                            pkmId,
+
+                        inline:
+                            true
+                    },
+
+                    {
+                        name:
+                            "Cabang",
+
+                        value:
+                            branch,
+
+                        inline:
+                            true
+                    },
+
+                    {
+                        name:
+                            "Type",
+
+                        value:
+                            typePkm,
+
+                        inline:
+                            true
+                    },
+
+                    {
+                        name:
+                            "Kegiatan",
+
+                        value:
+                            activityType,
+
+                        inline:
+                            false
+                    },
+
+                    {
+                        name:
+                            "Tahap",
+
+                        value:
+                            `Menunggu Approval ${approvalLabel}`,
+
+                        inline:
+                            false
+                    }
+
+                ],
+
+                footer: {
+
+                    text:
+                        "CSM Marketing Support"
+
+                },
+
+                timestamp:
+                    new Date()
+                        .toISOString()
+
+            }
+
+        ],
+
+        components:
+            approvalUrl
+                ? [
+                    {
+                        type:
+                            1,
+
+                        components:
+                            [
+                                {
+                                    type:
+                                        2,
+
+                                    style:
+                                        5,
+
+                                    label:
+                                        "Buka Pengajuan",
+
+                                    url:
+                                        approvalUrl
+                                }
+                            ]
+                    }
+                ]
+                : []
+
+    };
+
+
+    console.log(
+        "[AUTO DISCORD] Sending:",
+        {
+            pkmId:
+                pkmId,
+
+            typePkm:
+                typePkm,
+
+            nextRole:
+                normalizedRole,
+
+            target:
+                target
+        }
+    );
+
+
+    const result =
+        await sendDiscordFromBackend_(
+            target,
+            messageData
+        );
+
+
+    console.log(
+        "[AUTO DISCORD] BERHASIL:",
+        {
+            pkmId:
+                pkmId,
+
+            nextRole:
+                normalizedRole,
+
+            target:
+                target,
+
+            messageId:
+                result?.messageId ||
+                null
+        }
+    );
+
+
+    return result;
+}
+
 
 // ==========================================================================
 // PUSH PKM DISCORD REMINDER
@@ -9241,14 +9734,38 @@ async function pushPkmDiscordReminderHandler(
         const pkmId =
             String(
                 payload.pkmId ||
+                payload.id_pkm ||
+                payload.pkm_id ||
+                payload.id ||
                 body.pkmId ||
+                body.id_pkm ||
+                body.pkm_id ||
+                body.id ||
+                request.query?.pkmId ||
+                request.query?.id_pkm ||
                 ""
             ).trim();
+
+        console.log(
+            "[PUSH DISCORD] REQUEST BODY:",
+            JSON.stringify(body)
+        );
+
+        console.log(
+            "[PUSH DISCORD] RESOLVED PKM ID:",
+            pkmId
+        );
 
         if (!pkmId) {
             return response.status(400).json({
                 success: false,
-                message: "PKM ID wajib diisi."
+                message: "PKM ID wajib diisi.",
+                debug: {
+                    bodyKeys:
+                        Object.keys(body || {}),
+                    payloadKeys:
+                        Object.keys(payload || {})
+                }
             });
         }
 
@@ -10730,7 +11247,7 @@ function getPkmApprovalState(row) {
     | H123
     |
     | Setelah PIC_H23 → MGR_H1
-    | lalu MGR_H23
+    | MGR_H1 adalah approval terakhir.
     |--------------------------------------------------------------------------
     */
 
@@ -11604,6 +12121,71 @@ async function approvePkmHandler(
                     nextRole
             }
         );
+
+        /* ---------------------------------------------------------
+        AUTO DISCORD APPROVAL
+        ---------------------------------------------------------- */
+
+        if (
+            nextRole === "MSMC" ||
+            nextRole === "MGR_H1"
+        ) {
+
+            try {
+
+                await sendPkmApprovalDiscordAuto_(
+                    nextRole,
+                    {
+                        id:
+                            pkmId,
+
+                        name:
+                            row.nama ||
+                            row.name ||
+                            "-",
+
+                        branch:
+                            row.cabang ||
+                            row.branch ||
+                            "-",
+
+                        typePkm:
+                            row.type_pkm ||
+                            row.typePkm ||
+                            "-",
+
+                        activityType:
+                            row.jenis_kegiatan ||
+                            row.activity_type ||
+                            "-"
+                    }
+                );
+
+            } catch (
+                discordError
+            ) {
+
+                /*
+                | Approval DATABASE tetap dianggap berhasil.
+                | Jika Discord gagal, jangan rollback approval.
+                */
+
+                console.error(
+                    "[BACKEND] Approval berhasil, tetapi AUTO DISCORD gagal:",
+                    {
+                        pkmId:
+                            pkmId,
+
+                        nextRole:
+                            nextRole,
+
+                        error:
+                            discordError?.message ||
+                            discordError
+                    }
+                );
+            }
+        }
 
         /* ---------------------------------------------------------
         H23 → WHATSAPP MANAGER H23
