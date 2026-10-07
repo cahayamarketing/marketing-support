@@ -9577,15 +9577,6 @@ async function sendPkmApprovalDiscordAuto_(
             .trim()
             .toUpperCase();
 
-    /*
-    |--------------------------------------------------------------------------
-    | Hanya 2 tahap yang menggunakan Discord otomatis:
-    |
-    | MSMC
-    | MGR_H1
-    |--------------------------------------------------------------------------
-    */
-
     if (
         ![
             "MSMC",
@@ -9596,35 +9587,17 @@ async function sendPkmApprovalDiscordAuto_(
     ) {
 
         return {
-            success:
-                false,
-
-            sent:
-                false,
-
+            success: false,
+            sent: false,
             reason:
                 "Tahap ini tidak menggunakan Discord otomatis."
         };
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | TARGET CHANNEL
-    |--------------------------------------------------------------------------
-    */
-
     const target =
         normalizedRole === "MSMC"
             ? "MSMC"
             : "MGR";
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | DATA PKM
-    |--------------------------------------------------------------------------
-    */
 
     const pkmId =
         String(
@@ -9633,7 +9606,7 @@ async function sendPkmApprovalDiscordAuto_(
             ""
         ).trim();
 
-    const name =
+    const pkmName =
         String(
             pkm?.name ||
             pkm?.nama ||
@@ -9661,26 +9634,31 @@ async function sendPkmApprovalDiscordAuto_(
             "-"
         ).trim();
 
+    const approvedBy =
+        String(
+            pkm?.approvedBy ||
+            "-"
+        ).trim();
 
     if (!pkmId) {
-
         throw new Error(
             "ID PKM untuk Discord otomatis tidak ditemukan."
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | LINK WEBSITE
+    | LINK APPROVAL
     |--------------------------------------------------------------------------
     */
 
     const webUrl =
         String(
             process.env.PKM_WEB_URL ||
-            ""
-        ).trim();
+            "https://marketing-support-system-phi.vercel.app"
+        )
+            .trim()
+            .replace(/\/+$/, "");
 
     const approvalToken =
         createDiscordApprovalToken_(
@@ -9689,10 +9667,9 @@ async function sendPkmApprovalDiscordAuto_(
         );
 
     const approvalUrl =
-        webUrl
-            ? `${webUrl}/index.html?approvalPkm=${encodeURIComponent(pkmId)}&approvalToken=${encodeURIComponent(approvalToken)}`
-            : "";
-
+        `${webUrl}/index.html` +
+        `?approvalPkm=${encodeURIComponent(pkmId)}` +
+        `&approvalToken=${encodeURIComponent(approvalToken)}`;
 
     /*
     |--------------------------------------------------------------------------
@@ -9703,31 +9680,32 @@ async function sendPkmApprovalDiscordAuto_(
     const approvalLabel =
         normalizedRole === "MSMC"
             ? "MSMC"
-            : "Manager H1";
-
+            : "Manager";
 
     /*
     |--------------------------------------------------------------------------
-    | MESSAGE
+    | PESAN DISCORD
     |--------------------------------------------------------------------------
     */
 
     const messageData = {
 
         content:
-            normalizedRole === "MSMC"
-                ? "🔔 **Reminder Approval PKM untuk MSMC**"
-                : "🔔 **Reminder Approval PKM untuk Manager H1**",
+            "🔔 **Pengajuan PKM menunggu Approval " +
+            approvalLabel +
+            "**",
 
         embeds: [
 
             {
 
                 title:
-                    "Pengajuan PKM Menunggu Approval",
+                    pkmId +
+                    " — " +
+                    pkmName,
 
                 description:
-                    name,
+                    "Pengajuan PKM telah diteruskan dan membutuhkan proses persetujuan.",
 
                 color:
                     normalizedRole === "MSMC"
@@ -9738,21 +9716,10 @@ async function sendPkmApprovalDiscordAuto_(
 
                     {
                         name:
-                            "ID PKM",
-
-                        value:
-                            pkmId,
-
-                        inline:
-                            true
-                    },
-
-                    {
-                        name:
                             "Cabang",
 
                         value:
-                            branch,
+                            branch || "-",
 
                         inline:
                             true
@@ -9760,10 +9727,10 @@ async function sendPkmApprovalDiscordAuto_(
 
                     {
                         name:
-                            "Type",
+                            "Type PKM",
 
                         value:
-                            typePkm,
+                            typePkm || "-",
 
                         inline:
                             true
@@ -9771,24 +9738,36 @@ async function sendPkmApprovalDiscordAuto_(
 
                     {
                         name:
-                            "Kegiatan",
+                            "Jenis kegiatan",
 
                         value:
-                            activityType,
+                            activityType || "-",
 
                         inline:
-                            false
+                            true
                     },
 
                     {
                         name:
-                            "Tahap",
+                            "Approval sebelumnya",
 
                         value:
-                            `Menunggu Approval ${approvalLabel}`,
+                            approvedBy || "-",
 
                         inline:
-                            false
+                            true
+                    },
+
+                    {
+                        name:
+                            "Tahap berikutnya",
+
+                        value:
+                            "Approval " +
+                            approvalLabel,
+
+                        inline:
+                            true
                     }
 
                 ],
@@ -9801,60 +9780,55 @@ async function sendPkmApprovalDiscordAuto_(
                 },
 
                 timestamp:
-                    new Date()
-                        .toISOString()
+                    new Date().toISOString()
 
             }
 
         ],
 
-        components:
-            approvalUrl
-                ? [
+        components: [
+
+            {
+
+                type:
+                    1,
+
+                components: [
+
                     {
+
                         type:
-                            1,
+                            2,
 
-                        components:
-                            [
-                                {
-                                    type:
-                                        2,
+                        style:
+                            5,
 
-                                    style:
-                                        5,
+                        label:
+                            "Buka & Tanda Tangan",
 
-                                    label:
-                                        "Buka & Tanda Tangan",
+                        url:
+                            approvalUrl
 
-                                    url:
-                                        approvalUrl
-                                }
-                            ]
                     }
+
                 ]
-                : []
+
+            }
+
+        ]
 
     };
-
 
     console.log(
         "[AUTO DISCORD] Sending:",
         {
-            pkmId:
-                pkmId,
-
-            typePkm:
-                typePkm,
-
+            pkmId,
             nextRole:
                 normalizedRole,
-
-            target:
-                target
+            target,
+            approvalUrl
         }
     );
-
 
     const result =
         await sendDiscordFromBackend_(
@@ -9862,29 +9836,20 @@ async function sendPkmApprovalDiscordAuto_(
             messageData
         );
 
-
     console.log(
         "[AUTO DISCORD] BERHASIL:",
         {
-            pkmId:
-                pkmId,
-
+            pkmId,
             nextRole:
                 normalizedRole,
-
-            target:
-                target,
-
+            target,
             messageId:
-                result?.messageId ||
-                null
+                result?.messageId || null
         }
     );
 
-
     return result;
 }
-
 
 // ==========================================================================
 // PUSH PKM DISCORD REMINDER
@@ -10815,6 +10780,23 @@ async function downloadSavedProfileSignature(
         storagePath
     ) {
 
+        const SUPABASE_SERVICE_ROLE_KEY =
+            process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (
+            !SUPABASE_URL ||
+            !SUPABASE_SERVICE_ROLE_KEY
+        ) {
+            const error =
+                new Error(
+                    "Konfigurasi Supabase belum lengkap."
+                );
+
+            error.status = 500;
+
+            throw error;
+        }
+
         const storageUrl =
             `${SUPABASE_URL}/storage/v1/object/ttd/${storagePath
                 .split("/")
@@ -10823,10 +10805,20 @@ async function downloadSavedProfileSignature(
                 )
                 .join("/")}`;
 
-
         response =
             await fetch(
-                storageUrl
+                storageUrl,
+                {
+                    method: "GET",
+
+                    headers: {
+                        "Authorization":
+                            `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+
+                        "apikey":
+                            SUPABASE_SERVICE_ROLE_KEY
+                    }
+                }
             );
 
     }
@@ -12394,7 +12386,13 @@ async function approvePkmHandler(
                         activityType:
                             row.jenis_kegiatan ||
                             row.activity_type ||
-                            "-"
+                            "-",
+                        
+                        approvedBy:
+                            user?.name ||
+                            user?.nama ||
+                            user?.username ||
+                            "-",
                     }
                 );
 
