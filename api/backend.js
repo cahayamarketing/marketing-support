@@ -9800,11 +9800,20 @@ async function pushPkmDiscordReminderHandler(
         const pkm =
             rows[0];
 
-        /*
-        |--------------------------------------------------------------------------
-        | STATUS PKM
-        |--------------------------------------------------------------------------
-        */
+        /* ---------------------------------------------------------
+        | HITUNG TAHAP APPROVAL DARI KOLOM APPROVAL
+        | --------------------------------------------------------- */
+
+        const approvalState =
+            getPkmApprovalState(pkm);
+
+        const approvalStep =
+            String(
+                approvalState?.currentRole ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
 
         const status =
             String(
@@ -9814,22 +9823,15 @@ async function pushPkmDiscordReminderHandler(
                 .trim()
                 .toUpperCase();
 
-        const approvalStep =
-            String(
-                pkm.approval_step ||
-                pkm.next_role ||
-                ""
-            )
-                .trim()
-                .toUpperCase();
-
         console.log(
             "[PUSH DISCORD] PKM:",
             pkmId,
             "STATUS:",
-            status,
+            status || null,
             "APPROVAL_STEP:",
-            approvalStep
+            approvalStep || null,
+            "APPROVAL_STATE:",
+            approvalState
         );
 
         /*
@@ -9841,8 +9843,7 @@ async function pushPkmDiscordReminderHandler(
         let target = "";
 
         if (
-            approvalStep === "MSMC" ||
-            status.includes("MSMC")
+            approvalStep === "MSMC"
         ) {
 
             target = "MSMC";
@@ -9850,8 +9851,7 @@ async function pushPkmDiscordReminderHandler(
         }
 
         else if (
-            approvalStep === "MGR_H1" ||
-            status.includes("MGR_H1")
+            approvalStep === "MGR_H1"
         ) {
 
             target = "MGR";
