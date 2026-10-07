@@ -16031,27 +16031,38 @@ async function initializeDiscordApproval() {
 
         isDiscordAutoLogin = true;
 
+        hideAppBootstrapLoader();
+
         console.log(
-            "[DISCORD AUTO LOGIN] LOGIN BERHASIL",
-            {
-                username:
-                    currentUser.username,
+            "=================================================="
+        );
 
-                nik:
-                    currentUser.nik,
+        console.log(
+            "[DISCORD AUTO LOGIN] LOGIN BERHASIL"
+        );
 
-                name:
-                    currentUser.name,
+        console.log(
+            "[DISCORD AUTO LOGIN] AKUN YANG LOGIN:"
+        );
 
-                role:
-                    currentUser.role,
+        console.table({
+            "Nama": currentUser.name || "-",
+            "Username / NIK": currentUser.username || currentUser.nik || "-",
+            "NIK": currentUser.nik || "-",
+            "Role": currentUser.role || "-",
+            "Jabatan": currentUser.jabatan || "-",
+            "Cabang": currentUser.branch || "-",
+            "PKM ID": discordApprovalPkmId || "-",
+            "Approval Mode": "DISCORD AUTO LOGIN"
+        });
 
-                jabatan:
-                    currentUser.jabatan,
+        console.log(
+            "[DISCORD AUTO LOGIN] Detail user:",
+            currentUser
+        );
 
-                branch:
-                    currentUser.branch
-            }
+        console.log(
+            "=================================================="
         );
 
         /*
