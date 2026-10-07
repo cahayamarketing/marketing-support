@@ -9276,6 +9276,12 @@ async function sendDiscordFromBackend_(
             }
         );
 
+    /*
+    |--------------------------------------------------------------------------
+    | BACA RESPONSE DISCORD
+    |--------------------------------------------------------------------------
+    */
+
     const responseText =
         await discordResponse.text();
 
@@ -10068,10 +10074,42 @@ async function pushPkmDiscordReminderHandler(
             }
         );
 
-        return await sendDiscordFromBackend_(
-            target,
-            messageData
+        const discordResult =
+            await sendDiscordFromBackend_(
+                target,
+                messageData
+            );
+
+        console.log(
+            "[PUSH DISCORD] SEND SUCCESS:",
+            {
+                pkmId,
+                target,
+                messageId:
+                    discordResult?.messageId ||
+                    null
+            }
         );
+
+        return response
+            .status(200)
+            .json({
+                success:
+                    true,
+
+                message:
+                    "Reminder Discord berhasil dikirim.",
+
+                pkmId:
+                    pkmId,
+
+                target:
+                    target,
+
+                messageId:
+                    discordResult?.messageId ||
+                    null
+            });
 
     } catch (error) {
 
