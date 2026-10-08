@@ -10927,38 +10927,55 @@ async function sendManagerH23WhatsappApproval(pkmData) {
     --------------------------------------------------------- */
 
     const message =
-        "🔔 *Approval PKM — Manager H23*\n\n" +
+        "🔔 *APPROVAL PKM — MANAGER H23*\n" +
+        "━━━━━━━━━━━━━━━━━━━━\n\n" +
 
-        "*ID PKM*\n" +
-        pkmId +
+        "📋 *DETAIL PENGAJUAN*\n\n" +
+
+        "🆔 *ID PKM*\n" +
+        (pkmData.id || "-") +
         "\n\n" +
 
-        "*Nama*\n" +
-        pkmName +
+        "📌 *Nama Kegiatan*\n" +
+        (pkmData.name || "-") +
         "\n\n" +
 
-        "*Cabang*\n" +
-        branch +
+        "🏢 *Cabang*\n" +
+        (pkmData.branch || "-") +
         "\n\n" +
 
-        "*Type*\n" +
-        typePkm +
+        "🏷️ *Type PKM*\n" +
+        (pkmData.typePkm || "-") +
         "\n\n" +
 
-        "*Kegiatan*\n" +
-        activityType +
+        "🎯 *Jenis Kegiatan*\n" +
+        (pkmData.activityType || "-") +
         "\n\n" +
 
-        "━━━━━━━━━━━━━━━━━━\n" +
+        "━━━━━━━━━━━━━━━━━━━━\n" +
 
-        "🔐 *Tahap Berikutnya*\n" +
-        "Approval Manager H23\n\n" +
+        "✅ *APPROVAL SEBELUMNYA*\n" +
+        (pkmData.approvedByRole || "APPROVER") +
+        " — " +
+        (pkmData.approvedBy || "-") +
+        "\n\n" +
 
-        "✍️ *Silakan buka link berikut untuk melakukan approval dan tanda tangan:*\n" +
+        "⏳ *STATUS*\n" +
+        "Menunggu persetujuan *Manager H23*\n\n" +
+
+        "━━━━━━━━━━━━━━━━━━━━\n\n" +
+
+        "✍️ *TINDAKAN DIPERLUKAN*\n" +
+        "Silakan klik link berikut untuk membuka pengajuan, memeriksa data, dan memberikan tanda tangan persetujuan:\n\n" +
+
+        "🔗 " +
         approvalUrl +
         "\n\n" +
 
-        "CSM Marketing Support";
+        "━━━━━━━━━━━━━━━━━━━━\n" +
+
+        "💼 *CSM Marketing Support*\n" +
+        "Approval PKM Manager H23";
 
 
     /* ---------------------------------------------------------
@@ -12092,19 +12109,6 @@ function getPkmApprovalState(row) {
     |--------------------------------------------------------------------------
     */
 
-    if (
-        typePkm === "H123"
-    ) {
-
-        if (!accManagerH23) {
-
-            return {
-                currentRole: "MGR_H23",
-                column: "acc_manager_h23",
-                final: false
-            };
-        }
-    }
 
 
     return {
@@ -13182,11 +13186,11 @@ async function approvePkmHandler(
         if (
             nextRole === "MGR_H23"
         ) {
+            try {
 
-            console.log(
-                "[WA H23] START",
-                {
-                    pkmId:
+                await sendManagerH23WhatsappApproval({
+
+                    id:
                         pkmId,
 
                     name:
@@ -13197,68 +13201,24 @@ async function approvePkmHandler(
                     branch:
                         row.branch ||
                         row.cabang ||
-                        "-"
-                }
-            );
+                        "-",
 
-            try {
+                    typePkm:
+                        row.type_pkm ||
+                        row.typePkm ||
+                        "-",
 
-                const waResult =
-                    await sendManagerH23WhatsappApproval({
-                        id:
-                            pkmId,
+                    activityType:
+                        row.activity_type ||
+                        row.activityType ||
+                        "-",
 
-                        name:
-                            row.name ||
-                            row.nama ||
-                            "-",
+                    approvedBy:
+                        previousApprovalName,
 
-                        branch:
-                            row.branch ||
-                            row.cabang ||
-                            "-",
-
-                        typePkm:
-                            row.type_pkm ||
-                            row.typePkm ||
-                            "-",
-
-                        activityType:
-                            row.activity_type ||
-                            row.activityType ||
-                            "-"
-                    });
-
-                console.log(
-                    "[WA H23] SUCCESS",
-                    {
-                        pkmId:
-                            pkmId,
-
-                        result:
-                            waResult
-                    }
-                );
-
-            } catch (waError) {
-
-                console.error(
-                    "[WA H23] FAILED",
-                    {
-                        pkmId:
-                            pkmId,
-
-                        message:
-                            waError?.message ||
-                            String(waError),
-
-                        error:
-                            waError
-                    }
-                );
-
-            }
-        }
+                    approvedByRole:
+                        role
+                });
 
 
         return response
