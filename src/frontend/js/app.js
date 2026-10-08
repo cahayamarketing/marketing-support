@@ -12313,11 +12313,25 @@ async function approvePkmWithSignature() {
         : sheetPkmData.find(
             function (pkm) {
                 return (
-                    String(pkm.id_pkm || pkm.id) ===
-                    String(activeApprovalPkmId)
+                    String(
+                        pkm.id_pkm ||
+                        pkm.id ||
+                        ""
+                    ).trim() ===
+                    String(
+                        activeApprovalPkmId ||
+                        ""
+                    ).trim()
                 );
             }
         );
+
+    console.log("[APPROVAL ITEM CHECK]", {
+        activeApprovalPkmId,
+        found: !!item,
+        item: item || null,
+        sheetPkmDataCount: sheetPkmData.length
+});
 
     if (!item) {
         showToast(
