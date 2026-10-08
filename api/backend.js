@@ -12750,7 +12750,16 @@ async function approvePkmHandler(
 
         const approverName =
             normalizeApproverName(user);
+        
+        if (
+            nameColumn
+        ) {
 
+            updateRecord[
+                nameColumn
+            ] =
+                approverName;
+        }
 
         const updateRecord = {
 
@@ -13535,8 +13544,124 @@ async function getDiscordApprovalHandler(
 
                 user,
 
-                pkm:
-                    mapPkmRecord(pkm),
+                pkm: {
+                    id:
+                        String(
+                            pkm.id_pkm || ""
+                        ).trim(),
+
+                    id_pkm:
+                        String(
+                            pkm.id_pkm || ""
+                        ).trim(),
+
+                    name:
+                        pkm.nama || "",
+
+                    branch:
+                        pkm.cabang || "",
+
+                    branchName:
+                        pkm.cabang || "",
+
+                    type:
+                        pkm.type_pkm
+                            ? String(pkm.type_pkm)
+                                .split(",")
+                                .map(function (item) {
+                                    return item.trim();
+                                })
+                                .filter(Boolean)
+                            : [],
+
+                    jenisPkm:
+                        pkm.jenis_pkm || "",
+
+                    kegiatan:
+                        pkm.jenis_kegiatan || "",
+
+                    startDate:
+                        pkm.tanggal_mulai || "",
+
+                    endDate:
+                        pkm.tanggal_selesai || "",
+
+                    createdAt:
+                        pkm.tanggal_pengajuan || "",
+
+                    location:
+                        pkm.lokasi || "",
+
+                    kabupaten:
+                        pkm.kabupaten || "",
+
+                    kecamatan:
+                        pkm.kecamatan || "",
+
+                    kelurahan:
+                        pkm.kelurahan || "",
+
+                    alasan:
+                        pkm.alasan || "",
+
+                    konsep:
+                        pkm.konsep || "",
+
+                    danaLeasing:
+                        Number(pkm.dana_ls || 0),
+
+                    danaMd:
+                        Number(pkm.dana_md || 0),
+
+                    danaCsm:
+                        Number(pkm.dana_csm || 0),
+
+                    danaLain:
+                        Number(pkm.dana_ll || 0),
+
+                    totalFund:
+                        Number(pkm.dana_ls || 0) +
+                        Number(pkm.dana_md || 0) +
+                        Number(pkm.dana_csm || 0) +
+                        Number(pkm.dana_ll || 0),
+
+                    targetDb:
+                        Number(pkm.target_db || 0),
+
+                    targetDeal:
+                        Number(pkm.target_deal || 0),
+
+                    targetUe:
+                        Number(pkm.target_ue || 0),
+
+                    status:
+                        pkm.status || "",
+
+                    approvalStep:
+                        getApprovalStep(pkm),
+
+                    approvals: {
+                        crm:
+                            pkm.acc_crm || "",
+
+                        kacab:
+                            pkm.acc_kacab || "",
+
+                        msmc:
+                            pkm.acc_msmc || "",
+
+                        managerH1:
+                            pkm.acc_manager_h1 || "",
+
+                        managerH23:
+                            pkm.acc_manager_h23 || ""
+                    },
+
+                    approvalHistory:
+                        Array.isArray(pkm.raw_data?.approvalHistory)
+                            ? pkm.raw_data.approvalHistory
+                            : []
+                },
 
                 approvalRole:
                     tokenRole,
