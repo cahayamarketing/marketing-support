@@ -12774,7 +12774,8 @@ async function approvePkmWithSignature() {
             pdfSaved
         ) {
             showToast(
-                "Approval selesai dan PDF berhasil disimpan."
+                "Approval selesai dan PDF berhasil disimpan.",
+                "success"
             );
         } else if (
             isFinalManagerApproval &&
@@ -12782,7 +12783,15 @@ async function approvePkmWithSignature() {
         ) {
             showToast(
                 "Approval berhasil, tetapi PDF gagal dibuat: " +
-                pdfErrorMessage
+                pdfErrorMessage,
+                "error"
+            );
+        } else if (
+            isFinalManagerApproval
+        ) {
+            showToast(
+                "Approval Manager berhasil. PKM sudah selesai.",
+                "success"
             );
         } else {
             showToast(
@@ -12791,8 +12800,56 @@ async function approvePkmWithSignature() {
                     isCrmSubmission
                         ? "PKM berhasil diajukan dan menunggu ACC KACAB."
                         : "Pengajuan berhasil disetujui."
-                )
+                ),
+                "success"
             );
+        }
+
+        /* ---------------------------------------------------------
+        | MANAGER FINAL → KELUAR DARI BROWSER/TAB
+        | --------------------------------------------------------- */
+
+        if (isFinalManagerApproval) {
+
+            setTimeout(function () {
+
+                try {
+                    window.close();
+                } catch (closeError) {
+                    console.warn(
+                        "Browser menolak window.close():",
+                        closeError
+                    );
+                }
+
+                /*
+                | Beberapa browser hanya mengizinkan
+                | close() untuk tab yang dibuka script.
+                | Jika tidak bisa ditutup, tampilkan
+                | halaman kosong sebagai fallback.
+                */
+                setTimeout(function () {
+
+                    if (!window.closed) {
+
+                        try {
+                            window.location.replace(
+                                "about:blank"
+                            );
+                        } catch (fallbackError) {
+                            console.warn(
+                                "Fallback browser exit gagal:",
+                                fallbackError
+                            );
+                        }
+
+                    }
+
+                }, 500);
+
+            }, 1200);
+
+            return;
         }
     } catch (error) {
         /*

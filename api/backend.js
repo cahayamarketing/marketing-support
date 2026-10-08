@@ -9377,7 +9377,8 @@ function normalizeDiscordApprovalRole_(role) {
 
     if (
         normalized === "MSMC" ||
-        normalized === "MGR_H1"
+        normalized === "MGR_H1" ||
+        normalized === "MGR_H23"
     ) {
         return normalized;
     }
@@ -10853,30 +10854,116 @@ async function sendManagerH23WhatsappApproval(pkmData) {
         );
     }
 
+
+    /* ---------------------------------------------------------
+    | DATA PKM
+    --------------------------------------------------------- */
+
+    const pkmId =
+        String(
+            pkmData.id || ""
+        ).trim();
+
+    const pkmName =
+        String(
+            pkmData.name || "-"
+        ).trim();
+
+    const branch =
+        String(
+            pkmData.branch || "-"
+        ).trim();
+
+    const typePkm =
+        String(
+            pkmData.typePkm || "-"
+        ).trim();
+
+    const activityType =
+        String(
+            pkmData.activityType || "-"
+        ).trim();
+
+
+    /* ---------------------------------------------------------
+    | URL WEBSITE
+    --------------------------------------------------------- */
+
+    const webUrl =
+        String(
+            process.env.PKM_WEB_URL ||
+            "https://marketing-support-system-phi.vercel.app"
+        )
+            .trim()
+            .replace(
+                /\/+$/,
+                ""
+            );
+
+
+    /* ---------------------------------------------------------
+    | TOKEN APPROVAL MANAGER H23
+    --------------------------------------------------------- */
+
+    const approvalToken =
+        createDiscordApprovalToken_(
+            pkmId,
+            "MGR_H23"
+        );
+
+
+    /* ---------------------------------------------------------
+    | LINK APPROVAL
+    --------------------------------------------------------- */
+
+    const approvalUrl =
+        `${webUrl}/index.html` +
+        `?approvalPkm=${encodeURIComponent(pkmId)}` +
+        `&approvalToken=${encodeURIComponent(approvalToken)}`;
+
+
+    /* ---------------------------------------------------------
+    | PESAN WHATSAPP
+    --------------------------------------------------------- */
+
     const message =
-        "🔔 *Approval PKM Manager H23*\n\n" +
+        "🔔 *Approval PKM — Manager H23*\n\n" +
 
-        "ID PKM: " +
-        (pkmData.id || "-") +
-        "\n" +
-
-        "Nama: " +
-        (pkmData.name || "-") +
-        "\n" +
-
-        "Cabang: " +
-        (pkmData.branch || "-") +
-        "\n" +
-
-        "Type: " +
-        (pkmData.typePkm || "-") +
-        "\n" +
-
-        "Kegiatan: " +
-        (pkmData.activityType || "-") +
+        "*ID PKM*\n" +
+        pkmId +
         "\n\n" +
 
-        "Silakan buka CSM Marketing Support untuk melakukan approval.";
+        "*Nama*\n" +
+        pkmName +
+        "\n\n" +
+
+        "*Cabang*\n" +
+        branch +
+        "\n\n" +
+
+        "*Type*\n" +
+        typePkm +
+        "\n\n" +
+
+        "*Kegiatan*\n" +
+        activityType +
+        "\n\n" +
+
+        "━━━━━━━━━━━━━━━━━━\n" +
+
+        "🔐 *Tahap Berikutnya*\n" +
+        "Approval Manager H23\n\n" +
+
+        "✍️ *Silakan buka link berikut untuk melakukan approval dan tanda tangan:*\n" +
+        approvalUrl +
+        "\n\n" +
+
+        "CSM Marketing Support";
+
+
+    /* ---------------------------------------------------------
+    | KIRIM FONNTE
+    --------------------------------------------------------- */
 
     const fonnteResponse =
         await fetch(
@@ -10885,31 +10972,49 @@ async function sendManagerH23WhatsappApproval(pkmData) {
                 method: "POST",
 
                 headers: {
-                    Authorization: fonnteToken
+                    Authorization:
+                        fonnteToken
                 },
 
-                body: new URLSearchParams({
-                    target: target,
-                    message: message,
-                    countryCode: "62"
-                })
+                body:
+                    new URLSearchParams({
+                        target:
+                            target,
+
+                        message:
+                            message,
+
+                        countryCode:
+                            "62"
+                    })
             }
         );
+
 
     const responseText =
         await fonnteResponse.text();
 
+
     let result;
 
     try {
-        result = JSON.parse(responseText);
+
+        result =
+            JSON.parse(
+                responseText
+            );
+
     } catch (error) {
+
         result = {
-            raw: responseText
+            raw:
+                responseText
         };
     }
 
+
     if (!fonnteResponse.ok) {
+
         throw new Error(
             "Fonnte gagal. HTTP " +
             fonnteResponse.status +
@@ -10918,16 +11023,37 @@ async function sendManagerH23WhatsappApproval(pkmData) {
         );
     }
 
+
     if (
         result &&
         result.status === false
     ) {
+
         throw new Error(
             result.reason ||
             result.message ||
             "Fonnte menolak pengiriman WhatsApp."
         );
     }
+
+
+    console.log(
+        "[WA H23] SENT",
+        {
+            pkmId:
+                pkmId,
+
+            target:
+                target,
+
+            approvalUrl:
+                approvalUrl,
+
+            fonnteResult:
+                result
+        }
+    );
+
 
     return result;
 }
@@ -12815,6 +12941,60 @@ async function approvePkmHandler(
                 approverName;
         }
 
+        /* ---------------------------------------------------------
+        | UPDATE APPROVAL HISTORY
+        | --------------------------------------------------------- */
+
+        const existingRawData =
+            row.raw_data &&
+            typeof row.raw_data === "object" &&
+            !Array.isArray(row.raw_data)
+                ? row.raw_data
+                : {};
+
+        const existingApprovalHistory =
+            Array.isArray(
+                existingRawData.approvalHistory
+            )
+                ? existingRawData.approvalHistory
+                : [];
+
+        const approvalHistoryEntry = {
+            role:
+                role,
+
+            action:
+                "MENYETUJUI",
+
+            name:
+                approverName || "-",
+
+            username:
+                String(
+                    user.username ||
+                    userNik ||
+                    ""
+                ).trim(),
+
+            date:
+                now,
+
+            signature:
+                approvalPath || null
+        };
+
+        const updatedApprovalHistory = [
+            ...existingApprovalHistory,
+            approvalHistoryEntry
+        ];
+
+        updateRecord.raw_data = {
+            ...existingRawData,
+
+            approvalHistory:
+                updatedApprovalHistory
+        };
+
 
         const nextState =
             getPkmApprovalState(
@@ -12996,16 +13176,17 @@ async function approvePkmHandler(
         }
 
         /* ---------------------------------------------------------
-        H23 → WHATSAPP MANAGER H23
-        --------------------------------------------------------- */
+        | H23 → WHATSAPP MANAGER H23
+        | --------------------------------------------------------- */
 
         if (
             nextRole === "MGR_H23"
         ) {
-            try {
 
-                await sendManagerH23WhatsappApproval({
-                    id:
+            console.log(
+                "[WA H23] START",
+                {
+                    pkmId:
                         pkmId,
 
                     name:
@@ -13016,29 +13197,64 @@ async function approvePkmHandler(
                     branch:
                         row.branch ||
                         row.cabang ||
-                        "-",
-
-                    typePkm:
-                        row.type_pkm ||
-                        row.typePkm ||
-                        "-",
-
-                    activityType:
-                        row.activity_type ||
-                        row.activityType ||
                         "-"
-                });
+                }
+            );
+
+            try {
+
+                const waResult =
+                    await sendManagerH23WhatsappApproval({
+                        id:
+                            pkmId,
+
+                        name:
+                            row.name ||
+                            row.nama ||
+                            "-",
+
+                        branch:
+                            row.branch ||
+                            row.cabang ||
+                            "-",
+
+                        typePkm:
+                            row.type_pkm ||
+                            row.typePkm ||
+                            "-",
+
+                        activityType:
+                            row.activity_type ||
+                            row.activityType ||
+                            "-"
+                    });
 
                 console.log(
-                    "[BACKEND] WA MANAGER H23 BERHASIL",
-                    pkmId
+                    "[WA H23] SUCCESS",
+                    {
+                        pkmId:
+                            pkmId,
+
+                        result:
+                            waResult
+                    }
                 );
 
             } catch (waError) {
 
                 console.error(
-                    "[BACKEND] Approval berhasil, tetapi WA Manager H23 gagal:",
-                    waError
+                    "[WA H23] FAILED",
+                    {
+                        pkmId:
+                            pkmId,
+
+                        message:
+                            waError?.message ||
+                            String(waError),
+
+                        error:
+                            waError
+                    }
                 );
 
             }
