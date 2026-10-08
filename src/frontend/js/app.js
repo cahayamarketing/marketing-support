@@ -2583,6 +2583,17 @@ async function performPkmDataLoad(
             ? pkmResult.data
             : [];
 
+        console.log(
+            "[PKM ID CHECK]",
+            sheetPkmData.slice(0, 5).map(function (item) {
+                return {
+                    id: item.id,
+                    name: item.name,
+                    branch: item.branch
+                };
+            })
+        );
+
         if (
             Array.isArray(pkmResult.branches) &&
             pkmResult.branches.length
