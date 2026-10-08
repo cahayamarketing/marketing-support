@@ -12586,13 +12586,7 @@ async function approvePkmHandler(
                 userNik,
 
                 approverName:
-                    String(
-                        user.nama_marketing ||
-                        user.nama ||
-                        user.name ||
-                        user.full_name ||
-                        "-"
-                    ).trim() || "-",
+                    getApproverName(user),
 
                 signatureMode,
                 signatureData
@@ -12652,13 +12646,7 @@ async function approvePkmHandler(
 
 
         const approverName =
-            String(
-                user.nama_marketing ||
-                user.nama ||
-                user.name ||
-                user.full_name ||
-                "-"
-            ).trim() || "-";
+            getApproverName(user);
 
 
         const updateRecord = {
@@ -12710,12 +12698,16 @@ async function approvePkmHandler(
         */
 
         const simulatedRow = {
-
             ...row,
 
             [approvalColumn]:
                 approvalPath
         };
+
+        if (nameColumn) {
+            simulatedRow[nameColumn] =
+                approverName;
+        }
 
 
         const nextState =
@@ -12726,7 +12718,20 @@ async function approvePkmHandler(
 
         const nextRole =
             nextState.currentRole;
-
+        
+        const previousApprovalName =
+            nextRole === "MSMC"
+                ? String(
+                    simulatedRow.nama_approval_kacab ||
+                    "-"
+                ).trim()
+                : nextRole === "MGR_H1"
+                    ? String(
+                        simulatedRow.nama_approval_msmc ||
+                        "-"
+                    ).trim()
+                    : "-";
+        
 
         updateRecord.status =
             nextState.final
@@ -12852,15 +12857,7 @@ async function approvePkmHandler(
                             0,
 
                         approvedBy:
-                            typeof user?.nama_marketing === "string"
-                                ? user.nama_marketing
-                                : typeof user?.nama === "string"
-                                    ? user.nama
-                                    : typeof user?.name === "string"
-                                        ? user.name
-                                        : typeof user?.full_name === "string"
-                                            ? user.full_name
-                                            : "-"
+                            previousApprovalName
                     }
                 );
 
