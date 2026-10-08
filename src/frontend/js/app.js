@@ -12412,6 +12412,44 @@ async function approvePkmWithSignature() {
                 ? "approvePkmFromDiscord"
                 : "approvePkm";
 
+        console.log(
+            "========== DISCORD APPROVAL DEBUG =========="
+        );
+
+        console.log(
+            "[DISCORD APPROVAL] discordApprovalPkmId:",
+            discordApprovalPkmId
+        );
+
+        console.log(
+            "[DISCORD APPROVAL] activeApprovalPkmId:",
+            activeApprovalPkmId
+        );
+
+        console.log(
+            "[DISCORD APPROVAL] item:",
+            item
+        );
+
+        console.log(
+            "[DISCORD APPROVAL] item.id:",
+            item?.id
+        );
+
+        console.log(
+            "[DISCORD APPROVAL] item.id type:",
+            typeof item?.id
+        );
+
+        console.log(
+            "[DISCORD APPROVAL] currentUser:",
+            currentUser
+        );
+
+        console.log(
+            "============================================="
+        );
+
 
         const approvalPayload = {
             pkmId:
