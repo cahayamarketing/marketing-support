@@ -9514,6 +9514,142 @@ function createDiscordApprovalToken_(
 }
 
 
+function generateApprovalShortCode_(
+    length = 7
+) {
+
+    const chars =
+        "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+    let code = "";
+
+    while (code.length < length) {
+
+        const index =
+            crypto.randomInt(
+                0,
+                chars.length
+            );
+
+        code += chars[index];
+    }
+
+    return code;
+}
+
+
+async function createApprovalShortLink_(
+    pkmId,
+    role,
+    approvalToken
+) {
+
+    const normalizedPkmId =
+        String(
+            pkmId || ""
+        ).trim();
+
+    const normalizedRole =
+        String(
+            role || ""
+        ).trim().toUpperCase();
+
+    const normalizedToken =
+        String(
+            approvalToken || ""
+        ).trim();
+
+    if (
+        !normalizedPkmId ||
+        !normalizedRole ||
+        !normalizedToken
+    ) {
+
+        throw new Error(
+            "Data short link approval tidak lengkap."
+        );
+    }
+
+    let shortCode = "";
+
+    for (
+        let attempt = 0;
+        attempt < 10;
+        attempt++
+    ) {
+
+        const candidate =
+            generateApprovalShortCode_(
+                7
+            );
+
+        try {
+
+            await supabaseRequest(
+                "/rest/v1/approval_short_links",
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Prefer":
+                            "return=representation"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            short_code:
+                                candidate,
+
+                            pkm_id:
+                                normalizedPkmId,
+
+                            role:
+                                normalizedRole,
+
+                            approval_token:
+                                normalizedToken,
+
+                            expires_at:
+                                new Date(
+                                    Date.now() +
+                                    (
+                                        24 *
+                                        60 *
+                                        60 *
+                                        1000
+                                    )
+                                ).toISOString()
+                        })
+                }
+            );
+
+            shortCode =
+                candidate;
+
+            break;
+
+        } catch (error) {
+
+            if (
+                attempt === 9
+            ) {
+
+                throw error;
+            }
+        }
+    }
+
+    if (!shortCode) {
+
+        throw new Error(
+            "Gagal membuat short link approval."
+        );
+    }
+
+    return shortCode;
+}
+
 function getDiscordApprovalTokenData_(
     approvalToken
 ) {
@@ -10916,10 +11052,15 @@ async function sendManagerH23WhatsappApproval(pkmData) {
     | LINK APPROVAL
     --------------------------------------------------------- */
 
+    const shortCode =
+        await createApprovalShortLink_(
+            pkmId,
+            "MGR_H23",
+            approvalToken
+        );
+
     const approvalUrl =
-        `${webUrl}/index.html` +
-        `?approvalPkm=${encodeURIComponent(pkmId)}` +
-        `&approvalToken=${encodeURIComponent(approvalToken)}`;
+        `${webUrl}/a/${encodeURIComponent(shortCode)}`;
 
     const approvedByRoleLabel =
         String(
@@ -13231,10 +13372,7 @@ async function approvePkmHandler(
                     "[WA H23] SUCCESS",
                     {
                         pkmId:
-                            pkmId,
-
-                        result:
-                            waResult
+                            pkmId
                     }
                 );
 
@@ -13905,6 +14043,130 @@ async function getDiscordApprovalHandler(
     }
 }
 
+
+async function approvalShortLinkHandler(
+    req,
+    res
+) {
+
+    const code =
+        String(
+            req.query?.code ||
+            ""
+        ).trim();
+
+    if (!code) {
+
+        return res
+            .status(400)
+            .send(
+                "Kode approval tidak tersedia."
+            );
+    }
+
+    try {
+
+        const rows =
+            await supabaseRequest(
+                "/rest/v1/approval_short_links" +
+                "?select=pkm_id,role,approval_token,expires_at,used_at" +
+                "&short_code=eq." +
+                encodeURIComponent(code) +
+                "&limit=1"
+            );
+
+        if (
+            !Array.isArray(rows) ||
+            !rows.length
+        ) {
+
+            return res
+                .status(404)
+                .send(
+                    "Link approval tidak ditemukan atau sudah tidak berlaku."
+                );
+        }
+
+        const row =
+            rows[0];
+
+        const expiresAt =
+            new Date(
+                row.expires_at
+            ).getTime();
+
+        if (
+            !Number.isFinite(expiresAt) ||
+            expiresAt < Date.now()
+        ) {
+
+            return res
+                .status(410)
+                .send(
+                    "Link approval sudah kedaluwarsa."
+                );
+        }
+
+        const pkmId =
+            String(
+                row.pkm_id ||
+                ""
+            ).trim();
+
+        const approvalToken =
+            String(
+                row.approval_token ||
+                ""
+            ).trim();
+
+        if (
+            !pkmId ||
+            !approvalToken
+        ) {
+
+            return res
+                .status(500)
+                .send(
+                    "Data approval tidak lengkap."
+                );
+        }
+
+        const webUrl =
+            String(
+                process.env.PKM_WEB_URL ||
+                "https://marketing-support-system-phi.vercel.app"
+            )
+                .trim()
+                .replace(
+                    /\/+$/,
+                    ""
+                );
+
+        const approvalUrl =
+            `${webUrl}/index.html` +
+            `?approvalPkm=${encodeURIComponent(pkmId)}` +
+            `&approvalToken=${encodeURIComponent(approvalToken)}`;
+
+        return res
+            .redirect(
+                302,
+                approvalUrl
+            );
+
+    } catch (error) {
+
+        console.error(
+            "[APPROVAL SHORT LINK] Gagal resolve:",
+            error
+        );
+
+        return res
+            .status(500)
+            .send(
+                "Gagal membuka link approval."
+            );
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -15801,6 +16063,13 @@ module.exports = async function handler(req, res) {
           approvePkmFromDiscordHandler,
           req,
           res
+        );
+
+    case "approvalShortLink":
+        return await runHandler(
+            approvalShortLinkHandler,
+            req,
+            res
         );
 
     case "getCrmKpiData":

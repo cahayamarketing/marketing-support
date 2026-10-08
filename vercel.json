@@ -35,6 +35,10 @@
     {
       "source": "/api/discord",
       "destination": "/api/backend?action=discord"
+    },
+    {
+      "source": "/a/:code",
+      "destination": "/api/backend?action=approvalShortLink&code=:code"
     }
   ]
 }
