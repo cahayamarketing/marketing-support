@@ -13135,9 +13135,8 @@ async function getDiscordApprovalHandler(
         const profileRows =
             await supabaseRequest(
                 "/rest/v1/v_user_profile" +
-                "?approval_role=eq." +
+                "?role_pkm=eq." +
                 encodeURIComponent(tokenRole) +
-                "&can_approve=eq.true" +
                 "&select=*"
             );
 
@@ -13225,44 +13224,6 @@ async function getDiscordApprovalHandler(
                     `Tidak ada user aktif yang memiliki hak approval ${tokenRole}.`
             });
         }
-
-
-        if (
-            eligibleProfiles.length > 1
-        ) {
-
-            console.error(
-                "[DISCORD APPROVAL] MULTIPLE APPROVER",
-                {
-                    role:
-                        tokenRole,
-
-                    users:
-                        eligibleProfiles.map(
-                            item => ({
-                                nik:
-                                    item.nik,
-
-                                nama:
-                                    item.nama_marketing
-                            })
-                        )
-                }
-            );
-
-            return response.status(409).json({
-
-                success:
-                    false,
-
-                message:
-                    `Terdapat lebih dari satu user aktif dengan hak approval ${tokenRole}. Tentukan satu approver terlebih dahulu.`,
-
-                approvalRole:
-                    tokenRole
-            });
-        }
-
 
         const profile =
             eligibleProfiles[0];
