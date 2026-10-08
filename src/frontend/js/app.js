@@ -11713,7 +11713,14 @@ async function openApprovalModal(
         return;
     }
 
-    activeApprovalPkmId = item.id;
+    activeApprovalPkmId = String(item.id || "").trim();
+
+    console.log("[APPROVAL ID CHECK]", {
+        activeApprovalPkmId,
+        itemId: item.id,
+        itemIdType: typeof item.id,
+        item
+    });
 
     const typeText =
         Array.isArray(item.type)
@@ -12306,7 +12313,7 @@ async function approvePkmWithSignature() {
         : sheetPkmData.find(
             function (pkm) {
                 return (
-                    String(pkm.id) ===
+                    String(pkm.id_pkm || pkm.id) ===
                     String(activeApprovalPkmId)
                 );
             }
@@ -12464,7 +12471,11 @@ async function approvePkmWithSignature() {
 
         const approvalPayload = {
             pkmId:
-                item.id,
+                String(
+                    item.id_pkm ||
+                    item.id ||
+                    ""
+                ).trim(),
 
             userNik:
                 String(
