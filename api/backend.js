@@ -9848,10 +9848,10 @@ async function sendPkmApprovalDiscordAuto_(
     */
 
     const approvedBy =
-        String(
-            pkm?.approvedBy ||
-            "-"
-        ).trim();
+        normalizeApproverName({
+            nama_marketing:
+                pkm?.approvedBy
+        }) || "-";
 
 
     /*
@@ -11606,6 +11606,61 @@ function getApprovalNameColumn(role) {
 }
 
 
+function normalizeApproverName(user) {
+
+    if (!user) {
+        return "-";
+    }
+
+    const candidates = [
+        user.nama_marketing,
+        user.nama,
+        user.name,
+        user.full_name,
+        user.displayName
+    ];
+
+    for (const value of candidates) {
+
+        if (
+            typeof value === "string" &&
+            value.trim()
+        ) {
+            return value.trim();
+        }
+
+        if (
+            value &&
+            typeof value === "object"
+        ) {
+
+            const nested = [
+                value.nama_marketing,
+                value.nama,
+                value.name,
+                value.full_name,
+                value.displayName,
+                value.value
+            ];
+
+            for (const item of nested) {
+
+                if (
+                    typeof item === "string" &&
+                    item.trim()
+                ) {
+                    return item.trim();
+                }
+
+            }
+
+        }
+
+    }
+
+    return "-";
+}
+
 function getApprovalRoleFromUser(user) {
 
     const candidates = [
@@ -12586,7 +12641,7 @@ async function approvePkmHandler(
                 userNik,
 
                 approverName:
-                    getApproverName(user),
+                    normalizeApproverName(user),
 
                 signatureMode,
                 signatureData
@@ -12646,7 +12701,7 @@ async function approvePkmHandler(
 
 
         const approverName =
-            getApproverName(user);
+            normalizeApproverName(user);
 
 
         const updateRecord = {
@@ -12721,15 +12776,15 @@ async function approvePkmHandler(
         
         const previousApprovalName =
             nextRole === "MSMC"
-                ? String(
-                    simulatedRow.nama_approval_kacab ||
-                    "-"
-                ).trim()
+                ? normalizeApproverName({
+                    nama_marketing:
+                        simulatedRow.nama_approval_kacab
+                })
                 : nextRole === "MGR_H1"
-                    ? String(
-                        simulatedRow.nama_approval_msmc ||
-                        "-"
-                    ).trim()
+                    ? normalizeApproverName({
+                        nama_marketing:
+                            simulatedRow.nama_approval_msmc
+                    })
                     : "-";
         
 
