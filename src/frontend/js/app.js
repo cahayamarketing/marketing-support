@@ -11713,7 +11713,12 @@ async function openApprovalModal(
         return;
     }
 
-    activeApprovalPkmId = String(item.id || "").trim();
+    activeApprovalPkmId =
+        String(
+            item.id_pkm ||
+            item.id ||
+            ""
+        ).trim();
 
     console.log("[APPROVAL ID CHECK]", {
         activeApprovalPkmId,
@@ -12314,8 +12319,8 @@ async function approvePkmWithSignature() {
             function (pkm) {
                 return (
                     String(
-                        pkm.id_pkm ||
                         pkm.id ||
+                        pkm.id_pkm ||
                         ""
                     ).trim() ===
                     String(

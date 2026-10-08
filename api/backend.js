@@ -7143,6 +7143,9 @@ function mapPkmRecord(row) {
 
     return {
 
+        id_pkm:
+            textValue(row.id_pkm),
+
         id:
             textValue(row.id_pkm),
 
