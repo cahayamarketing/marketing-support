@@ -10921,6 +10921,18 @@ async function sendManagerH23WhatsappApproval(pkmData) {
         `?approvalPkm=${encodeURIComponent(pkmId)}` +
         `&approvalToken=${encodeURIComponent(approvalToken)}`;
 
+    const approvedByRoleLabel =
+        String(
+            pkmData.approvedByRole || ""
+        )
+            .trim()
+            .toUpperCase() === "PIC_H23"
+            ? "PIC H23"
+            : String(
+                pkmData.approvedByRole || "APPROVER"
+            )
+                .replace(/_/g, " ")
+                .trim();
 
     /* ---------------------------------------------------------
     | PESAN WHATSAPP
@@ -10955,7 +10967,7 @@ async function sendManagerH23WhatsappApproval(pkmData) {
         "━━━━━━━━━━━━━━━━━━━━\n" +
 
         "✅ *APPROVAL SEBELUMNYA*\n" +
-        (pkmData.approvedByRole || "APPROVER") +
+        approvedByRoleLabel +
         " — " +
         (pkmData.approvedBy || "-") +
         "\n\n" +
@@ -12110,7 +12122,6 @@ function getPkmApprovalState(row) {
     */
 
 
-
     return {
         currentRole: "SELESAI",
         column: null,
@@ -13179,10 +13190,6 @@ async function approvePkmHandler(
             }
         }
 
-        /* ---------------------------------------------------------
-        | H23 → WHATSAPP MANAGER H23
-        | --------------------------------------------------------- */
-
         if (
             nextRole === "MGR_H23"
         ) {
@@ -13219,6 +13226,37 @@ async function approvePkmHandler(
                     approvedByRole:
                         role
                 });
+
+                console.log(
+                    "[WA H23] SUCCESS",
+                    {
+                        pkmId:
+                            pkmId,
+
+                        result:
+                            waResult
+                    }
+                );
+
+            } catch (waError) {
+
+                console.error(
+                    "[WA H23] FAILED",
+                    {
+                        pkmId:
+                            pkmId,
+
+                        message:
+                            waError?.message ||
+                            String(waError),
+
+                        error:
+                            waError
+                    }
+                );
+
+            }
+        }
 
 
         return response
