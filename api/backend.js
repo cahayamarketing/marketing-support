@@ -9851,11 +9851,9 @@ async function sendPkmApprovalDiscordAuto_(
     */
 
     const approvedBy =
-        normalizeApproverName({
-            nama_marketing:
-                pkm?.approvedBy
-        }) || "-";
-
+        normalizeApproverName(
+            pkm?.approvedBy
+        ) || "-";
 
     /*
     |----------------------------------------------------------------------
@@ -11609,59 +11607,106 @@ function getApprovalNameColumn(role) {
 }
 
 
-function normalizeApproverName(user) {
+function normalizeApproverName(value) {
 
-    if (!user) {
-        return "-";
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
     }
 
-    const candidates = [
-        user.nama_marketing,
-        user.nama,
-        user.name,
-        user.full_name,
-        user.displayName
-    ];
 
-    for (const value of candidates) {
+    if (
+        typeof value === "string"
+    ) {
+
+        const text =
+            value.trim();
 
         if (
-            typeof value === "string" &&
-            value.trim()
+            !text ||
+            text.toLowerCase() ===
+                "[object object]"
         ) {
-            return value.trim();
+            return "";
         }
 
-        if (
-            value &&
-            typeof value === "object"
+        return text;
+    }
+
+
+    if (
+        typeof value === "number"
+    ) {
+        return String(value).trim();
+    }
+
+
+    if (
+        Array.isArray(value)
+    ) {
+
+        for (
+            const item of value
         ) {
 
-            const nested = [
-                value.nama_marketing,
-                value.nama,
-                value.name,
-                value.full_name,
-                value.displayName,
-                value.value
-            ];
+            const name =
+                normalizeApproverName(
+                    item
+                );
 
-            for (const item of nested) {
-
-                if (
-                    typeof item === "string" &&
-                    item.trim()
-                ) {
-                    return item.trim();
-                }
-
+            if (name) {
+                return name;
             }
-
         }
 
+        return "";
     }
 
-    return "-";
+
+    if (
+        typeof value === "object"
+    ) {
+
+        const candidates = [
+
+            value.nama_marketing,
+
+            value.nama,
+
+            value.name,
+
+            value.full_name,
+
+            value.displayName,
+
+            value.value,
+
+            value.text,
+
+            value.label
+
+        ];
+
+
+        for (
+            const candidate of candidates
+        ) {
+
+            const name =
+                normalizeApproverName(
+                    candidate
+                );
+
+            if (name) {
+                return name;
+            }
+        }
+    }
+
+
+    return "";
 }
 
 function getApprovalRoleFromUser(user) {
@@ -12779,15 +12824,17 @@ async function approvePkmHandler(
         
         const previousApprovalName =
             nextRole === "MSMC"
-                ? normalizeApproverName({
-                    nama_marketing:
+                ? (
+                    normalizeApproverName(
                         simulatedRow.nama_approval_kacab
-                })
+                    ) || "-"
+                )
                 : nextRole === "MGR_H1"
-                    ? normalizeApproverName({
-                        nama_marketing:
+                    ? (
+                        normalizeApproverName(
                             simulatedRow.nama_approval_msmc
-                    })
+                        ) || "-"
+                    )
                     : "-";
         
 
@@ -13488,7 +13535,8 @@ async function getDiscordApprovalHandler(
 
                 user,
 
-                pkm,
+                pkm:
+                    mapPkmRecord(pkm),
 
                 approvalRole:
                     tokenRole,
