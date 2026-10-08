@@ -11639,7 +11639,10 @@ function normalizeApproverName(value) {
     if (
         typeof value === "number"
     ) {
-        return String(value).trim();
+
+        return String(
+            value
+        ).trim();
     }
 
 
@@ -11656,7 +11659,9 @@ function normalizeApproverName(value) {
                     item
                 );
 
-            if (name) {
+            if (
+                name
+            ) {
                 return name;
             }
         }
@@ -11699,7 +11704,9 @@ function normalizeApproverName(value) {
                     candidate
                 );
 
-            if (name) {
+            if (
+                name
+            ) {
                 return name;
             }
         }
@@ -11708,7 +11715,6 @@ function normalizeApproverName(value) {
 
     return "";
 }
-
 function getApprovalRoleFromUser(user) {
 
     const candidates = [
@@ -12750,25 +12756,23 @@ async function approvePkmHandler(
 
         const approverName =
             normalizeApproverName(user);
-        
-        if (
-            nameColumn
-        ) {
 
-            updateRecord[
-                nameColumn
-            ] =
-                approverName;
-        }
 
-        const updateRecord = {
+        /*
+        |-----------------------------------------------------------------------
+        | SIAPKAN DATA UPDATE DATABASE
+        |-----------------------------------------------------------------------
+        */
 
-            [approvalColumn]:
-                approvalPath,
+        let updateRecord = {};
 
-            updated_at:
-                now
-        };
+        updateRecord[
+            approvalColumn
+        ] =
+            approvalPath;
+
+        updateRecord.updated_at =
+            now;
 
 
         if (
@@ -12790,16 +12794,6 @@ async function approvePkmHandler(
                 nameColumn
             ] =
                 approverName;
-}
-
-        if (
-            dateColumn
-        ) {
-
-            updateRecord[
-                dateColumn
-            ] =
-                now;
         }
 
 
