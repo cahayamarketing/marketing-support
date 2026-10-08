@@ -13632,7 +13632,7 @@ async function getDiscordApprovalHandler(
                         pkm.status || "",
 
                     approvalStep:
-                        getApprovalStep(pkm),
+                        approvalState.currentRole,
 
                     approvals: {
                         crm:
