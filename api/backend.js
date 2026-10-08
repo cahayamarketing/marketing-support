@@ -12240,6 +12240,16 @@ async function approvePkmHandler(
                 ""
             ).trim();
 
+        console.log(
+            "[APPROVE PKM DEBUG]",
+            {
+                pkmId: pkmId,
+                payloadPkmId: payload.pkmId,
+                bodyUserNik: body.userNik,
+                payloadUserNik: payload.userNik
+            }
+        );
+
 
         if (
             !pkmId
@@ -12336,6 +12346,18 @@ async function approvePkmHandler(
 
                 "&limit=1"
             );
+
+        console.log(
+            "[APPROVE PKM DEBUG] HASIL CARI PKM",
+            {
+                pkmId: pkmId,
+                totalRows:
+                    Array.isArray(rows)
+                        ? rows.length
+                        : -1,
+                rows: rows
+            }
+        );
 
 
         const row =
