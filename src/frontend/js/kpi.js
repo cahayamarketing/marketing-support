@@ -986,10 +986,17 @@ function renderCrmKpiTable() {
                             )}
                         </td>
 
-                        <td class="font-black text-red-600">
-                            ${formatKpiNumber(
-                                score
-                            )}
+                        <td
+                            data-kpi-score="${metric.code}"
+                            class="font-black ${
+                                score === 0
+                                    ? "rounded-lg bg-red-100 text-red-700"
+                                    : score >= metric.weight
+                                        ? "rounded-lg bg-emerald-100 text-emerald-700"
+                                        : "text-slate-900"
+                            }"
+                        >
+                            ${formatKpiNumber(score)}
                         </td>
                     </tr>
                 `;
@@ -3792,20 +3799,90 @@ function markCrmKpiDirty() {
     }
 }
 
-document.addEventListener(
-    "input",
-    function (event) {
-        if (
-            !event.target.closest(
-                "#crmKpiPage"
-            )
-        ) {
-            return;
+
+document.addEventListener("input", function (event) {
+    const input = event.target.closest(
+        '#crmKpiPage [data-kpi-actual="crm"]'
+    );
+
+    if (!input) {
+        if (event.target.closest("#crmKpiPage")) {
+            markCrmKpiDirty();
+        }
+        return;
+    }
+
+    const code = input.dataset.kpiCode;
+    const row = crmKpiRows.find(item => item.code === code);
+    const metric = CRM_KPI_METRICS.find(item => item.code === code);
+
+    if (row && metric) {
+        if (input.dataset.kpiIndex !== undefined) {
+            const index = Number(input.dataset.kpiIndex);
+
+            if (!Array.isArray(row.actualCrm)) {
+                row.actualCrm = ["", "", "", "", ""];
+            }
+
+            row.actualCrm[index] = input.value;
+
+            const values = row.actualCrm.slice(0, 4);
+            row.actualCrm[4] = calculateKpbDisplayAverage(values);
+
+            const root = getCrmKpiInputRoot();
+            const averageInput = root?.querySelector(
+                '[data-kpi-kpb-average="crm"]'
+            );
+
+            if (averageInput) {
+                averageInput.value = row.actualCrm[4];
+            }
+        } else {
+            row.actualCrm = input.value;
         }
 
-        markCrmKpiDirty();
+        const score = calculateCrmKpiScore(metric, row);
+        const scoreCell = document.querySelector(
+            `#crmKpiPage [data-kpi-score="${code}"]`
+        );
+
+        if (scoreCell) {
+            scoreCell.textContent = formatKpiNumber(score);
+
+            scoreCell.classList.remove(
+                "bg-red-100",
+                "text-red-700",
+                "bg-emerald-100",
+                "text-emerald-700",
+                "text-slate-900"
+            );
+
+            if (score === 0) {
+                scoreCell.classList.add("bg-red-100", "text-red-700");
+            } else if (score >= metric.weight) {
+                scoreCell.classList.add(
+                    "bg-emerald-100",
+                    "text-emerald-700"
+                );
+            } else {
+                scoreCell.classList.add("text-slate-900");
+            }
+        }
+
+        const total = calculateTotalCrmKpi();
+        const percentage = calculateCrmKpiPercentage(total);
+        const totalText = `${formatKpiNumber(percentage)}%`;
+
+        const totalTable = document.getElementById("crmKpiTableTotal");
+        const totalCard = document.getElementById("crmKpiTotal");
+
+        if (totalTable) totalTable.textContent = totalText;
+        if (totalCard) totalCard.textContent = totalText;
     }
-);
+
+    markCrmKpiDirty();
+});
+
 
 document.addEventListener(
     "change",
