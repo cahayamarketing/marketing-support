@@ -889,11 +889,21 @@ function renderCrmKpiTable() {
                         status: ""
                     };
 
-                const score =
-                    calculateCrmKpiScore(
-                        metric,
-                        row
-                    );
+                const score = calculateCrmKpiScore(metric, row);
+
+                const selectedActual = row.actualCrm;
+
+                const achievement = getCrmKpiAchievementPercentage(
+                    metric,
+                    row
+                );
+
+                const achievementInputClass =
+                    achievement === null
+                        ? "border-slate-200 bg-slate-50"
+                        : achievement >= 100
+                            ? "border-emerald-300 bg-emerald-50"
+                            : "border-red-300 bg-red-50";
 
                 const hoColumns =
                     showHoColumns
@@ -952,12 +962,20 @@ function renderCrmKpiTable() {
                         </td>
 
                         <td>
-                            ${renderCrmKpiActual(
-                                metric,
-                                row.actualCrm,
-                                "crm",
-                                crmKpiEditing
-                            )}
+                            <div class="${
+                                achievement === null
+                                    ? ""
+                                    : achievement >= 100
+                                        ? "rounded-lg bg-emerald-50"
+                                        : "rounded-lg bg-red-50"
+                            }">
+                                ${renderCrmKpiActual(
+                                    metric,
+                                    row.actualCrm,
+                                    "crm",
+                                    crmKpiEditing
+                                )}
+                            </div>
                         </td>
 
                         ${hoColumns}
@@ -2504,6 +2522,16 @@ function collectCrmKpiTableValues(owner) {
                     input.value;
             }
         });
+}
+
+
+
+function refreshCrmKpiInputPreview() {
+    collectCrmKpiTableValues("crm");
+
+    crmKpiDirty = true;
+
+    renderCrmKpiTable();
 }
 
 
