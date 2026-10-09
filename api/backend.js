@@ -3329,9 +3329,11 @@ const gasHandler = (() => {
                                                 ) || 0,
 
                                             harga_total:
-                                                Number(
-                                                    item.totalPrice
-                                                ) || 0,
+                                                (
+                                                    Number(item.totalPrice) || 0
+                                                ) * (
+                                                    Number(item.quantity) || 0
+                                                ),
 
                                             harga_realisasi:
                                                 0,
@@ -16169,6 +16171,29 @@ module.exports = async function handler(req, res) {
           req,
           res
         );
+
+      case "getSystemHealth": {
+        const startedAt = Date.now();
+
+        const stats = await supabaseRequest(
+          "/rest/v1/rpc/get_system_health_stats",
+          {
+            method: "POST",
+            body: JSON.stringify({})
+          }
+        );
+
+        return res.status(200).json({
+          success: true,
+          healthy: true,
+          supabase: true,
+          databaseName: stats.database_name,
+          databaseSizeBytes: Number(stats.database_size_bytes || 0),
+          tables: Array.isArray(stats.tables) ? stats.tables : [],
+          checkedAt: stats.checked_at || new Date().toISOString(),
+          executionMs: Date.now() - startedAt
+        });
+      }
 
       case "getPkmData":
         return await runHandler(

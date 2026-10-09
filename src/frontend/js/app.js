@@ -5784,253 +5784,193 @@ function showPage(pageId) {
 }
 
 
+
 async function loadSystemHealth() {
+    const refreshButton = document.getElementById("refreshSystemHealth");
+    const overall = document.getElementById("systemHealthOverall");
+    const api = document.getElementById("systemHealthApi");
+    const dbSize = document.getElementById("systemHealthAppsScript");
+    const dbName = document.getElementById("systemHealthSpreadsheet");
+    const checkedAt = document.getElementById("systemHealthCheckedAt");
+    const badge = document.getElementById("systemHealthStatusBadge");
+    const details = document.getElementById("systemHealthDetails");
+    const vercelStatus = document.getElementById("systemHealthSheets");
 
-    const refreshButton =
-        document.getElementById(
-            "refreshSystemHealth"
-        );
+    if (!isMasterAccount()) return;
 
-    const overall =
-        document.getElementById(
-            "systemHealthOverall"
-        );
+    const formatBytes = function (bytes) {
+        const value = Number(bytes) || 0;
+        if (value < 1024) return value + " B";
 
-    const api =
-        document.getElementById(
-            "systemHealthApi"
-        );
+        const units = ["KB", "MB", "GB", "TB"];
+        let size = value / 1024;
+        let unit = 0;
 
-    const appsScript =
-        document.getElementById(
-            "systemHealthAppsScript"
-        );
+        while (size >= 1024 && unit < units.length - 1) {
+            size /= 1024;
+            unit++;
+        }
 
-    const sheets =
-        document.getElementById(
-            "systemHealthSheets"
-        );
-
-    const spreadsheet =
-        document.getElementById(
-            "systemHealthSpreadsheet"
-        );
-
-    const checkedAt =
-        document.getElementById(
-            "systemHealthCheckedAt"
-        );
-
-    const badge =
-        document.getElementById(
-            "systemHealthStatusBadge"
-        );
-
-    const details =
-        document.getElementById(
-            "systemHealthDetails"
-        );
-
-    if (!isMasterAccount()) {
-        return;
-    }
+        return size.toFixed(2) + " " + units[unit];
+    };
 
     if (refreshButton) {
         refreshButton.disabled = true;
-        refreshButton.textContent =
-            "Checking...";
+        refreshButton.textContent = "Checking...";
     }
 
-    if (overall) {
-        overall.textContent =
-            "Checking...";
-    }
-
+    if (overall) overall.textContent = "Checking...";
     if (details) {
-        details.innerHTML =
-            `<div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">
-                Menjalankan health check...
-            </div>`;
+        details.textContent = "Memeriksa koneksi Vercel dan Supabase...";
     }
 
-    const startedAt =
-        performance.now();
+    const startedAt = performance.now();
 
     try {
+        const result = await requestBackend("getSystemHealth", {});
+        const apiDuration = performance.now() - startedAt;
 
-        const result =
-            await requestBackend(
-                "getSystemHealth",
-                {}
-            );
-
-        const apiDuration =
-            performance.now() -
-            startedAt;
-
-        const backendDuration =
-            Number(
-                result.executionMs || 0
-            );
-
-        if (overall) {
-            overall.textContent =
-                result.healthy
-                    ? "HEALTHY"
-                    : "WARNING";
+        if (!result || result.success !== true || result.supabase !== true) {
+            throw new Error("Respons health check Supabase tidak valid.");
         }
 
-        if (api) {
-            api.textContent =
-                `${(apiDuration / 1000).toFixed(2)}s`;
-        }
+        if (overall) overall.textContent = "HEALTHY";
+        if (api) api.textContent = (apiDuration / 1000).toFixed(2) + "s";
+        if (dbSize) dbSize.textContent = formatBytes(result.databaseSizeBytes);
+        if (dbName) dbName.textContent = result.databaseName || "-";
 
-        if (appsScript) {
-            appsScript.textContent =
-                `${(backendDuration / 1000).toFixed(2)}s`;
-        }
-
-        if (sheets) {
-            sheets.textContent =
-                result.googleSheets
-                    ? "CONNECTED"
-                    : "ERROR";
-        }
-
-        if (spreadsheet) {
-            spreadsheet.textContent =
-                result.spreadsheetName ||
-                "-";
-        }
+        // Angka resmi penggunaan Function tidak dikarang.
+        if (vercelStatus) vercelStatus.textContent = "API OK";
 
         if (checkedAt) {
-            checkedAt.textContent =
-                result.checkedAt ||
-                "-";
+            checkedAt.textContent = new Date(
+                result.checkedAt || Date.now()
+            ).toLocaleString("id-ID");
         }
 
         if (badge) {
-            badge.textContent =
-                result.healthy
-                    ? "Healthy"
-                    : "Warning";
-
+            badge.textContent = "Healthy";
             badge.className =
-                result.healthy
-                    ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-600"
-                    : "rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-600";
+                "rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-600";
         }
+
+        const tables = Array.isArray(result.tables) ? result.tables : [];
+        const totalBytes = Number(result.databaseSizeBytes) || 0;
+
+        const rows = tables.map(function (table) {
+            const bytes = Number(table.total_bytes) || 0;
+            const percent = totalBytes > 0
+                ? (bytes / totalBytes * 100)
+                : 0;
+
+            return `
+                <tr class="border-b border-slate-100">
+                    <td class="px-3 py-3 font-bold text-slate-700">
+                        ${String(table.table_name || "-")}
+                    </td>
+                    <td class="px-3 py-3 text-right">
+                        ${formatBytes(bytes)}
+                    </td>
+                    <td class="px-3 py-3 text-right">
+                        ${percent.toFixed(2)}%
+                    </td>
+                    <td class="px-3 py-3 text-right">
+                        ${Number(table.estimated_rows || 0).toLocaleString("id-ID")}
+                    </td>
+                </tr>
+            `;
+        }).join("");
 
         if (details) {
-
             details.innerHTML = `
-                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <span class="text-sm font-bold text-slate-700">
-                        Vercel / API
-                    </span>
-
-                    <span class="text-sm font-black ${
-                        apiDuration < 3000
-                            ? "text-emerald-600"
-                            : "text-amber-600"
-                    }">
-                        ${(apiDuration / 1000).toFixed(2)}s
-                    </span>
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div>
+                        <p class="text-xs font-bold uppercase text-slate-400">
+                            Supabase Database
+                        </p>
+                        <p class="mt-1 text-xl font-black text-slate-900">
+                            ${formatBytes(totalBytes)}
+                        </p>
+                        <p class="text-xs text-slate-500">
+                            ${String(result.databaseName || "-")}
+                        </p>
+                    </div>
+                    <a
+                        href="https://vercel.com/dashboard"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white"
+                    >
+                        Lihat Usage Vercel
+                    </a>
                 </div>
 
-                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <span class="text-sm font-bold text-slate-700">
-                        Apps Script
-                    </span>
-
-                    <span class="text-sm font-black text-slate-700">
-                        ${(backendDuration / 1000).toFixed(2)}s
-                    </span>
+                <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                            <tr>
+                                <th class="px-3 py-3 text-left">Tabel</th>
+                                <th class="px-3 py-3 text-right">Ukuran</th>
+                                <th class="px-3 py-3 text-right">% database</th>
+                                <th class="px-3 py-3 text-right">Estimasi baris</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows || `
+                                <tr>
+                                    <td colspan="4" class="px-3 py-6 text-center text-slate-500">
+                                        Tidak ada tabel public yang ditemukan.
+                                    </td>
+                                </tr>
+                            `}
+                        </tbody>
+                    </table>
                 </div>
 
-                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <span class="text-sm font-bold text-slate-700">
-                        Google Sheets
-                    </span>
-
-                    <span class="text-sm font-black ${
-                        result.googleSheets
-                            ? "text-emerald-600"
-                            : "text-red-600"
-                    }">
-                        ${
-                            result.googleSheets
-                                ? "CONNECTED"
-                                : "ERROR"
-                        }
-                    </span>
-                </div>
-
-                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <span class="text-sm font-bold text-slate-700">
-                        Spreadsheet
-                    </span>
-
-                    <span class="max-w-[60%] truncate text-sm font-black text-slate-700">
-                        ${result.spreadsheetName || "-"}
-                    </span>
-                </div>
+                <p class="mt-3 text-xs text-slate-500">
+                    % database menunjukkan porsi ukuran tabel terhadap ukuran seluruh database,
+                    bukan persentase kuota paket Supabase.
+                </p>
             `;
         }
-
     } catch (error) {
-
-        if (overall) {
-            overall.textContent =
-                "ERROR";
-        }
-
-        if (api) {
-            api.textContent =
-                "ERROR";
-        }
-
-        if (appsScript) {
-            appsScript.textContent =
-                "-";
-        }
-
-        if (sheets) {
-            sheets.textContent =
-                "ERROR";
-        }
+        if (overall) overall.textContent = "ERROR";
+        if (api) api.textContent = "ERROR";
+        if (dbSize) dbSize.textContent = "-";
+        if (vercelStatus) vercelStatus.textContent = "ERROR";
 
         if (badge) {
-            badge.textContent =
-                "Error";
-
+            badge.textContent = "Error";
             badge.className =
                 "rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600";
         }
 
         if (details) {
-            details.innerHTML = `
-                <div class="rounded-2xl border border-red-100 bg-red-50 p-4">
-                    <p class="text-sm font-black text-red-700">
-                        Health check gagal
-                    </p>
+            const errorBox = document.createElement("div");
+            errorBox.className =
+                "rounded-2xl border border-red-100 bg-red-50 p-4";
 
-                    <p class="mt-1 text-xs text-red-500">
-                        ${error.message || "Terjadi kesalahan."}
-                    </p>
-                </div>
-            `;
+            const title = document.createElement("p");
+            title.className = "text-sm font-black text-red-700";
+            title.textContent = "Health check gagal";
+
+            const message = document.createElement("p");
+            message.className = "mt-1 text-xs text-red-500";
+            message.textContent = error.message || "Terjadi kesalahan.";
+
+            errorBox.append(title, message);
+            details.replaceChildren(errorBox);
         }
 
+        console.error("[SYSTEM HEALTH]", error);
     } finally {
-
         if (refreshButton) {
             refreshButton.disabled = false;
-            refreshButton.textContent =
-                "Refresh";
+            refreshButton.textContent = "Refresh";
         }
     }
 }
+
 
 
 /*
@@ -7246,7 +7186,8 @@ function renderBudgetDetails() {
 
                         <td class="text-right font-black">
                             ${rupiah(
-                                item.totalPrice
+                                (Number(item.totalPrice) || 0) *
+                                (Number(item.quantity) || 0)
                             )}
                         </td>
 
