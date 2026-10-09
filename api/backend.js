@@ -15895,6 +15895,49 @@ async function crmKpiVerify_(
 }
 
 
+async function crmKpiInputAvailability_(user) {
+    const now = crmKpiJakartaNow_();
+
+    // Minggu KPI dihitung Sabtu–Jumat.
+    const firstDay = new Date(
+        Date.UTC(now.year, now.month - 1, 1)
+    );
+
+    const daysSinceSaturday =
+        (firstDay.getUTCDay() + 1) % 7;
+
+    const firstSaturday = new Date(firstDay);
+    firstSaturday.setUTCDate(
+        firstDay.getUTCDate() - daysSinceSaturday
+    );
+
+    const today = new Date(
+        Date.UTC(now.year, now.month - 1, now.day)
+    );
+
+    const currentWeek =
+        Math.floor(
+            (today.getTime() - firstSaturday.getTime()) /
+            (7 * 86400000)
+        ) + 1;
+
+    const lastDay = new Date(
+        Date.UTC(now.year, now.month, 0)
+    ).getUTCDate();
+
+    const closingAvailable =
+        now.day === lastDay || now.day === 1;
+
+    return {
+        currentYear: now.year,
+        currentMonth: now.month,
+        currentWeek,
+        closingAvailable
+    };
+}
+
+
+
 /* ==========================================================================
 | SINGLE CRM KPI HANDLER
 | ========================================================================== */
@@ -15939,6 +15982,11 @@ async function crmKpiHandler(
         let result;
 
         switch (action) {
+
+            case "getCrmKpiInputAvailability":
+                result = await crmKpiInputAvailability_
+                (user);
+                break;    
 
             case "getCrmKpiData":
 
@@ -16189,6 +16237,13 @@ module.exports = async function handler(req, res) {
     case "approvalShortLink":
         return await runHandler(
             approvalShortLinkHandler,
+            req,
+            res
+        );
+
+    case "getCrmKpiInputAvailability":
+        return await runHandler(
+            crmKpiHandler,
             req,
             res
         );

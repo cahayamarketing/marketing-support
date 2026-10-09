@@ -318,20 +318,23 @@ function initializeCrmKpiYear() {
     }
 }
 
+
+
 function initializeCrmKpiPeriod() {
-    const today =
-        new Date();
+    const today = new Date();
 
     crmKpiMonth.value =
-        String(
-            today.getMonth() + 1
-        );
+        String(today.getMonth() + 1);
 
-    crmKpiPeriodType.value =
-        "CLOSING";
+    crmKpiPeriodType.value = "WEEKLY";
 
     updateCrmKpiPeriodTypeUI();
+
+    // Isi pilihan Week saat halaman pertama kali dibuka.
+    populateCrmKpiWeekOptions();
 }
+
+
 
 const CRM_KPI_BRANCH_OPTIONS = [
     { code: "SLO", name: "SOLO YOS" },
@@ -427,27 +430,69 @@ async function loadCrmKpiSalesmanNames() {
     }
 }
 
+
 function renderCrmKpiSalesmanName() {
     if (!crmKpiCrmNameValue) return;
 
     const selectedBranch = String(
-        crmKpiBranch.value || ""
+        crmKpiBranch?.value || ""
     ).trim().toUpperCase();
 
-    const branchSalesmen = crmKpiSalesmanData.filter(
-        function (item) {
-            return String(
-                item.cab || item.cabang || ""
-            ).trim().toUpperCase() === selectedBranch;
-        }
-    );
+    const currentRole = String(
+        currentUser?.role ||
+        currentUser?.jabatan ||
+        ""
+    ).trim().toUpperCase();
+
+    const currentBranch = String(
+        currentUser?.originalBranch ||
+        currentUser?.branch ||
+        ""
+    ).trim().toUpperCase();
+
+    // Jika pengguna login adalah CRM cabang terpilih,
+    // tampilkan nama akun yang sedang login.
+    const currentName = String(
+        currentUser?.name ||
+        currentUser?.namaMarketing ||
+        currentUser?.nama_marketing ||
+        currentUser?.fullName ||
+        ""
+    ).trim();
+
+    if (
+        currentRole === "CRM" &&
+        currentBranch === selectedBranch &&
+        currentName
+    ) {
+        crmKpiCrmNameValue.textContent = currentName;
+        return;
+    }
+
+    const branchSalesmen = (
+        Array.isArray(crmKpiSalesmanData)
+            ? crmKpiSalesmanData
+            : []
+    ).filter(function (item) {
+        const branch = String(
+            item.cab ||
+            item.branch ||
+            item.cabang ||
+            ""
+        ).trim().toUpperCase();
+
+        return branch === selectedBranch;
+    });
 
     const crmNames = [
         ...new Set(
             branchSalesmen
                 .filter(function (item) {
                     const role = String(
-                        item.jab || item.jabatan || ""
+                        item.jab ||
+                        item.jabatan ||
+                        item.role ||
+                        ""
                     ).trim().toUpperCase();
 
                     return role === "CRM";
@@ -456,6 +501,7 @@ function renderCrmKpiSalesmanName() {
                     return String(
                         item.namaMarketing ||
                         item.nama_marketing ||
+                        item.name ||
                         item.nama ||
                         ""
                     ).trim();
@@ -464,10 +510,12 @@ function renderCrmKpiSalesmanName() {
         )
     ];
 
-    crmKpiCrmNameValue.textContent = crmNames.length
-        ? crmNames.join(", ")
-        : "Belum ada data CRM untuk cabang ini.";
+    crmKpiCrmNameValue.textContent =
+        crmNames.length
+            ? crmNames.join(", ")
+            : "Belum ada data CRM untuk cabang ini.";
 }
+
 
 
 
