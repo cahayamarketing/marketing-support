@@ -6837,29 +6837,28 @@ function refreshLeasingMasterOptions() {
         });
 }
 
+
 function collectLeasing() {
     return [
         ...document.querySelectorAll(".leasing-compact-row")
     ]
         .map(function (row) {
-            const leasingName =
-                row.querySelector(".leasing-name").value;
-
-            const leasingFund =
-                row.querySelector(".leasing-fund");
+            const select = row.querySelector(".leasing-name");
+            const fundInput = row.querySelector(".leasing-fund");
+            const name = String(select?.value || "").trim();
 
             return {
-                name: leasingName,
-
-                fund: leasingName
-                    ? Number(leasingFund.value) || 0
+                name: name,
+                fund: name && !fundInput.disabled
+                    ? Math.max(0, Number(fundInput.value) || 0)
                     : 0
             };
         })
-        .filter(function (leasing) {
-            return leasing.name !== "";
+        .filter(function (item) {
+            return item.name !== "";
         });
 }
+
 
 /*
 |--------------------------------------------------------------------------
