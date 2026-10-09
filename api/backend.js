@@ -14962,7 +14962,7 @@ async function crmKpiGetData_(user, payload) {
         `&cabang=eq.${encodeURIComponent(branch)}` +
         `&tahun=eq.${year}` +
         `&bulan=eq.${month}` +
-        "&order=id_detail.asc";
+        "&order=input_ke.desc,id_detail.asc";
 
     const rows =
         await supabaseRequest(
@@ -14971,6 +14971,33 @@ async function crmKpiGetData_(user, payload) {
                 method: "GET"
             }
         );
+
+    
+    const validInputRows =
+        Array.isArray(rows)
+            ? rows.filter(row =>
+                row.input_ke !== null &&
+                row.input_ke !== undefined &&
+                Number.isFinite(Number(row.input_ke))
+            )
+            : [];
+
+    const latestInputKe =
+        validInputRows.length
+            ? Math.max(
+                ...validInputRows.map(row =>
+                    Number(row.input_ke)
+                )
+            )
+            : null;
+
+    const latestRows =
+        latestInputKe !== null
+            ? rows.filter(row =>
+                Number(row.input_ke) === latestInputKe
+            )
+            : (Array.isArray(rows) ? rows : []);
+
 
     const data =
         Object.keys(
@@ -14981,8 +15008,8 @@ async function crmKpiGetData_(user, payload) {
                 KPI_CRM_DEFINITIONS[code];
 
             const matched =
-                Array.isArray(rows)
-                    ? rows.find(function (row) {
+                Array.isArray(latestRows)
+                    ? latestRows.find(function (row) {
 
                         return (
                             String(
@@ -15116,8 +15143,8 @@ async function crmKpiGetData_(user, payload) {
         });
 
     const matchedRows =
-        Array.isArray(rows)
-            ? rows
+        Array.isArray(latestRows)
+            ? latestRows
             : [];
 
     const status =
@@ -15177,6 +15204,45 @@ async function crmKpiGetData_(user, payload) {
             crmKpiIsHO_(user)
     };
 }
+
+
+function crmKpiJakartaNow_() {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Jakarta",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        weekday: "short"
+    }).formatToParts(new Date());
+
+    const values = {};
+
+    for (const part of parts) {
+        if (part.type !== "literal") {
+            values[part.type] = part.value;
+        }
+    }
+
+    const weekdayMap = {
+        Sun: 0,
+        Mon: 1,
+        Tue: 2,
+        Wed: 3,
+        Thu: 4,
+        Fri: 5,
+        Sat: 6
+    };
+
+    return {
+        year: Number(values.year),
+        month: Number(values.month),
+        day: Number(values.day),
+        weekday: weekdayMap[values.weekday],
+        date: `${values.year}-${values.month}-${values.day}`,
+        timestamp: new Date().toISOString()
+    };
+}
+
 
 /* ==========================================================================
 | SAVE KPI CRM
@@ -15273,16 +15339,142 @@ async function crmKpiSave_(
     | Solo-2026-09
     |
     */
-    const idInput =
-        [
-            branch,
-            year,
-            String(month)
-                .padStart(2, "0")
-        ].join("-");
 
-    const now =
-        new Date().toISOString();
+    const nowLocal = crmKpiJakartaNow_();
+
+    if (
+        !Number.isInteger(year) ||
+        !Number.isInteger(month) ||
+        month < 1 ||
+        month > 12
+    ) {
+        throw new Error("Tahun atau bulan KPI tidak valid.");
+    }
+
+    const periodEnd = new Date(
+        Date.UTC(year, month, 0)
+    ).getUTCDate();
+
+    const isSelectedMonthLastDay =
+        nowLocal.year === year &&
+        nowLocal.month === month &&
+        nowLocal.day === periodEnd;
+
+    const isFirstDayClosingPreviousMonth = (() => {
+        if (nowLocal.day !== 1) return false;
+
+        const previousDate = new Date(
+            Date.UTC(nowLocal.year, nowLocal.month - 2, 1)
+        );
+
+        return (
+            year === previousDate.getUTCFullYear() &&
+            month === previousDate.getUTCMonth() + 1
+        );
+    })();
+
+    if (snapshotType === "WEEKLY") {
+        if (![5, 6, 0].includes(nowLocal.weekday)) {
+            throw new Error(
+                "Input KPI mingguan hanya diperbolehkan Jumat, Sabtu, atau Minggu."
+            );
+        }
+    }
+
+    if (
+        snapshotType === "CLOSING" &&
+        !isSelectedMonthLastDay &&
+        !isFirstDayClosingPreviousMonth
+    ) {
+        throw new Error(
+            "Closing hanya diperbolehkan pada hari terakhir bulan atau tanggal 1 bulan berikutnya."
+        );
+    }
+
+    // Bulan baru hanya dapat diinput jika bulan sebelumnya sudah closing.
+    const previousDate = new Date(
+        Date.UTC(year, month - 2, 1)
+    );
+
+    const previousYear = previousDate.getUTCFullYear();
+    const previousMonth = previousDate.getUTCMonth() + 1;
+
+    const previousClosingRows = await supabaseRequest(
+        "/rest/v1/kpi_crm_ho" +
+        "?select=id_input" +
+        `&cabang=eq.${encodeURIComponent(branch)}` +
+        `&tahun=eq.${previousYear}` +
+        `&bulan=eq.${previousMonth}` +
+        "&status_closing=eq.CLOSED" +
+        "&limit=1",
+        { method: "GET" }
+    );
+
+    if (!Array.isArray(previousClosingRows) ||
+        !previousClosingRows.length) {
+        throw new Error(
+            `Input KPI ${String(month).padStart(2, "0")}/${year} terkunci. ` +
+            "Closing bulan sebelumnya harus diselesaikan terlebih dahulu."
+        );
+    }
+
+
+    // Blokir semua input jika periode ini sudah Closing.
+    const alreadyClosedRows = await supabaseRequest(
+        "/rest/v1/kpi_crm_ho" +
+        "?select=id_input" +
+        `&cabang=eq.${encodeURIComponent(branch)}` +
+        `&tahun=eq.${year}` +
+        `&bulan=eq.${month}` +
+        "&status_closing=eq.CLOSED" +
+        "&limit=1",
+        {
+            method: "GET"
+        }
+    );
+
+    if (
+        Array.isArray(alreadyClosedRows) &&
+        alreadyClosedRows.length > 0
+    ) {
+        throw new Error(
+            `KPI CRM ${String(month).padStart(2, "0")}/${year} sudah Closing. ` +
+            "Input baru untuk periode ini tidak diperbolehkan."
+        );
+    }
+
+
+    // Cari nomor snapshot terakhir pada periode yang dipilih.
+    const existingSnapshots = await supabaseRequest(
+        "/rest/v1/kpi_crm_ho" +
+        "?select=input_ke" +
+        `&cabang=eq.${encodeURIComponent(branch)}` +
+        `&tahun=eq.${year}` +
+        `&bulan=eq.${month}` +
+        "&input_ke=not.is.null" +
+        "&order=input_ke.desc" +
+        "&limit=1",
+        { method: "GET" }
+    );
+
+    const inputKe =
+        Array.isArray(existingSnapshots) &&
+        existingSnapshots.length
+            ? Number(existingSnapshots[0].input_ke || 0) + 1
+            : 1;
+
+    const idInput = [
+        branch,
+        year,
+        String(month).padStart(2, "0"),
+        `S${String(inputKe).padStart(3, "0")}`
+    ].join("-");
+
+    const now = nowLocal.timestamp;
+    // Status tetap OPEN selama proses penyimpanan berlangsung.
+    // CLOSING baru ditandai CLOSED setelah seluruh data berhasil disimpan.
+    const statusClosing = "OPEN";
+
 
     let savedRows = 0;
 
@@ -15343,97 +15535,39 @@ async function crmKpiSave_(
         |--------------------------------------------------------
         */
 
-        const crmRows =
-            await supabaseRequest(
-                `/rest/v1/kpi_crm?id_detail=eq.${encodeURIComponent(idDetail)}&select=id`,
-                {
-                    method: "GET"
-                }
-            );
+
 
         const crmRecord = {
-
-            id_input:
-                idInput,
-
-            id_detail:
-                idDetail,
-
-            tanggal:
-                now,
-
-            nik:
-                nik,
-
-            nama:
-                user.name ||
-                "",
-
-            cabang:
-                branch,
-
-            indikator_kpi:
-                definition.name,
-
-            aktual:
-                actualPercentage / 100,
-
-            target:
-                crmKpiSerializeValue_(
-                    target
-                ),
-
-            score:
-                scoreCrm,
-
-            tipe_snapshot:
-                snapshotType,
-
-            week:
-                null
+            id_input: idInput,
+            id_detail: idDetail,
+            tanggal: nowLocal.date,
+            tanggal_input: now,
+            input_ke: inputKe,
+            status_closing: statusClosing,
+            nik: nik,
+            nama: user.name || "",
+            cabang: branch,
+            indikator_kpi: definition.name,
+            aktual: actualPercentage / 100,
+            target: crmKpiSerializeValue_(target),
+            score: scoreCrm,
+            tipe_snapshot: snapshotType,
+            week: null,
+            source: "WEB"
         };
 
-        if (
-            Array.isArray(crmRows) &&
-            crmRows.length
-        ) {
+        await supabaseRequest(
+            "/rest/v1/kpi_crm",
+            {
+                method: "POST",
+                headers: {
+                    "Prefer": "return=minimal"
+                },
+                body: JSON.stringify(crmRecord)
+            }
+        );
 
-            await supabaseRequest(
-                `/rest/v1/kpi_crm?id_detail=eq.${encodeURIComponent(idDetail)}`,
-                {
-                    method: "PATCH",
 
-                    headers: {
-                        "Prefer":
-                            "return=minimal"
-                    },
-
-                    body:
-                        JSON.stringify(
-                            crmRecord
-                        )
-                }
-            );
-
-        } else {
-
-            await supabaseRequest(
-                "/rest/v1/kpi_crm",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Prefer":
-                            "return=minimal"
-                    },
-
-                    body:
-                        JSON.stringify(
-                            crmRecord
-                        )
-                }
-            );
-        }
 
         /*
         |--------------------------------------------------------
@@ -15441,127 +15575,87 @@ async function crmKpiSave_(
         |--------------------------------------------------------
         */
 
-        const hoRows =
-            await supabaseRequest(
-                `/rest/v1/kpi_crm_ho?id_detail=eq.${encodeURIComponent(idDetail)}&select=id`,
-                {
-                    method: "GET"
-                }
-            );
-
         const hoRecord = {
-
-            id_input:
-                idInput,
-
-            id_detail:
-                idDetail,
-
-            kode_kpi:
-                code,
-
-            cabang:
-                branch,
-
-            tahun:
-                year,
-
-            bulan:
-                month,
-
-            week:
-                null,
-
-            target_input:
-                crmKpiSerializeValue_(
-                    target
-                ),
-
-            realisasi_crm:
-                crmKpiSerializeValue_(
-                    actualCrm
-                ),
-
-            aktual_ho:
-                "",
-
-            skor_crm:
-                scoreCrm,
-
-            skor_ho:
-                null,
-
-            status:
-                "MENUNGGU VERIFIKASI MSMC",
-
-            nik_verifikator:
-                "",
-
-            nama_verifikator:
-                "",
-
-            tanggal_verifikasi:
-                null,
-
-            tipe_snapshot:
-                snapshotType,
-
-            catatan:
-                String(
-                    payload.snapshotNote ||
-                    ""
-                ).trim(),
-
-            tanggal_input:
-                now,
-
-            raw_data:
-                metricPayload
+            id_input: idInput,
+            id_detail: idDetail,
+            kode_kpi: code,
+            cabang: branch,
+            tahun: year,
+            bulan: month,
+            week: null,
+            target_input: crmKpiSerializeValue_(target),
+            realisasi_crm: crmKpiSerializeValue_(actualCrm),
+            aktual_ho: "",
+            skor_crm: scoreCrm,
+            skor_ho: null,
+            status: "MENUNGGU VERIFIKASI MSMC",
+            nik_verifikator: "",
+            nama_verifikator: "",
+            tanggal_verifikasi: null,
+            tipe_snapshot: snapshotType,
+            catatan: String(payload.snapshotNote || "").trim(),
+            tanggal_input: now,
+            input_ke: inputKe,
+            status_closing: statusClosing,
+            raw_data: metricPayload
         };
 
-        if (
-            Array.isArray(hoRows) &&
-            hoRows.length
-        ) {
 
-            await supabaseRequest(
-                `/rest/v1/kpi_crm_ho?id_detail=eq.${encodeURIComponent(idDetail)}`,
-                {
-                    method: "PATCH",
+        
+        await supabaseRequest(
+            "/rest/v1/kpi_crm_ho",
+            {
+                method: "POST",
+                headers: {
+                    "Prefer": "return=minimal"
+                },
+                body: JSON.stringify(hoRecord)
+            }
+        );
 
-                    headers: {
-                        "Prefer":
-                            "return=minimal"
-                    },
 
-                    body:
-                        JSON.stringify(
-                            hoRecord
-                        )
-                }
-            );
+        savedRows += 1;
+    }
 
-        } else {
-
-            await supabaseRequest(
-                "/rest/v1/kpi_crm_ho",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Prefer":
-                            "return=minimal"
-                    },
-
-                    body:
-                        JSON.stringify(
-                            hoRecord
-                        )
-                }
+    // Closing baru dikunci setelah seluruh indikator berhasil disimpan.
+    if (snapshotType === "CLOSING") {
+        if (savedRows !== metrics.filter(metric =>
+            KPI_CRM_DEFINITIONS[
+                String(metric.code || "").trim().toUpperCase()
+            ]
+        ).length) {
+            throw new Error(
+                "Closing belum lengkap. Periksa kembali data KPI yang tersimpan."
             );
         }
 
-        savedRows += 1;
+        await supabaseRequest(
+            "/rest/v1/kpi_crm_ho" +
+            `?id_input=eq.${encodeURIComponent(idInput)}`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Prefer": "return=minimal"
+                },
+                body: JSON.stringify({
+                    status_closing: "CLOSED"
+                })
+            }
+        );
+
+        await supabaseRequest(
+            "/rest/v1/kpi_crm" +
+            `?id_input=eq.${encodeURIComponent(idInput)}`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Prefer": "return=minimal"
+                },
+                body: JSON.stringify({
+                    status_closing: "CLOSED"
+                })
+            }
+        );
     }
 
     return {
@@ -15680,15 +15774,42 @@ async function crmKpiVerify_(
                 }
             );
 
+        
+        const validInputRows =
+            Array.isArray(rows)
+                ? rows.filter(row =>
+                    row.input_ke !== null &&
+                    row.input_ke !== undefined &&
+                    Number.isFinite(Number(row.input_ke))
+                )
+                : [];
+
+        const latestInputKe =
+            validInputRows.length
+                ? Math.max(
+                    ...validInputRows.map(row =>
+                        Number(row.input_ke)
+                    )
+                )
+                : null;
+
+        const latestRows =
+            latestInputKe !== null
+                ? validInputRows.filter(row =>
+                    Number(row.input_ke) === latestInputKe
+                )
+                : (Array.isArray(rows) ? rows : []);
+
+
         if (
-            !Array.isArray(rows) ||
-            !rows.length
+            !Array.isArray(latestRows) ||
+            !latestRows.length
         ) {
             continue;
         }
 
         for (
-            const record of rows
+            const record of latestRows
         ) {
 
             const target =
