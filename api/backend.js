@@ -15392,31 +15392,55 @@ async function crmKpiSave_(
     }
 
     // Bulan baru hanya dapat diinput jika bulan sebelumnya sudah closing.
-    const previousDate = new Date(
-        Date.UTC(year, month - 2, 1)
-    );
 
-    const previousYear = previousDate.getUTCFullYear();
-    const previousMonth = previousDate.getUTCMonth() + 1;
+    // Periode awal penerapan KPI CRM.
+    // Oktober 2026 tidak mensyaratkan Closing September.
+    const KPI_START_YEAR = 2026;
+    const KPI_START_MONTH = 10;
 
-    const previousClosingRows = await supabaseRequest(
-        "/rest/v1/kpi_crm_ho" +
-        "?select=id_input" +
-        `&cabang=eq.${encodeURIComponent(branch)}` +
-        `&tahun=eq.${previousYear}` +
-        `&bulan=eq.${previousMonth}` +
-        "&status_closing=eq.CLOSED" +
-        "&limit=1",
-        { method: "GET" }
-    );
+    const isInitialPeriod =
+        year === KPI_START_YEAR &&
+        month === KPI_START_MONTH;
 
-    if (!Array.isArray(previousClosingRows) ||
-        !previousClosingRows.length) {
-        throw new Error(
-            `Input KPI ${String(month).padStart(2, "0")}/${year} terkunci. ` +
-            "Closing bulan sebelumnya harus diselesaikan terlebih dahulu."
+    // Periode sebelum bulan mulai juga tidak perlu
+    // memenuhi syarat Closing sebelumnya.
+    const isBeforeKpiStart =
+        year < KPI_START_YEAR ||
+        (
+            year === KPI_START_YEAR &&
+            month < KPI_START_MONTH
         );
+
+    if (!isInitialPeriod && !isBeforeKpiStart) {
+        const previousDate = new Date(
+            Date.UTC(year, month - 2, 1)
+        );
+
+        const previousYear = previousDate.getUTCFullYear();
+        const previousMonth = previousDate.getUTCMonth() + 1;
+
+        const previousClosingRows = await supabaseRequest(
+            "/rest/v1/kpi_crm_ho" +
+            "?select=id_input" +
+            `&cabang=eq.${encodeURIComponent(branch)}` +
+            `&tahun=eq.${previousYear}` +
+            `&bulan=eq.${previousMonth}` +
+            "&status_closing=eq.CLOSED" +
+            "&limit=1",
+            { method: "GET" }
+        );
+
+        if (
+            !Array.isArray(previousClosingRows) ||
+            !previousClosingRows.length
+        ) {
+            throw new Error(
+                `Input KPI ${String(month).padStart(2, "0")}/${year} terkunci. ` +
+                "Closing bulan sebelumnya harus diselesaikan terlebih dahulu."
+            );
+        }
     }
+
 
 
     // Blokir semua input jika periode ini sudah Closing.
