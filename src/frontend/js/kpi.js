@@ -185,6 +185,14 @@ let crmKpiInputMode = "WEEKLY";
 |--------------------------------------------------------------------------
 */
 
+
+const crmKpiCrmNameValue =
+    document.getElementById("crmKpiCrmNameValue");
+
+let crmKpiSalesmanData = [];
+let crmKpiSalesmanLoaded = false;
+
+
 const crmKpiBranch =
     document.getElementById("crmKpiBranch");
 
@@ -277,6 +285,13 @@ function initializeCrmKpi() {
     initializeCrmKpiYear();
     initializeCrmKpiBranch();
     initializeCrmKpiPeriod();
+
+    loadCrmKpiSalesmanNames();
+
+    crmKpiBranch.addEventListener(
+        "change",
+        loadCrmKpiSalesmanNames
+    );
 
     updateCrmKpiHoVisibility();
     renderCrmKpiTable();
@@ -381,6 +396,79 @@ function initializeCrmKpiBranch() {
         !isHeadOffice
     );
 }
+
+
+async function loadCrmKpiSalesmanNames() {
+    if (!crmKpiCrmNameValue) return;
+
+    crmKpiCrmNameValue.textContent = "Memuat data CRM...";
+
+    try {
+        const result = await requestBackend(
+            "getSalesmen",
+            { branch: crmKpiBranch.value }
+        );
+
+        crmKpiSalesmanData = Array.isArray(result.data)
+            ? result.data
+            : [];
+
+        crmKpiSalesmanLoaded = true;
+
+        renderCrmKpiSalesmanName();
+    } catch (error) {
+        console.error(
+            "[KPI CRM] Gagal memuat nama CRM:",
+            error
+        );
+
+        crmKpiCrmNameValue.textContent =
+            "Nama CRM gagal dimuat. Coba pilih ulang cabang.";
+    }
+}
+
+function renderCrmKpiSalesmanName() {
+    if (!crmKpiCrmNameValue) return;
+
+    const selectedBranch = String(
+        crmKpiBranch.value || ""
+    ).trim().toUpperCase();
+
+    const branchSalesmen = crmKpiSalesmanData.filter(
+        function (item) {
+            return String(
+                item.cab || item.cabang || ""
+            ).trim().toUpperCase() === selectedBranch;
+        }
+    );
+
+    const crmNames = [
+        ...new Set(
+            branchSalesmen
+                .filter(function (item) {
+                    const role = String(
+                        item.jab || item.jabatan || ""
+                    ).trim().toUpperCase();
+
+                    return role === "CRM";
+                })
+                .map(function (item) {
+                    return String(
+                        item.namaMarketing ||
+                        item.nama_marketing ||
+                        item.nama ||
+                        ""
+                    ).trim();
+                })
+                .filter(Boolean)
+        )
+    ];
+
+    crmKpiCrmNameValue.textContent = crmNames.length
+        ? crmNames.join(", ")
+        : "Belum ada data CRM untuk cabang ini.";
+}
+
 
 
 /*
