@@ -7434,21 +7434,107 @@ function dateRangesOverlap(
 }
 
 
-async function getPkmRows() {
-
+async function getPkmRows(filters) {
     const pageSize = 1000;
     const allRows = [];
-
     let offset = 0;
 
+    const selectedColumns = [
+        "id",
+        "id_pkm",
+        "nama",
+        "cabang",
+        "type_pkm",
+        "jenis_pkm",
+        "jenis_kegiatan",
+        "tanggal_mulai",
+        "tanggal_selesai",
+        "tanggal_pengajuan",
+        "lokasi",
+        "kabupaten",
+        "kecamatan",
+        "kelurahan",
+        "alasan",
+        "konsep",
+        "people",
+        "fokus_type",
+        "program_h1",
+        "program_h23",
+        "publikasi",
+        "leasing",
+        "dana_ls",
+        "dana_md",
+        "dana_csm",
+        "dana_ll",
+        "target_db",
+        "target_deal",
+        "target_ue",
+        "status",
+        "source",
+        "pengajuan",
+        "acc_crm",
+        "acc_kacab",
+        "acc_msmc",
+        "acc_koordinator_h23",
+        "acc_manager_h1",
+        "acc_manager_h23",
+        "pdf",
+        "print"
+    ].join(",");
+
+    const queryFilters = new URLSearchParams({
+        select: selectedColumns,
+        order: "tanggal_mulai.desc,id.desc",
+        limit: String(pageSize)
+    });
+
+    if (filters.jenisPkm !== "ALL") {
+        queryFilters.set(
+            "jenis_pkm",
+            "eq." + filters.jenisPkm
+        );
+    }
+
+    if (filters.branches.length === 1) {
+        queryFilters.set(
+            "cabang",
+            "eq." + filters.branches[0]
+        );
+    } else if (filters.branches.length > 1) {
+        queryFilters.set(
+            "cabang",
+            "in.(" + filters.branches.join(",") + ")"
+        );
+    }
+
+    // Acuan tanggal mulai filter:
+    // event harus berakhir pada/setelah tanggal ini.
+    // Jika tanggal selesai kosong, gunakan tanggal mulai.
+    if (filters.startDate) {
+        queryFilters.set(
+            "or",
+            "(tanggal_selesai.gte." + filters.startDate +
+            ",and(tanggal_selesai.is.null,tanggal_mulai.gte." +
+            filters.startDate + "))"
+        );
+    }
+
+    // Acuan tanggal akhir filter:
+    // event harus mulai pada/sebelum tanggal ini.
+    if (filters.endDate) {
+        queryFilters.set(
+            "tanggal_mulai",
+            "lte." + filters.endDate
+        );
+    }
+
     while (true) {
+        const pageQuery = new URLSearchParams(queryFilters);
+
+        pageQuery.set("offset", String(offset));
 
         const rows = await supabaseRequest(
-            "/rest/v1/pkm" +
-            "?select=*" +
-            "&order=tanggal_mulai.desc,id.desc" +
-            "&offset=" + offset +
-            "&limit=" + pageSize
+            "/rest/v1/pkm?" + pageQuery.toString()
         );
 
         if (!Array.isArray(rows) || rows.length === 0) {
@@ -7458,8 +7544,41 @@ async function getPkmRows() {
         allRows.push(...rows);
 
         console.log(
-            `PKM pagination: offset=${offset}, rows=${rows.length}, total=${allRows.length}`
+            `[PKM pagination] offset=${offset}, ` +
+            `rows=${rows.length}, total=${allRows.length}`
         );
+
+        if (rows.length < pageSize) {
+            break;
+        }
+
+        offset += pageSize;
+    }
+
+    return allRows;
+}
+
+async function getPkmBranchRows() {
+    const pageSize = 1000;
+    const allRows = [];
+    let offset = 0;
+
+    while (true) {
+        const query = new URLSearchParams({
+            select: "cabang",
+            offset: String(offset),
+            limit: String(pageSize)
+        });
+
+        const rows = await supabaseRequest(
+            "/rest/v1/pkm?" + query.toString()
+        );
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            break;
+        }
+
+        allRows.push(...rows);
 
         if (rows.length < pageSize) {
             break;
@@ -7487,54 +7606,12 @@ return async function handler(req, res) {
         const filters =
             createAppliedFilters(req.query || {});
 
-        const rows =
-            await getPkmRows();
+        const [rows, branchRows] = await Promise.all([
+            getPkmRows(filters),
+            getPkmBranchRows()
+        ]);
 
-        let records =
-            rows
-                .filter(row => {
-
-                    const branch =
-                        normalizeBranch(row.cabang);
-
-                    /*
-                     * Kalau branches dikirim,
-                     * filter berdasarkan branch.
-                     */
-                    if (
-                        filters.branches.length &&
-                        !filters.branches.includes(branch)
-                    ) {
-                        return false;
-                    }
-
-                    /*
-                     * Filter jenis PKM.
-                     */
-                    const jenisPkm =
-                        textValue(row.jenis_pkm)
-                            .toUpperCase();
-
-                    if (
-                        filters.jenisPkm !== "ALL" &&
-                        jenisPkm !== filters.jenisPkm
-                    ) {
-                        return false;
-                    }
-
-                    /*
-                     * Filter tanggal menggunakan
-                     * tanggal pelaksanaan.
-                     */
-                    return dateRangesOverlap(
-                        row.tanggal_mulai,
-                        row.tanggal_selesai ||
-                            row.tanggal_mulai,
-                        filters.startDate,
-                        filters.endDate
-                    );
-                })
-                .map(mapPkmRecord);
+        let records = rows.map(mapPkmRecord);
 
         /*
          * Pastikan terbaru berada di atas.
@@ -7559,7 +7636,7 @@ return async function handler(req, res) {
          */
         const branchSet =
             new Set(
-                rows
+                branchRows
                     .map(row =>
                         normalizeBranch(row.cabang)
                     )
