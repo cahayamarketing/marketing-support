@@ -3513,42 +3513,73 @@ const gasHandler = (() => {
                 |--------------------------------------------------------------------------
                 */
 
-                const pkmRows =
-                    await fetchAllSupabaseRows(
-                        "/rest/v1/pkm" +
-                        "?select=" +
-                        [
-                            "id_pkm",
-                            "nama",
-                            "cabang",
-                            "type_pkm",
-                            "jenis_pkm",
-                            "tanggal_mulai",
-                            "tanggal_selesai",
-                            "lokasi",
-                            "kabupaten",
-                            "kecamatan",
-                            "kelurahan",
-                            "people",
-                            "fokus_type",
-                            "program_h1",
-                            "program_h23",
-                            "publikasi",
-                            "leasing",
-                            "dana_ls",
-                            "dana_md",
-                            "dana_csm",
-                            "dana_ll",
-                            "target_db",
-                            "target_deal",
-                            "target_ue",
-                            "status",
-                            "acc_manager_h1",
-                            "acc_koordinator_h23",
-                            "acc_manager_h23"
-                        ].join(",") +
-                        "&order=tanggal_mulai.desc"
+
+                const pkmSelect = [
+                    "id_pkm",
+                    "nama",
+                    "cabang",
+                    "type_pkm",
+                    "jenis_pkm",
+                    "tanggal_mulai",
+                    "tanggal_selesai",
+                    "lokasi",
+                    "kabupaten",
+                    "kecamatan",
+                    "kelurahan",
+                    "people",
+                    "fokus_type",
+                    "program_h1",
+                    "program_h23",
+                    "publikasi",
+                    "leasing",
+                    "dana_ls",
+                    "dana_md",
+                    "dana_csm",
+                    "dana_ll",
+                    "target_db",
+                    "target_deal",
+                    "target_ue",
+                    "status",
+                    "acc_manager_h1",
+                    "acc_koordinator_h23",
+                    "acc_manager_h23"
+                ].join(",");
+
+                const nowIso = new Date().toISOString();
+
+                const pkmQuery = new URLSearchParams({
+                    select: pkmSelect,
+                    acc_manager_h1: "not.is.null",
+                    tanggal_selesai: "not.is.null",
+                    order: "tanggal_mulai.desc"
+                });
+
+                // Push filter tanggal ke Supabase.
+                const dateConditions = [
+                    `tanggal_selesai.lte.${nowIso}`
+                ];
+
+                if (startDate) {
+                    dateConditions.push(
+                        `tanggal_selesai.gte.${startDate}T00:00:00`
                     );
+                }
+
+                if (endDate) {
+                    dateConditions.push(
+                        `tanggal_selesai.lte.${endDate}T23:59:59`
+                    );
+                }
+
+                pkmQuery.set(
+                    "and",
+                    `(${dateConditions.join(",")})`
+                );
+
+                const pkmRows = await fetchAllSupabaseRows(
+                    "/rest/v1/pkm?" + pkmQuery.toString()
+                );
+
 
                 /*
                 |--------------------------------------------------------------------------
