@@ -11918,8 +11918,9 @@ function renderApprovalHistory(item) {
                         </p>
                     </div>
 
+                    
                     ${
-                        approval.signature
+                        approval.signature && !isDiscordApprovalMode
                             ? `
                                 <img
                                     src="${approval.signature}"
@@ -11931,6 +11932,7 @@ function renderApprovalHistory(item) {
                             `
                             : ""
                     }
+
                 </div>
             `;
         })
