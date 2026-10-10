@@ -12818,14 +12818,10 @@ async function approvePkmHandler(
             );
 
         console.log(
-            "[APPROVE PKM DEBUG] HASIL CARI PKM",
+            "[APPROVE PKM] HASIL CARI PKM",
             {
-                pkmId: pkmId,
-                totalRows:
-                    Array.isArray(rows)
-                        ? rows.length
-                        : -1,
-                rows: rows
+                pkmId,
+                totalRows: Array.isArray(rows) ? rows.length : -1
             }
         );
 
