@@ -2003,10 +2003,9 @@ async function updateMyProfileHandler(
         }
 
         const name =
-            String(
-                payload.name ||
-                ""
-            ).trim();
+            typeof payload.name === "string"
+                ? payload.name.trim()
+                : "";
 
         const newPassword =
             String(
