@@ -12063,23 +12063,17 @@ function normalizeApproverName(value) {
     ) {
 
         const candidates = [
-
             value.nama_marketing,
-
+            value.nama_sales,
+            value.nama_karyawan,
+            value.nama_lengkap,
             value.nama,
-
             value.name,
-
             value.full_name,
-
             value.displayName,
-
             value.value,
-
             value.text,
-
             value.label
-
         ];
 
 
@@ -13249,6 +13243,14 @@ async function approvePkmHandler(
         const nextRole =
             nextState.currentRole;
         
+        const normalizedPkmType = String(
+            simulatedRow.type_pkm ||
+            simulatedRow.jenis_pkm ||
+            ""
+        )
+            .replace(/\s+/g, "")
+            .toUpperCase();
+
         const previousApprovalName =
             nextRole === "MSMC"
                 ? (
@@ -13258,11 +13260,25 @@ async function approvePkmHandler(
                 )
                 : nextRole === "MGR_H1"
                     ? (
-                        normalizeApproverName(
-                            simulatedRow.nama_approval_msmc
-                        ) || "-"
+                        ["H23", "H123"].includes(normalizedPkmType)
+                            ? (
+                                normalizeApproverName(
+                                    simulatedRow.nama_approval_koordinator_h23
+                                ) || "-"
+                            )
+                            : (
+                                normalizeApproverName(
+                                    simulatedRow.nama_approval_msmc
+                                ) || "-"
+                            )
                     )
-                    : "-";
+                    : nextRole === "MGR_H23"
+                        ? (
+                            normalizeApproverName(
+                                simulatedRow.nama_approval_koordinator_h23
+                            ) || "-"
+                        )
+                        : "-";
         
 
         updateRecord.status =
