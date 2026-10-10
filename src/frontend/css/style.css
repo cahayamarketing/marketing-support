@@ -3492,3 +3492,11 @@ label:has(> input.publication:focus-visible) > div {
         border-radius: 0.875rem;
     }
 }
+
+
+/* Status pengajuan: optimasi tampilan HP */
+@media (max-width: 640px) {
+    #submitPanel.sticky-submit {
+        display: none !important;
+    }
+}
