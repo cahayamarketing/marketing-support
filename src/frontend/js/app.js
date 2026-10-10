@@ -8641,33 +8641,76 @@ function canCurrentUserProcess(item) {
 }
 
 
-function isApprovalStageCompleted(
-    item,
-    role
-) {
+
+function isApprovalStageCompleted(item, role) {
     if (role === "CRM") {
         return true;
     }
 
     if (
-        item.status === "DISETUJUI" ||
-        item.status === "ACC"
+        ["DISETUJUI", "ACC"].includes(
+            String(item.status || "").trim().toUpperCase()
+        )
     ) {
         return true;
     }
 
-    const history =
-        Array.isArray(item.approvalHistory)
-            ? item.approvalHistory
-            : [];
+    // Prioritaskan status approval langsung dari database.
+    const approvalKeys = {
+        KACAB: ["kacab", "acc_kacab", "accKacab"],
+        MSMC: ["msmc", "acc_msmc", "accMsmc"],
+        PIC_H23: [
+            "picH23",
+            "koordinatorH23",
+            "acc_koordinator_h23",
+            "accKoordinatorH23"
+        ],
+        MGR_H1: ["managerH1", "acc_manager_h1", "accManagerH1"],
+        MGR_H23: ["managerH23", "acc_manager_h23", "accManagerH23"]
+    };
+
+    const approvals = item.approvals || {};
+    const directValues = approvalKeys[role] || [];
+
+    const directApproval = directValues.some(function (key) {
+        const value =
+            Object.prototype.hasOwnProperty.call(approvals, key)
+                ? approvals[key]
+                : item[key];
+
+        return Boolean(
+            value &&
+            String(value).trim() &&
+            String(value).trim().toLowerCase() !== "null"
+        );
+    });
+
+    if (directApproval) {
+        return true;
+    }
+
+    // Fallback ke riwayat approval.
+    const history = Array.isArray(item.approvalHistory)
+        ? item.approvalHistory
+        : [];
 
     return history.some(function (approval) {
+        const historyRole = String(
+            approval.role || approval.jabatan || ""
+        ).trim().toUpperCase();
+
+        const historyAction = String(
+            approval.action || approval.aksi || approval.status || ""
+        ).trim().toUpperCase();
+
         return (
-            approval.role === role &&
-            approval.action === "MENYETUJUI"
+            historyRole === role &&
+            ["MENYETUJUI", "DISETUJUI", "ACC", "APPROVED"]
+                .includes(historyAction)
         );
     });
 }
+
 
 
 function renderApprovalFlow(item) {
