@@ -3547,6 +3547,14 @@ const gasHandler = (() => {
 
                 const nowIso = new Date().toISOString();
 
+                const startDate = String(
+                    payload.startDate || ""
+                ).trim();
+
+                const endDate = String(
+                    payload.endDate || ""
+                ).trim();
+
                 const pkmQuery = new URLSearchParams({
                     select: pkmSelect,
                     acc_manager_h1: "not.is.null",
@@ -3838,16 +3846,6 @@ const gasHandler = (() => {
                 | 8. FILTER TANGGAL
                 |--------------------------------------------------------------------------
                 */
-
-                const startDate =
-                    String(
-                        payload.startDate || ""
-                    ).trim();
-
-                const endDate =
-                    String(
-                        payload.endDate || ""
-                    ).trim();
 
                 if (startDate) {
                     const start =
