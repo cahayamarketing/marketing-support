@@ -2088,30 +2088,31 @@ function isHeadOfficeUser() {
     );
 }
 
+
 function initializePkmFilters() {
+    const monthRange = getCurrentMonthRange();
 
-    ["dashboard", "list"].forEach(
-        function (prefix) {
-            const startInput = document.getElementById(
-                `${prefix}StartDate`
-            );
-            const endInput = document.getElementById(
-                `${prefix}EndDate`
-            );
+    ["dashboard", "list"].forEach(function (prefix) {
+        const startInput = document.getElementById(
+            `${prefix}StartDate`
+        );
 
-            if (startInput) {
-                startInput.value = "";
-            }
+        const endInput = document.getElementById(
+            `${prefix}EndDate`
+        );
 
-            if (endInput) {
-                endInput.value = "";
-            }
+        if (startInput) {
+            startInput.value = monthRange.startDate;
         }
-    );
+
+        if (endInput) {
+            endInput.value = monthRange.endDate;
+        }
+    });
 
     activePkmFilters = {
-        startDate: "",
-        endDate: "",
+        startDate: monthRange.startDate,
+        endDate: monthRange.endDate,
         jenisPkm: "ALL",
         branches: isHeadOfficeUser()
             ? []
@@ -2121,6 +2122,7 @@ function initializePkmFilters() {
             ]
     };
 }
+
 
 function renderBranchFilter(prefix) {
     const container = document.getElementById(
