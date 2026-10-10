@@ -6828,6 +6828,7 @@ function refreshLeasingMasterOptions() {
 }
 
 
+
 function collectLeasing() {
     return [
         ...document.querySelectorAll(".leasing-compact-row")
@@ -6848,6 +6849,7 @@ function collectLeasing() {
             return item.name !== "";
         });
 }
+
 
 
 /*
@@ -7031,10 +7033,10 @@ function generateTemporaryBudgetId() {
 function getBudgetDetailTotal() {
     return budgetDetails.reduce(
         function (total, item) {
-            return (
-                total +
-                Number(item.totalPrice || 0)
-            );
+            const harga = Number(item.totalPrice) || 0;
+            const qty = Number(item.quantity) || 0;
+
+            return total + (harga * qty);
         },
         0
     );
@@ -7542,6 +7544,13 @@ pkmForm.addEventListener("submit", async function (event) {
     const leasing = collectLeasing();
     const fund = calculateTotalFund();
 
+    const leasingDetails = leasing.map(function (item) {
+        return {
+            name: item.name,
+            fund: item.fund
+        };
+    });
+
     const budgetDetailTotal =
         getBudgetDetailTotal();
 
@@ -7661,13 +7670,16 @@ pkmForm.addEventListener("submit", async function (event) {
                 : "",
 
         publication,
-        leasing,
+        leasing: leasing.map(item => item.name),
+        leasingDetails,
 
         danaCsm: fund.danaCsm,
         danaMd: fund.danaMd,
-        danaLeasing: fund.danaLeasing,
+        danaLeasing: leasingDetails.reduce(
+            (total, item) => total + item.fund,
+            0
+        ),
         danaLain: fund.danaLain,
-        totalFund: fund.total,
         budgetDetails:
             budgetDetails.map(
                 function (item) {

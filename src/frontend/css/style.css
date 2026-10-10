@@ -3428,3 +3428,67 @@ label:has(> input.publication:focus-visible) > div {
     outline: 3px solid rgba(220, 38, 38, 0.18);
     outline-offset: 2px;
 }
+
+
+/* FIX: panel status pengajuan PKM */
+#submitPanel.sticky-submit {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Konten status dan tombol */
+#submitPanel > div:first-child {
+    min-width: 0;
+}
+
+/* Desktop: status di kiri, tombol di kanan */
+@media (min-width: 1024px) {
+    #submitPanel > div:first-child {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+    }
+
+    #submitPanel #submitStatusMessage {
+        max-width: 420px;
+    }
+}
+
+/* HP: panel lebih ringkas */
+@media (max-width: 640px) {
+    #submitPanel {
+        border-radius: 1.25rem;
+    }
+
+    #submitPanel > div:first-child {
+        gap: 0.75rem;
+        padding: 0.875rem;
+    }
+
+    #submitPanel #submitStatusIcon {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.75rem;
+    }
+
+    #submitPanel #submitStatusTitle {
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+    }
+
+    #submitPanel #submitStatusMessage {
+        font-size: 0.7rem;
+        line-height: 1rem;
+    }
+
+    #submitPanel #submitPkmButton {
+        min-height: 2.75rem;
+        padding: 0.65rem 0.875rem;
+        border-radius: 0.875rem;
+    }
+}

@@ -3196,16 +3196,29 @@ const gasHandler = (() => {
                             arrayToText(
                                 payload.publication
                             ),
-
+                        
                         leasing:
-                            arrayToText(
-                                payload.leasing
-                            ),
+                            arrayToText(payload.leasing),
+
+                        leasing_details:
+                            Array.isArray(payload.leasingDetails)
+                                ? payload.leasingDetails
+                                    .filter(item => item && String(item.name || "").trim())
+                                    .map(item => ({
+                                        nama: String(item.name).trim(),
+                                        nominal: Math.max(0, Number(item.fund) || 0)
+                                    }))
+                                : [],
 
                         dana_ls:
-                            Number(
-                                payload.danaLeasing
-                            ) || 0,
+                            Array.isArray(payload.leasingDetails)
+                                ? payload.leasingDetails.reduce(
+                                    (total, item) =>
+                                        total + Math.max(0, Number(item?.fund) || 0),
+                                    0
+                                )
+                                : Math.max(0, Number(payload.danaLeasing) || 0),
+
 
                         dana_md:
                             Number(
