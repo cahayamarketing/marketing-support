@@ -795,13 +795,33 @@ if (
                     "MY_QUEUE";
             }
 
-            showPage(
-                "listPkmPage"
-            );
 
-            await loadPkmData(
-                "list"
-            );
+            showPage("listPkmPage");
+
+            await loadPkmData("list");
+
+            const notificationPkmId = String(
+                item.dataset.approvalNotificationId || ""
+            ).trim();
+
+            if (!notificationPkmId) {
+                showToast("ID pengajuan PKM dari notifikasi tidak ditemukan.");
+                return;
+            }
+
+            const pkm = sheetPkmData.find(function (row) {
+                return String(
+                    row.id_pkm || row.id || ""
+                ).trim() === notificationPkmId;
+            });
+
+            if (!pkm) {
+                showToast("Data pengajuan PKM tidak ditemukan.");
+                return;
+            }
+
+            await openApprovalModal(pkm.id_pkm || pkm.id);
+
         }
     );
 }
