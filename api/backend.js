@@ -11170,56 +11170,53 @@ async function sendManagerH23WhatsappApproval(pkmData) {
     | PESAN WHATSAPP
     --------------------------------------------------------- */
 
+
+    const formatRupiah = (value) => {
+        const amount = Number(value) || 0;
+        return "Rp" + amount.toLocaleString("id-ID");
+    };
+
     const message =
-        "🔔 *APPROVAL PKM — MANAGER H23*\n" +
-        "━━━━━━━━━━━━━━━━━━━━\n\n" +
+        "🔔 *APPROVAL PKM — MANAGER H23*\n\n" +
 
-        "📋 *DETAIL PENGAJUAN*\n\n" +
+        "📋 *PENGAJUAN MENUNGGU PERSETUJUAN*\n\n" +
 
-        "🆔 *ID PKM*\n" +
-        (pkmData.id || "-") +
-        "\n\n" +
+        "📌 *Nama Kegiatan:* " +
+        (pkmData.name || "-") + "\n" +
 
-        "📌 *Nama Kegiatan*\n" +
-        (pkmData.name || "-") +
-        "\n\n" +
+        "🆔 *ID PKM:* " +
+        (pkmData.id || "-") + "\n\n" +
 
-        "🏢 *Cabang*\n" +
-        (pkmData.branch || "-") +
-        "\n\n" +
+        "🏢 *INFORMASI PENGAJUAN*\n" +
+        "• Cabang: " + (pkmData.branch || "-") + "\n" +
+        "• Tipe PKM: " + (pkmData.typePkm || "-") + "\n" +
+        "• Jenis Kegiatan: " + (pkmData.activityType || "-") + "\n" +
+        "• Lokasi: " + (pkmData.location || "-") + "\n\n" +
 
-        "🏷️ *Type PKM*\n" +
-        (pkmData.typePkm || "-") +
-        "\n\n" +
+        "💰 *RINCIAN DANA*\n" +
+        "• Internal: " + formatRupiah(pkmData.danaInternal) + "\n" +
+        "• MD: " + formatRupiah(pkmData.danaMd) + "\n" +
+        "• Leasing: " + formatRupiah(pkmData.danaLeasing) + "\n" +
+        "• Lain-lain: " + formatRupiah(pkmData.danaLain) + "\n\n" +
 
-        "🎯 *Jenis Kegiatan*\n" +
-        (pkmData.activityType || "-") +
-        "\n\n" +
-
-        "━━━━━━━━━━━━━━━━━━━━\n" +
+        "🎯 *TARGET*\n" +
+        "• DB: " + (pkmData.targetDb ?? 0) + "\n" +
+        "• DEAL: " + (pkmData.targetDeal ?? 0) + "\n\n" +
 
         "✅ *APPROVAL SEBELUMNYA*\n" +
-        approvedByRoleLabel +
-        " — " +
-        (pkmData.approvedBy || "-") +
-        "\n\n" +
+        approvedByRoleLabel + " — " +
+        (pkmData.approvedBy || "-") + "\n\n" +
 
         "⏳ *STATUS*\n" +
-        "Menunggu persetujuan *Manager H23*\n\n" +
-
-        "━━━━━━━━━━━━━━━━━━━━\n\n" +
+        "Menunggu persetujuan Manager H23.\n\n" +
 
         "✍️ *TINDAKAN DIPERLUKAN*\n" +
-        "Silakan klik link berikut untuk membuka pengajuan, memeriksa data, dan memberikan tanda tangan persetujuan:\n\n" +
+        "Silakan buka pengajuan untuk memeriksa data dan memberikan tanda tangan persetujuan.\n\n" +
 
-        "🔗 " +
-        approvalUrl +
-        "\n\n" +
+        "🔗 *BUKA PENGAJUAN & TANDA TANGAN*\n" +
+        approvalUrl + "\n\n" +
 
-        "━━━━━━━━━━━━━━━━━━━━\n" +
-
-        "💼 *CSM Marketing Support*\n" +
-        "Approval PKM Manager H23";
+        "_CSM Marketing Support_";
 
 
     /* ---------------------------------------------------------
@@ -13463,6 +13460,36 @@ async function approvePkmHandler(
                         row.activity_type ||
                         row.activityType ||
                         "-",
+
+                    
+                    location:
+                        row.lokasi ||
+                        "-",
+
+                    danaInternal:
+                        row.dana_csm ??
+                        0,
+
+                    danaMd:
+                        row.dana_md ??
+                        0,
+
+                    danaLeasing:
+                        row.dana_ls ??
+                        0,
+
+                    danaLain:
+                        row.dana_ll ??
+                        0,
+
+                    targetDb:
+                        row.target_db ??
+                        0,
+
+                    targetDeal:
+                        row.target_deal ??
+                        0,
+
 
                     approvedBy:
                         previousApprovalName,
