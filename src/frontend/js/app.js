@@ -721,13 +721,10 @@ if (
 
     approvalNotificationButton.addEventListener(
         "click",
-        async function () {
-
+        function () {
             approvalNotificationPanel.classList.toggle(
                 "hidden"
             );
-
-            await loadApprovalNotifications();
         }
     );
 }
@@ -810,21 +807,12 @@ if (
 }
 
 function startApprovalNotificationPolling() {
-
-    window.clearInterval(
-        approvalNotificationInterval
-    );
+    window.clearInterval(approvalNotificationInterval);
+    approvalNotificationInterval = null;
 
     loadApprovalNotifications();
-
-    approvalNotificationInterval =
-        window.setInterval(
-            function () {
-                loadApprovalNotifications();
-            },
-            30000
-        );
 }
+
 
 
 /*
