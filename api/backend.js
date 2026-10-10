@@ -3980,14 +3980,14 @@ const gasHandler = (() => {
                             )
                             .join(",");
 
-                    itemRows =
-                        await supabaseRequest(
-                            "/rest/v1/pkm_item" +
-                            "?select=*" +
-                            "&link_pkm=in.(" +
-                            itemFilter +
-                            ")"
-                        );
+                    itemRows = await supabaseRequest(
+                        "/rest/v1/pkm_item" +
+                        "?select=id,link_pkm,jenis_item,nama_item,jumlah," +
+                        "harga_total,harga_realisasi,gambar_desain,foto,keterangan" +
+                        "&link_pkm=in.(" +
+                        itemFilter +
+                        ")"
+                    );
                 }
 
                 /*
@@ -7828,9 +7828,10 @@ const getPkmPdfDataHandler = async (req, res) => {
             const itemRows =
                 await supabaseRequest(
                     "/rest/v1/pkm_item" +
-                    "?link_pkm=eq." +
-                    encodeURIComponent(pkmId) +
-                    "&select=*"
+                    "?select=id,jenis_item,nama_item,jumlah,harga_total," +
+                    "harga_actual,actual_price,gambar_desain,foto,keterangan" +
+                    "&link_pkm=eq." +
+                    encodeURIComponent(pkmId)
                 );
 
             if (Array.isArray(itemRows)) {
