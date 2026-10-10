@@ -7440,46 +7440,19 @@ async function getPkmRows(filters) {
     let offset = 0;
 
     const selectedColumns = [
-        "id",
-        "id_pkm",
-        "nama",
-        "cabang",
-        "type_pkm",
-        "jenis_pkm",
-        "jenis_kegiatan",
-        "tanggal_mulai",
-        "tanggal_selesai",
-        "tanggal_pengajuan",
-        "lokasi",
-        "kabupaten",
-        "kecamatan",
-        "kelurahan",
-        "alasan",
-        "konsep",
-        "people",
-        "fokus_type",
-        "program_h1",
-        "program_h23",
-        "publikasi",
-        "leasing",
-        "dana_ls",
-        "dana_md",
-        "dana_csm",
-        "dana_ll",
-        "target_db",
-        "target_deal",
-        "target_ue",
-        "status",
-        "source",
-        "pengajuan",
-        "acc_crm",
-        "acc_kacab",
-        "acc_msmc",
-        "acc_koordinator_h23",
-        "acc_manager_h1",
-        "acc_manager_h23",
-        "pdf",
-        "print"
+        "id", "id_pkm", "nama", "cabang",
+        "type_pkm", "jenis_pkm", "jenis_kegiatan",
+        "tanggal_mulai", "tanggal_selesai",
+        "tanggal_pengajuan", "lokasi", "kabupaten",
+        "kecamatan", "kelurahan", "alasan", "konsep",
+        "people", "fokus_type", "program_h1",
+        "program_h23", "publikasi", "leasing",
+        "dana_ls", "dana_md", "dana_csm", "dana_ll",
+        "target_db", "target_deal", "target_ue",
+        "status", "source", "pengajuan",
+        "acc_crm", "acc_kacab", "acc_msmc",
+        "acc_koordinator_h23", "acc_manager_h1",
+        "acc_manager_h23", "pdf", "print"
     ].join(",");
 
     const queryFilters = new URLSearchParams({
@@ -7488,39 +7461,28 @@ async function getPkmRows(filters) {
         limit: String(pageSize)
     });
 
+    // Filter jenis PKM dilakukan di Supabase.
     if (filters.jenisPkm !== "ALL") {
         queryFilters.set(
             "jenis_pkm",
-            "eq." + filters.jenisPkm
+            "ilike." + filters.jenisPkm
         );
     }
 
-    if (filters.branches.length === 1) {
-        queryFilters.set(
-            "cabang",
-            "eq." + filters.branches[0]
-        );
-    } else if (filters.branches.length > 1) {
-        queryFilters.set(
-            "cabang",
-            "in.(" + filters.branches.join(",") + ")"
-        );
-    }
-
-    // Acuan tanggal mulai filter:
-    // event harus berakhir pada/setelah tanggal ini.
+    // Ambil kegiatan yang berakhir pada/setelah tanggal awal.
     // Jika tanggal selesai kosong, gunakan tanggal mulai.
     if (filters.startDate) {
         queryFilters.set(
             "or",
-            "(tanggal_selesai.gte." + filters.startDate +
-            ",and(tanggal_selesai.is.null,tanggal_mulai.gte." +
-            filters.startDate + "))"
+            "(tanggal_selesai.gte." +
+                filters.startDate +
+            ",and(tanggal_selesai.is.null," +
+                "tanggal_mulai.gte." +
+                filters.startDate + "))"
         );
     }
 
-    // Acuan tanggal akhir filter:
-    // event harus mulai pada/sebelum tanggal ini.
+    // Kegiatan harus dimulai pada/sebelum tanggal akhir.
     if (filters.endDate) {
         queryFilters.set(
             "tanggal_mulai",
@@ -7530,7 +7492,6 @@ async function getPkmRows(filters) {
 
     while (true) {
         const pageQuery = new URLSearchParams(queryFilters);
-
         pageQuery.set("offset", String(offset));
 
         const rows = await supabaseRequest(
@@ -7611,7 +7572,16 @@ return async function handler(req, res) {
             getPkmBranchRows()
         ]);
 
-        let records = rows.map(mapPkmRecord);
+        let records = rows
+            .filter(row => {
+                const branch = normalizeBranch(row.cabang);
+
+                return (
+                    !filters.branches.length ||
+                    filters.branches.includes(branch)
+                );
+            })
+            .map(mapPkmRecord);
 
         /*
          * Pastikan terbaru berada di atas.
