@@ -1029,7 +1029,7 @@ function openLpjModal(pkmId) {
     document.getElementById(
         "lpjPreviewBranch"
     ).textContent =
-        `${activeLpjItem.branch} — ${activeLpjItem.branchName}`;
+        activeLpjItem.branch || "-";
 
     document.getElementById(
         "lpjPreviewDate"

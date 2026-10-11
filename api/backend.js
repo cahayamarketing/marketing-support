@@ -3097,6 +3097,44 @@ const gasHandler = (() => {
                     |--------------------------------------------------------------------------
                     */
 
+                    
+                    function toWibTimestamp(value) {
+                        if (!value) return null;
+
+                        const input = String(value).trim();
+
+                        // Input form datetime-local: YYYY-MM-DDTHH:mm
+                        // Anggap sebagai WIB (UTC+7), lalu simpan sebagai UTC.
+                        const match = input.match(
+                            /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/
+                        );
+
+                        if (match) {
+                            const [, year, month, day, hour, minute, second = "00"] = match;
+
+                            const utcDate = new Date(Date.UTC(
+                                Number(year),
+                                Number(month) - 1,
+                                Number(day),
+                                Number(hour) - 7,
+                                Number(minute),
+                                Number(second)
+                            ));
+
+                            return utcDate.toISOString();
+                        }
+
+                        // Nilai yang sudah memiliki zona waktu tidak dikonversi ulang.
+                        const date = new Date(input);
+
+                        if (Number.isNaN(date.getTime())) {
+                            throw new Error("Format tanggal PKM tidak valid: " + input);
+                        }
+
+                        return date.toISOString();
+                    }
+
+
                     const pkmRecord = {
                         id_pkm:
                             pkmId,
@@ -3125,12 +3163,10 @@ const gasHandler = (() => {
                             ).trim(),
 
                         tanggal_mulai:
-                            payload.startDate ||
-                            null,
+                            toWibTimestamp(payload.startDate),
 
                         tanggal_selesai:
-                            payload.endDate ||
-                            null,
+                            toWibTimestamp(payload.endDate),
 
                         tanggal_pengajuan:
                             new Date().toISOString(),
