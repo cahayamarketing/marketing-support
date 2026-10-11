@@ -1,0 +1,3953 @@
+"use strict";
+
+/*
+|--------------------------------------------------------------------------
+| KONFIGURASI KPI CRM
+|--------------------------------------------------------------------------
+| Total bobot maksimum: 115
+*/
+
+const CRM_KPI_MAX_SCORE = 115;
+
+const CRM_KPI_METRICS = [
+    {
+        code: "RO",
+        name: "Repeat Order (RO Sales)",
+        target: 20,
+        targetLabel: "20%",
+        unit: "PERCENT",
+        weight: 20
+    },
+    {
+        code: "SIPEDE",
+        name: "SiPede Performance",
+        target: 100,
+        targetLabel: "100%",
+        unit: "PERCENT",
+        weight: 10
+    },
+    {
+        code: "KPB",
+        name: "Unit Entry KPB-1 sampai KPB-4",
+        target: [60, 50, 30, 40],
+        targetLabel: "KPB1 60% · KPB2 50% · KPB3 30% · KPB4 40%",
+        unit: "KPB",
+        weight: 5
+    },
+    {
+        code: "REGISTER_USER",
+        name: "Register User MotorkuX/Brompit",
+        target: 0,
+        targetLabel: "Target MD (%)",
+        unit: "PERCENT",
+        targetEditable: true,
+        weight: 3
+    },
+    {
+        code: "REGISTER_MOTOR",
+        name: "Register Motor MotorkuX/Brompit",
+        target: 0,
+        targetLabel: "Target MD (%)",
+        unit: "PERCENT",
+        targetEditable: true,
+        weight: 3
+    },
+    {
+        code: "TOTAL_BOOKING",
+        name: "Total Booking MotorkuX/Brompit",
+        target: 0,
+        targetLabel: "Target MD (%)",
+        unit: "PERCENT",
+        targetEditable: true,
+        weight: 3
+    },
+    {
+        code: "KPB_DIGITAL",
+        name: "KPB Digital",
+        target: 0,
+        targetLabel: "Target MD (%)",
+        unit: "PERCENT",
+        targetEditable: true,
+        weight: 3
+    },
+    {
+        code: "WORKLOAD_STAR",
+        name: "Workload STAR/SDMS FLP",
+        target: 5,
+        targetLabel: "< 5%",
+        unit: "PERCENT",
+        lowerIsBetter: true,
+        weight: 5
+    },
+    {
+        code: "UTILISASI_STAR",
+        name: "Utilisasi STAR/SDMS FLP",
+        target: 100,
+        targetLabel: "100%",
+        unit: "PERCENT",
+        weight: 3
+    },
+    {
+        code: "END_TO_END",
+        name: "End to End Sales",
+        target: 0,
+        targetLabel: "Target MD",
+        unit: "NUMBER",
+        targetEditable: true,
+        weight: 5
+    },
+    {
+        code: "LEAD_MANAGEMENT",
+        name: "Lead Management (Overdue Pending FU)",
+        target: 20,
+        targetLabel: "Maksimal 20%",
+        unit: "PERCENT",
+        lowerIsBetter: true,
+        weight: 5
+    },
+    {
+        code: "CDB_QUALITY",
+        name: "CDB Quality",
+        target: 95,
+        targetLabel: "95% valid",
+        unit: "PERCENT",
+        weight: 15
+    },
+    {
+        code: "DISTRIBUSI_LEADS",
+        name: "Distribusi Leads",
+        target: 100,
+        targetLabel: "100%",
+        unit: "PERCENT",
+        weight: 5
+    },
+    {
+        code: "GMB",
+        name: "Penambahan Review Google My Business",
+        target: 100,
+        targetLabel: "100 review · ≥5 bintang · respon <2 hari",
+        unit: "NUMBER",
+        weight: 10
+    },
+    {
+        code: "NOS",
+        name: "Network Operational Standard (NOS)",
+        target: 90,
+        targetLabel: "Platinum >90%",
+        unit: "PERCENT",
+        weight: 5
+    },
+    {
+        code: "PDCA",
+        name: "PDCA – Project Improvement CRM",
+        target: 1,
+        targetLabel: "1 project per semester",
+        unit: "NUMBER",
+        weight: 10
+    },
+    {
+        code: "WORKLOAD_STNK",
+        name: "Workloads STNK & Voice Customer Insight",
+        target: 10,
+        targetLabel: "10% total sales M-1",
+        unit: "PERCENT",
+        weight: 5
+    }
+];
+
+const crmKpiSnapshotNote =
+    document.getElementById(
+        "crmKpiSnapshotNote"
+    );
+
+/*
+|--------------------------------------------------------------------------
+| STATE
+|--------------------------------------------------------------------------
+*/
+
+let crmKpiRows = [];
+let crmKpiSavedRows = [];
+let crmKpiEditing = false;
+let crmKpiVerifying = false;
+let crmKpiDirty = false;
+let crmKpiInitialized = false;
+
+let crmKpiLoadingTimer = null;
+let crmKpiLoadingValue = 0;
+let crmKpiLoadPromise = null;
+let crmKpiBackendCanViewHo = false;
+let crmKpiInputMode = "WEEKLY";
+
+/*
+|--------------------------------------------------------------------------
+| ELEMENT
+|--------------------------------------------------------------------------
+*/
+
+
+const crmKpiCrmNameValue =
+    document.getElementById("crmKpiCrmNameValue");
+
+let crmKpiSalesmanData = [];
+let crmKpiSalesmanLoaded = false;
+
+
+const crmKpiBranch =
+    document.getElementById("crmKpiBranch");
+
+const crmKpiYear =
+    document.getElementById("crmKpiYear");
+
+const crmKpiMonth =
+    document.getElementById("crmKpiMonth");
+
+const crmKpiWeek =
+    document.getElementById("crmKpiWeek");
+
+const crmKpiPeriodType =
+    document.getElementById(
+        "crmKpiPeriodType"
+    );
+
+const crmKpiWeekWrapper =
+    document.getElementById(
+        "crmKpiWeekWrapper"
+    );
+
+const crmKpiTableBody =
+    document.getElementById("crmKpiTableBody");
+
+const newCrmKpiButton =
+    document.getElementById("newCrmKpiButton");
+
+const saveCrmKpiButton =
+    document.getElementById("saveCrmKpiButton");
+
+const verifyCrmKpiButton =
+    document.getElementById("verifyCrmKpiButton");
+
+const cancelCrmKpiButton =
+    document.getElementById("cancelCrmKpiButton");
+
+
+/*
+|--------------------------------------------------------------------------
+| ROLE
+|--------------------------------------------------------------------------
+*/
+
+function getCrmKpiRole() {
+    return String(
+        currentUser.role ||
+        currentUser.jabatan ||
+        ""
+    )
+        .trim()
+        .toUpperCase();
+}
+
+function canInputCrmKpi() {
+    return getCrmKpiRole() === "CRM";
+}
+
+function canVerifyCrmKpi() {
+    return getCrmKpiRole() === "MSCM";
+}
+
+function canViewCrmKpiHo() {
+    const role =
+        getCrmKpiRole();
+
+    return (
+        crmKpiBackendCanViewHo ||
+        [
+            "MSCM",
+            "MGR"
+        ].includes(role)
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| INITIALIZE
+|--------------------------------------------------------------------------
+*/
+
+function initializeCrmKpi() {
+    if (crmKpiInitialized) {
+        return;
+    }
+
+    crmKpiInitialized = true;
+
+    initializeCrmKpiYear();
+    initializeCrmKpiBranch();
+    initializeCrmKpiPeriod();
+
+    loadCrmKpiSalesmanNames();
+
+    crmKpiBranch.addEventListener(
+        "change",
+        loadCrmKpiSalesmanNames
+    );
+
+    updateCrmKpiHoVisibility();
+    renderCrmKpiTable();
+}
+
+function initializeCrmKpiYear() {
+    const currentYear = new Date().getFullYear();
+
+    crmKpiYear.innerHTML = "";
+
+    for (
+        let year = currentYear - 2;
+        year <= currentYear + 1;
+        year += 1
+    ) {
+        const option =
+            document.createElement("option");
+
+        option.value = String(year);
+        option.textContent = String(year);
+        option.selected = year === currentYear;
+
+        crmKpiYear.appendChild(option);
+    }
+}
+
+
+
+function initializeCrmKpiPeriod() {
+    const today = new Date();
+
+    crmKpiMonth.value =
+        String(today.getMonth() + 1);
+
+    crmKpiPeriodType.value = "WEEKLY";
+
+    updateCrmKpiPeriodTypeUI();
+
+    // Isi pilihan Week saat halaman pertama kali dibuka.
+    populateCrmKpiWeekOptions();
+}
+
+
+
+const CRM_KPI_BRANCH_OPTIONS = [
+    { code: "SLO", name: "SOLO YOS" },
+    { code: "RJM", name: "RAJIMAN" },
+    { code: "KRA", name: "KARANGANYAR" },
+    { code: "KRP", name: "KARANGPANDAN" },
+    { code: "SRG", name: "SRAGEN" },
+    { code: "WNG", name: "WONOGIRI" },
+    { code: "NGA", name: "NGAWI" },
+    { code: "CRB", name: "CARUBAN" },
+    { code: "STY", name: "SUTOYO" },
+    { code: "KSM", name: "KUSUMANEGARA" }
+];
+
+function initializeCrmKpiBranch() {
+    const isHeadOffice =
+        currentUser.branch === "ALL" ||
+        currentUser.originalBranch === "HO";
+
+    const userBranch = String(
+        currentUser.originalBranch ||
+        currentUser.branch ||
+        ""
+    ).trim().toUpperCase();
+
+    crmKpiBranch.innerHTML = "";
+
+    CRM_KPI_BRANCH_OPTIONS.forEach(function (branch) {
+        const option =
+            document.createElement("option");
+
+        option.value = branch.code;
+
+        option.textContent =
+            `${branch.code} — ${branch.name}`;
+
+        if (branch.code === userBranch) {
+            option.selected = true;
+        }
+
+        crmKpiBranch.appendChild(option);
+    });
+
+    /*
+     * Jika user HO/MSCM/MGR dan branch user
+     * bukan salah satu cabang operasional,
+     * default ke SLO.
+     */
+    if (
+        isHeadOffice &&
+        !CRM_KPI_BRANCH_OPTIONS.some(function (branch) {
+            return branch.code === userBranch;
+        })
+    ) {
+        crmKpiBranch.value = "SLO";
+    }
+
+    crmKpiBranch.disabled = !isHeadOffice;
+
+    crmKpiBranch.classList.toggle(
+        "bg-slate-100",
+        !isHeadOffice
+    );
+}
+
+
+async function loadCrmKpiSalesmanNames() {
+    if (!crmKpiCrmNameValue) return;
+
+    crmKpiCrmNameValue.textContent = "Memuat data CRM...";
+
+    try {
+        const result = await requestBackend(
+            "getSalesmen",
+            { branch: crmKpiBranch.value }
+        );
+
+        crmKpiSalesmanData = Array.isArray(result.data)
+            ? result.data
+            : [];
+
+        crmKpiSalesmanLoaded = true;
+
+        renderCrmKpiSalesmanName();
+    } catch (error) {
+        console.error(
+            "[KPI CRM] Gagal memuat nama CRM:",
+            error
+        );
+
+        crmKpiCrmNameValue.textContent =
+            "Nama CRM gagal dimuat. Coba pilih ulang cabang.";
+    }
+}
+
+
+function renderCrmKpiSalesmanName() {
+    if (!crmKpiCrmNameValue) return;
+
+    const selectedBranch = String(
+        crmKpiBranch?.value || ""
+    ).trim().toUpperCase();
+
+    const currentRole = String(
+        currentUser?.role ||
+        currentUser?.jabatan ||
+        ""
+    ).trim().toUpperCase();
+
+    const currentBranch = String(
+        currentUser?.originalBranch ||
+        currentUser?.branch ||
+        ""
+    ).trim().toUpperCase();
+
+    // Jika pengguna login adalah CRM cabang terpilih,
+    // tampilkan nama akun yang sedang login.
+    const currentName = String(
+        currentUser?.name ||
+        currentUser?.namaMarketing ||
+        currentUser?.nama_marketing ||
+        currentUser?.fullName ||
+        ""
+    ).trim();
+
+    if (
+        currentRole === "CRM" &&
+        currentBranch === selectedBranch &&
+        currentName
+    ) {
+        crmKpiCrmNameValue.textContent = currentName;
+        return;
+    }
+
+    const branchSalesmen = (
+        Array.isArray(crmKpiSalesmanData)
+            ? crmKpiSalesmanData
+            : []
+    ).filter(function (item) {
+        const branch = String(
+            item.cab ||
+            item.branch ||
+            item.cabang ||
+            ""
+        ).trim().toUpperCase();
+
+        return branch === selectedBranch;
+    });
+
+    const crmNames = [
+        ...new Set(
+            branchSalesmen
+                .filter(function (item) {
+                    const role = String(
+                        item.jab ||
+                        item.jabatan ||
+                        item.role ||
+                        ""
+                    ).trim().toUpperCase();
+
+                    return role === "CRM";
+                })
+                .map(function (item) {
+                    return String(
+                        item.namaMarketing ||
+                        item.nama_marketing ||
+                        item.name ||
+                        item.nama ||
+                        ""
+                    ).trim();
+                })
+                .filter(Boolean)
+        )
+    ];
+
+    crmKpiCrmNameValue.textContent =
+        crmNames.length
+            ? crmNames.join(", ")
+            : "Belum ada data CRM untuk cabang ini.";
+}
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| DATA KOSONG
+|--------------------------------------------------------------------------
+*/
+
+function createEmptyCrmKpiRows() {
+    return CRM_KPI_METRICS.map(function (metric) {
+        return {
+            code: metric.code,
+            target: Array.isArray(metric.target)
+                ? [...metric.target]
+                : metric.target,
+            actualCrm:
+                metric.unit === "KPB"
+                    ? ["", "", "", "", ""]
+                    : "",
+            actualHo:
+                metric.unit === "KPB"
+                    ? ["", "", "", "", ""]
+                    : "",
+            status: ""
+        };
+    });
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| LOAD DATA
+|--------------------------------------------------------------------------
+*/
+
+async function loadCrmKpiPage() {
+    /*
+    |--------------------------------------------------------------------------
+    | CEGAH REQUEST GANDA
+    |--------------------------------------------------------------------------
+    */
+
+    if (crmKpiLoadPromise) {
+        return crmKpiLoadPromise;
+    }
+
+    crmKpiLoadPromise =
+        executeCrmKpiLoad();
+
+    try {
+        return await crmKpiLoadPromise;
+    } finally {
+        crmKpiLoadPromise = null;
+    }
+}
+
+
+async function executeCrmKpiLoad() {
+    initializeCrmKpi();
+
+    const period =
+        getSelectedCrmKpiPeriod();
+
+    setCrmKpiLoading(
+        true,
+        period.snapshotType === "CLOSING"
+            ? "Memuat laporan closing..."
+            : "Memuat KPI bulan berjalan..."
+    );
+
+    try {
+        const result =
+            await requestBackend(
+                "getCrmKpiData",
+                {
+                    branch: period.branch,
+                    year: period.year,
+                    month: period.month,
+                    snapshotType: period.snapshotType
+                }
+            );
+
+        crmKpiBackendCanViewHo =
+            result.canViewHo === true;    
+
+        crmKpiRows =
+            Array.isArray(
+                result.data
+            ) &&
+            result.data.length
+                ? mergeCrmKpiRows(
+                    result.data
+                )
+                : createEmptyCrmKpiRows();
+
+        crmKpiSavedRows =
+            JSON.parse(
+                JSON.stringify(
+                    crmKpiRows
+                )
+            );
+
+        crmKpiEditing = false;
+        crmKpiVerifying = false;
+        crmKpiDirty = false;
+
+        updateCrmKpiPeriodInformation(
+            result.status || ""
+        );
+
+        renderCrmKpiTable();
+
+        updateCrmKpiButtons(
+            result.status || ""
+        );
+    } catch (error) {
+        console.error(
+            "Gagal memuat KPI CRM:",
+            error
+        );
+
+        crmKpiRows =
+            createEmptyCrmKpiRows();
+
+        crmKpiEditing = false;
+        crmKpiVerifying = false;
+
+        renderCrmKpiTable();
+        updateCrmKpiButtons("");
+
+        showToast(
+            error.message ||
+            "Data KPI CRM gagal dimuat."
+        );
+    } finally {
+        setCrmKpiLoading(false);
+    }
+}
+
+function updateCrmKpiHoVisibility() {
+    const visible =
+        canViewCrmKpiHo();
+
+    document
+        .querySelectorAll(
+            "[data-kpi-ho-only]"
+        )
+        .forEach(function (element) {
+            element.classList.toggle(
+                "hidden",
+                !visible
+            );
+        });
+}
+
+function mergeCrmKpiRows(data) {
+    const sourceData =
+        Array.isArray(data)
+            ? data
+            : [];
+
+    return CRM_KPI_METRICS.map(
+        function (metric) {
+            const saved =
+                sourceData.find(
+                    function (item) {
+                        return (
+                            String(
+                                item.code || ""
+                            )
+                                .trim()
+                                .toUpperCase() ===
+                            metric.code
+                        );
+                    }
+                );
+
+            const defaultActual =
+                metric.unit === "KPB"
+                    ? [
+                        "",
+                        "",
+                        "",
+                        ""
+                    ]
+                    : "";
+
+            if (!saved) {
+                return {
+                    code: metric.code,
+
+                    target:
+                        Array.isArray(
+                            metric.target
+                        )
+                            ? [
+                                ...metric.target
+                            ]
+                            : metric.target,
+
+                    actualCrm:
+                        Array.isArray(
+                            defaultActual
+                        )
+                            ? [
+                                ...defaultActual
+                            ]
+                            : defaultActual,
+
+                    actualHo:
+                        Array.isArray(
+                            defaultActual
+                        )
+                            ? [
+                                ...defaultActual
+                            ]
+                            : defaultActual,
+
+                    scoreCrm: "",
+                    scoreHo: "",
+                    status: ""
+                };
+            }
+
+            return {
+                code: metric.code,
+
+                target:
+                    saved.target !==
+                        undefined &&
+                    saved.target !==
+                        null &&
+                    saved.target !==
+                        ""
+                        ? saved.target
+                        : Array.isArray(
+                            metric.target
+                        )
+                            ? [
+                                ...metric.target
+                            ]
+                            : metric.target,
+
+                actualCrm:
+                    saved.actualCrm !==
+                        undefined &&
+                    saved.actualCrm !==
+                        null
+                        ? saved.actualCrm
+                        : Array.isArray(
+                            defaultActual
+                        )
+                            ? [
+                                ...defaultActual
+                            ]
+                            : defaultActual,
+
+                /*
+                | Backend tidak akan mengirim Actual HO
+                | kepada akun cabang.
+                */
+
+                actualHo:
+                    canViewCrmKpiHo() &&
+                    saved.actualHo !==
+                        undefined &&
+                    saved.actualHo !==
+                        null
+                        ? saved.actualHo
+                        : Array.isArray(
+                            defaultActual
+                        )
+                            ? [
+                                ...defaultActual
+                            ]
+                            : defaultActual,
+
+                scoreCrm:
+                    saved.scoreCrm !==
+                        undefined &&
+                    saved.scoreCrm !==
+                        null
+                        ? saved.scoreCrm
+                        : "",
+
+                scoreHo:
+                    canViewCrmKpiHo() &&
+                    saved.scoreHo !==
+                        undefined &&
+                    saved.scoreHo !==
+                        null
+                        ? saved.scoreHo
+                        : "",
+
+                status:
+                    String(
+                        saved.status || ""
+                    )
+                        .trim()
+                        .toUpperCase()
+            };
+        }
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
+| RENDER
+|--------------------------------------------------------------------------
+*/
+
+function renderCrmKpiTable() {
+    const showHoColumns =
+        canViewCrmKpiHo();
+
+    if (
+        !Array.isArray(crmKpiRows) ||
+        !crmKpiRows.length
+    ) {
+        crmKpiRows =
+            createEmptyCrmKpiRows();
+    }
+
+    crmKpiTableBody.innerHTML =
+        CRM_KPI_METRICS
+            .map(function (
+                metric,
+                index
+            ) {
+                const row =
+                    crmKpiRows.find(
+                        function (item) {
+                            return (
+                                item.code ===
+                                metric.code
+                            );
+                        }
+                    ) || {
+                        code: metric.code,
+                        target:
+                            Array.isArray(
+                                metric.target
+                            )
+                                ? [
+                                    ...metric.target
+                                ]
+                                : metric.target,
+                        actualCrm:
+                            metric.unit ===
+                            "KPB"
+                                ? [
+                                    "",
+                                    "",
+                                    "",
+                                    ""
+                                ]
+                                : "",
+                        actualHo:
+                            metric.unit ===
+                            "KPB"
+                                ? [
+                                    "",
+                                    "",
+                                    "",
+                                    ""
+                                ]
+                                : "",
+                        scoreCrm: "",
+                        scoreHo: "",
+                        status: ""
+                    };
+
+                const score = calculateCrmKpiScore(metric, row);
+
+                const selectedActual = row.actualCrm;
+
+                const achievement = getCrmKpiAchievementPercentage(
+                    metric,
+                    row
+                );
+
+                const achievementInputClass =
+                    achievement === null
+                        ? "border-slate-200 bg-slate-50"
+                        : achievement >= 100
+                            ? "border-emerald-300 bg-emerald-50"
+                            : "border-red-300 bg-red-50";
+
+                const hoColumns =
+                    showHoColumns
+                        ? `
+                            <td data-kpi-ho-only>
+                                ${renderCrmKpiActual(
+                                    metric,
+                                    row.actualHo,
+                                    "ho",
+                                    crmKpiVerifying
+                                )}
+                            </td>
+
+                            <td
+                                data-kpi-ho-only
+                                class="font-black ${getDifferenceClass(
+                                    metric,
+                                    row
+                                )}"
+                            >
+                                ${formatCrmKpiDifference(
+                                    metric,
+                                    row
+                                )}
+                            </td>
+                        `
+                        : "";
+
+                return `
+                    <tr>
+                        <td class="font-black text-slate-400">
+                            ${index + 1}
+                        </td>
+
+                        <td>
+                            <p class="font-black text-slate-900">
+                                ${escapeHtml(
+                                    metric.name
+                                )}
+                            </p>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                ${escapeHtml(
+                                    getMetricInformation(
+                                        metric
+                                    )
+                                )}
+                            </p>
+                        </td>
+
+                        <td>
+                            ${renderCrmKpiTarget(
+                                metric,
+                                row
+                            )}
+                        </td>
+
+                        <td>
+                            <div class="${
+                                achievement === null
+                                    ? ""
+                                    : achievement >= 100
+                                        ? "rounded-lg bg-emerald-50"
+                                        : "rounded-lg bg-red-50"
+                            }">
+                                ${renderCrmKpiActual(
+                                    metric,
+                                    row.actualCrm,
+                                    "crm",
+                                    crmKpiEditing
+                                )}
+                            </div>
+                        </td>
+
+                        ${hoColumns}
+
+                        <td class="font-black text-slate-900">
+                            ${formatKpiNumber(
+                                metric.weight
+                            )}
+                        </td>
+
+                        <td
+                            data-kpi-score="${metric.code}"
+                            class="font-black ${
+                                score === 0
+                                    ? "rounded-lg bg-red-100 text-red-700"
+                                    : score >= metric.weight
+                                        ? "rounded-lg bg-emerald-100 text-emerald-700"
+                                        : "text-slate-900"
+                            }"
+                        >
+                            ${formatKpiNumber(score)}
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+
+    const totalScore =
+        calculateTotalCrmKpi();
+
+    const totalPercentage =
+        calculateCrmKpiPercentage(
+            totalScore
+        );
+
+    const percentageText =
+        `${formatKpiNumber(
+            totalPercentage
+        )}%`;
+
+    document.getElementById(
+        "crmKpiTableTotal"
+    ).textContent =
+        percentageText;
+
+    document.getElementById(
+        "crmKpiTotal"
+    ).textContent =
+        percentageText;
+
+    const scoreBar =
+        document.getElementById(
+            "crmKpiScoreBar"
+        );
+
+    if (scoreBar) {
+        const scoreProgress =
+            (
+                totalPercentage /
+                CRM_KPI_MAX_SCORE
+            ) * 100;
+
+        scoreBar.style.width =
+            `${Math.min(
+                scoreProgress,
+                100
+            )}%`;
+    }
+
+    const totalLabel =
+        document.getElementById(
+            "crmKpiTotalLabel"
+        );
+
+    if (totalLabel) {
+        /*
+        | Ada 8 kolom jika Actual HO tampil.
+        | Ada 6 kolom jika Actual HO disembunyikan.
+        | Kolom terakhir dipakai untuk nilai total.
+        */
+
+        totalLabel.colSpan =
+            showHoColumns
+                ? 7
+                : 5;
+    }
+
+    renderCrmKpiMobileList(
+        showHoColumns
+    );
+    updateCrmKpiHoVisibility();
+}
+
+function renderCrmKpiMobileList(
+    showHoColumns
+) {
+    const container =
+        document.getElementById(
+            "crmKpiMobileList"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML =
+        CRM_KPI_METRICS
+            .map(function (metric, index) {
+
+                const row =
+                    crmKpiRows.find(
+                        function (item) {
+                            return (
+                                item.code ===
+                                metric.code
+                            );
+                        }
+                    );
+
+                if (!row) {
+                    return "";
+                }
+
+                const score =
+                    calculateCrmKpiScore(
+                        metric,
+                        row
+                    );
+
+                return `
+                    <article
+                        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
+
+                        <div class="flex items-start justify-between gap-3">
+
+                            <div class="min-w-0">
+
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 text-xs font-black text-red-600"
+                                    >
+                                        ${index + 1}
+                                    </span>
+
+                                    <p class="font-black text-slate-900">
+                                        ${escapeHtml(
+                                            metric.name
+                                        )}
+                                    </p>
+                                </div>
+
+                                <p class="mt-2 pl-9 text-xs leading-5 text-slate-500">
+                                    ${escapeHtml(
+                                        getMetricInformation(
+                                            metric
+                                        )
+                                    )}
+                                </p>
+
+                            </div>
+
+                            <div class="shrink-0 rounded-xl bg-red-50 px-3 py-2 text-right">
+                                <p class="text-[10px] font-bold uppercase text-red-400">
+                                    Score
+                                </p>
+
+                                <p class="mt-0.5 text-lg font-black text-red-600">
+                                    ${formatKpiNumber(
+                                        score
+                                    )}
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-4 grid gap-3 ${
+                            showHoColumns
+                                ? "sm:grid-cols-3"
+                                : "sm:grid-cols-2"
+                        }">
+
+                            <div class="rounded-xl bg-slate-50 p-3">
+
+                                <p class="text-[10px] font-black uppercase text-slate-400">
+                                    Target
+                                </p>
+
+                                <div class="mt-2">
+                                    ${renderCrmKpiTarget(
+                                        metric,
+                                        row
+                                    )}
+                                </div>
+
+                            </div>
+
+                            <div class="rounded-xl bg-slate-50 p-3">
+
+                                <p class="text-[10px] font-black uppercase text-slate-400">
+                                    Actual CRM
+                                </p>
+
+                                <div class="mt-2">
+                                    ${renderCrmKpiMobileActual(
+                                        metric,
+                                        row.actualCrm,
+                                        "crm",
+                                        crmKpiEditing
+                                    )}
+                                </div>
+
+                        </div>
+
+                        ${
+                            (() => {
+                                const achievement =
+                                    getCrmKpiAchievementPercentage(
+                                        metric,
+                                        row
+                                    );
+
+                                if (
+                                    achievement === null
+                                ) {
+                                    return `
+                                        <div class="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2">
+                                            <span class="text-xs font-semibold text-slate-400">
+                                                Belum ada actual
+                                            </span>
+                                        `;
+                                }
+
+                                const safeAchievement =
+                                    Math.min(
+                                        Math.max(
+                                            achievement,
+                                            0
+                                        ),
+                                        100
+                                    );
+
+                                const achievementClass =
+                                    achievement >= 100
+                                        ? "text-emerald-600"
+                                        : achievement >= 80
+                                            ? "text-amber-600"
+                                            : "text-red-600";
+
+                                const barClass =
+                                    achievement >= 100
+                                        ? "bg-emerald-500"
+                                        : achievement >= 80
+                                            ? "bg-amber-500"
+                                            : "bg-red-500";
+
+                                return `
+                                    <div class="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">
+
+                                        <div class="flex items-center justify-between gap-3">
+
+                                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                Pencapaian Target
+                                            </span>
+
+                                            <span class="text-sm font-black ${achievementClass}">
+                                                ${formatKpiNumber(achievement)}%
+                                            </span>
+
+                                        </div>
+
+                                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                                            <div
+                                                class="h-full rounded-full transition-all duration-500 ${barClass}"
+                                                style="width: ${safeAchievement}%"
+                                            ></div>
+                                        </div>
+
+                                    </div>
+                                `;
+                            })()
+                        }
+
+                        ${
+                            showHoColumns
+                                ? `
+                                    <div class="mt-3 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+
+                                        <span class="text-xs font-bold text-slate-500">
+                                            Selisih CRM vs HO
+                                        </span>
+
+                                        <span class="font-black ${getDifferenceClass(
+                                            metric,
+                                            row
+                                        )}">
+                                            ${formatCrmKpiDifference(
+                                                metric,
+                                                row
+                                            )}
+                                        </span>
+
+                                    </div>
+                                `
+                                : ""
+                        }
+
+                        <div class="mt-3 flex items-center justify-between text-xs">
+
+                            <span class="font-semibold text-slate-400">
+                                Bobot
+                            </span>
+
+                            <span class="font-black text-slate-700">
+                                ${formatKpiNumber(
+                                    metric.weight
+                                )}
+                            </span>
+
+                        </div>
+
+                    </article>
+                `;
+            })
+            .join("");
+}
+
+function getCrmKpiAchievementPercentage(
+    metric,
+    row
+) {
+    if (!metric || !row) {
+        return null;
+    }
+
+    const status =
+        String(
+            row.status || ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const verified =
+        status === "TERVERIFIKASI";
+
+    const useHoResult =
+        verified &&
+        canViewCrmKpiHo() &&
+        hasKpiValue(
+            row.actualHo
+        );
+
+    const selectedActual =
+        useHoResult ||
+        crmKpiVerifying
+            ? row.actualHo
+            : row.actualCrm;
+
+    if (!hasKpiValue(selectedActual)) {
+        return null;
+    }
+
+    if (metric.unit === "KPB") {
+        const targets =
+            Array.isArray(row.target)
+                ? row.target
+                : Array.isArray(metric.target)
+                    ? metric.target
+                    : [60, 50, 30, 40];
+
+        const actuals =
+            Array.isArray(selectedActual)
+                ? selectedActual
+                : [
+                    selectedActual,
+                    "",
+                    "",
+                    ""
+                ];
+
+        const achievements =
+            targets.map(function (
+                targetValue,
+                index
+            ) {
+                return calculateAchievement(
+                    Number(targetValue || 0),
+                    Number(actuals[index] || 0),
+                    false
+                );
+            });
+
+        if (!achievements.length) {
+            return null;
+        }
+
+        const averageAchievement =
+            achievements.reduce(
+                function (
+                    total,
+                    achievement
+                ) {
+                    return (
+                        total +
+                        achievement
+                    );
+                },
+                0
+            ) /
+            achievements.length;
+
+        return roundCrmKpiNumber(
+            averageAchievement * 100,
+            1
+        );
+    }
+
+    const target =
+        Number(
+            row.target !== "" &&
+            row.target !== null &&
+            row.target !== undefined
+                ? row.target
+                : metric.target || 0
+        );
+
+    const actual =
+        Number(
+            selectedActual || 0
+        );
+
+    return roundCrmKpiNumber(
+        calculateAchievement(
+            target,
+            actual,
+            metric.lowerIsBetter === true
+        ) * 100,
+        1
+    );
+}
+
+function renderCrmKpiMobileActual(
+    metric,
+    value,
+    owner,
+    editable
+) {
+    if (metric.unit === "KPB") {
+
+        const values =
+            normalizeKpbDisplayValues(
+                value
+            );
+
+        return `
+            <div class="grid grid-cols-2 gap-2">
+
+                ${values
+                    .slice(0, 4)
+                    .map(function (
+                        item,
+                        index
+                    ) {
+                        return `
+                            <div>
+                                <span class="mb-1 block text-[10px] font-black text-slate-400">
+                                    KPB${index + 1}
+                                </span>
+
+                                <input
+                                    class="form-input px-2 text-sm"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    data-kpi-actual="${owner}"
+                                    data-kpi-code="${metric.code}"
+                                    data-kpi-index="${index}"
+                                    value="${escapeHtml(item)}"
+                                    ${editable ? "" : "disabled"}
+                                >
+                            </div>
+                        `;
+                    })
+                    .join("")}
+
+                <div class="col-span-2">
+                    <span class="mb-1 block text-[10px] font-black text-red-500">
+                        Rata-rata
+                    </span>
+
+                    <input
+                        class="form-input bg-red-50 text-sm font-black text-red-700"
+                        type="text"
+                        data-kpi-kpb-average="${owner}"
+                        value="${escapeHtml(values[4])}"
+                        disabled
+                    >
+                </div>
+
+            </div>
+        `;
+    }
+
+    return `
+        <div class="relative">
+            <input
+                class="form-input pr-10"
+                type="number"
+                min="0"
+                step="0.01"
+                data-kpi-actual="${owner}"
+                data-kpi-code="${metric.code}"
+                value="${escapeHtml(value)}"
+                ${editable ? "" : "disabled"}
+            >
+
+            ${
+                metric.unit === "PERCENT"
+                    ? `
+                        <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                            %
+                        </span>
+                    `
+                    : ""
+            }
+        </div>
+    `;
+}
+
+function renderCrmKpiTarget(
+    metric,
+    row
+) {
+    if (
+        metric.targetEditable &&
+        crmKpiEditing
+    ) {
+        const isPercentage =
+            metric.unit ===
+            "PERCENT";
+
+        return `
+            <div class="relative min-w-[130px]">
+                <input
+                    class="form-input ${
+                        isPercentage
+                            ? "pr-10"
+                            : ""
+                    }"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    data-kpi-target="${metric.code}"
+                    value="${escapeHtml(
+                        row.target || ""
+                    )}"
+                    placeholder="${
+                        isPercentage
+                            ? "Target %"
+                            : "Target MD"
+                    }"
+                >
+
+                ${
+                    isPercentage
+                        ? `
+                            <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                                %
+                            </span>
+                        `
+                        : ""
+                }
+            </div>
+        `;
+    }
+
+    return `
+        <span class="font-bold text-slate-700">
+            ${escapeHtml(
+                formatCrmKpiTarget(
+                    metric,
+                    row.target
+                )
+            )}
+        </span>
+    `;
+}
+
+function calculateKpbDisplayAverage(
+    values
+) {
+    if (!Array.isArray(values)) {
+        return "";
+    }
+
+    const numbers =
+        values
+            .slice(0, 4)
+            .filter(function (value) {
+                return (
+                    value !== "" &&
+                    value !== null &&
+                    value !== undefined &&
+                    Number.isFinite(
+                        Number(value)
+                    )
+                );
+            })
+            .map(Number);
+
+    if (!numbers.length) {
+        return "";
+    }
+
+    return roundCrmKpiNumber(
+        numbers.reduce(
+            function (total, value) {
+                return total + value;
+            },
+            0
+        ) / numbers.length
+    );
+}
+
+
+function normalizeKpbDisplayValues(
+    value
+) {
+    /*
+    | Data lama hanya satu nilai.
+    | Masukkan ke kolom Rata-rata.
+    */
+
+    if (!Array.isArray(value)) {
+        return [
+            "",
+            "",
+            "",
+            "",
+            value ?? ""
+        ];
+    }
+
+    const firstFour = [
+        value[0] ?? "",
+        value[1] ?? "",
+        value[2] ?? "",
+        value[3] ?? ""
+    ];
+
+    const calculatedAverage =
+        calculateKpbDisplayAverage(
+            firstFour
+        );
+
+    const average =
+        calculatedAverage !== ""
+            ? calculatedAverage
+            : value[4] ?? "";
+
+    return [
+        ...firstFour,
+        average
+    ];
+}
+
+function renderCrmKpiActual(
+    metric,
+    value,
+    owner,
+    editable
+) {
+    if (metric.unit === "KPB") {
+        const values =
+            normalizeKpbDisplayValues(
+                value
+            );
+
+        return `
+            <div class="grid min-w-[390px] grid-cols-5 gap-2">
+                ${values
+                    .slice(0, 4)
+                    .map(function (
+                        item,
+                        index
+                    ) {
+                        return `
+                            <div>
+                                <span class="mb-1 block text-[10px] font-black text-slate-400">
+                                    KPB${index + 1}
+                                </span>
+
+                                <input
+                                    class="form-input px-2 text-sm"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    data-kpi-actual="${owner}"
+                                    data-kpi-code="${metric.code}"
+                                    data-kpi-index="${index}"
+                                    value="${escapeHtml(item)}"
+                                    ${editable ? "" : "disabled"}
+                                >
+                            </div>
+                        `;
+                    })
+                    .join("")}
+
+                <div>
+                    <span class="mb-1 block text-[10px] font-black text-red-500">
+                        Rata-rata
+                    </span>
+
+                    <input
+                        class="form-input bg-red-50 px-2 text-sm font-black text-red-700"
+                        type="text"
+                        data-kpi-kpb-average="${owner}"
+                        value="${escapeHtml(values[4])}"
+                        disabled
+                    >
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="relative min-w-[140px]">
+            <input
+                class="form-input pr-10"
+                type="number"
+                min="0"
+                step="0.01"
+                data-kpi-actual="${owner}"
+                data-kpi-code="${metric.code}"
+                value="${escapeHtml(value)}"
+                ${editable ? "" : "disabled"}
+            >
+
+            ${
+                metric.unit === "PERCENT"
+                    ? `
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                            %
+                        </span>
+                    `
+                    : ""
+            }
+        </div>
+    `;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| PERHITUNGAN
+|--------------------------------------------------------------------------
+*/
+
+/*
+|--------------------------------------------------------------------------
+| PEMBULATAN NILAI KPI
+|--------------------------------------------------------------------------
+*/
+
+function roundCrmKpiNumber(
+    value,
+    decimalPlaces = 2
+) {
+    const number =
+        Number(value);
+
+    if (!Number.isFinite(number)) {
+        return 0;
+    }
+
+    const multiplier =
+        Math.pow(
+            10,
+            decimalPlaces
+        );
+
+    return Math.round(
+        (
+            number +
+            Number.EPSILON
+        ) *
+        multiplier
+    ) / multiplier;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| UBAH TOTAL SKOR MENJADI PERSENTASE
+|--------------------------------------------------------------------------
+| Total bobot maksimal KPI CRM adalah 115.
+|
+| Contoh:
+| Skor 115 = 115%
+| Skor 57,5 = 57,5%
+|--------------------------------------------------------------------------
+*/
+
+function calculateCrmKpiPercentage(
+    totalScore
+) {
+    const score =
+        Number(totalScore);
+
+    if (
+        !Number.isFinite(score) ||
+        score <= 0
+    ) {
+        return 0;
+    }
+
+    return roundCrmKpiNumber(
+        Math.min(
+            score,
+            CRM_KPI_MAX_SCORE
+        ),
+        2
+    );
+}
+
+function hasKpiValue(value) {
+    if (Array.isArray(value)) {
+        return value.some(function (item) {
+            return item !== "" &&
+                item !== null &&
+                item !== undefined;
+        });
+    }
+
+    return (
+        value !== "" &&
+        value !== null &&
+        value !== undefined
+    );
+}
+
+function calculateCrmKpiScore(
+    metric,
+    row
+) {
+    if (!metric || !row) {
+        return 0;
+    }
+
+    const status =
+        String(row.status || "")
+            .trim()
+            .toUpperCase();
+
+    const verified =
+        status === "TERVERIFIKASI";
+
+    const useHoResult =
+        verified &&
+        canViewCrmKpiHo() &&
+        hasKpiValue(
+            row.actualHo
+        );
+
+    /*
+    |--------------------------------------------------------------------------
+    | SAAT MODE LIHAT
+    |--------------------------------------------------------------------------
+    | Gunakan skor yang sudah disimpan di database.
+    | Ini penting agar data historis AppSheet tidak dihitung ulang
+    | dengan formula frontend yang baru.
+    */
+
+    if (
+        !crmKpiEditing &&
+        !crmKpiVerifying
+    ) {
+        if (
+            useHoResult &&
+            hasKpiValue(
+                row.scoreHo
+            )       
+        ) {
+            return Number(
+                row.scoreHo
+            );
+        }
+
+        if (
+            hasKpiValue(
+                row.scoreCrm
+            )
+        ) {
+            return Number(
+                row.scoreCrm
+            );
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PILIH ACTUAL
+    |--------------------------------------------------------------------------
+    */
+
+    const selectedActual =
+        useHoResult ||
+        crmKpiVerifying
+            ? row.actualHo
+            : row.actualCrm;
+
+    /*
+    | Nilai kosong tidak boleh mendapat bobot,
+    | termasuk KPI semakin kecil semakin baik.
+    */
+
+    if (!hasKpiValue(selectedActual)) {
+        return 0;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | KPI KPB
+    |--------------------------------------------------------------------------
+    */
+
+    if (metric.unit === "KPB") {
+        const targets =
+            Array.isArray(row.target)
+                ? row.target
+                : Array.isArray(
+                    metric.target
+                )
+                    ? metric.target
+                    : [
+                        60,
+                        50,
+                        30,
+                        40
+                    ];
+
+        const actuals =
+            Array.isArray(
+                selectedActual
+            )
+                ? selectedActual
+                : [
+                    selectedActual,
+                    "",
+                    "",
+                    ""
+                ];
+
+        const achievements =
+            targets.map(function (
+                targetValue,
+                index
+            ) {
+                const actualValue =
+                    Number(
+                        actuals[index] || 0
+                    );
+
+                return calculateAchievement(
+                    Number(
+                        targetValue || 0
+                    ),
+                    actualValue,
+                    false
+                );
+            });
+
+        if (!achievements.length) {
+            return 0;
+        }
+
+        const averageAchievement =
+            achievements.reduce(
+                function (
+                    total,
+                    achievement
+                ) {
+                    return (
+                        total +
+                        achievement
+                    );
+                },
+                0
+            ) /
+            achievements.length;
+
+        return roundCrmKpiNumber(
+            averageAchievement *
+            Number(
+                metric.weight || 0
+            )
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | KPI BIASA
+    |--------------------------------------------------------------------------
+    */
+
+    const target =
+        Number(
+            row.target !== "" &&
+            row.target !== null &&
+            row.target !== undefined
+                ? row.target
+                : metric.target || 0
+        );
+
+    const actual =
+        Number(
+            selectedActual || 0
+        );
+
+    const achievement =
+        calculateAchievement(
+            target,
+            actual,
+            metric.lowerIsBetter ===
+                true
+        );
+
+    return roundCrmKpiNumber(
+        achievement *
+        Number(metric.weight || 0)
+    );
+}
+
+function calculateAchievement(
+    target,
+    actual,
+    lowerIsBetter
+) {
+    const targetNumber =
+        Number(target || 0);
+
+    const actualNumber =
+        Number(actual || 0);
+
+    if (
+        !Number.isFinite(
+            targetNumber
+        ) ||
+        !Number.isFinite(
+            actualNumber
+        ) ||
+        targetNumber <= 0 ||
+        actualNumber < 0
+    ) {
+        return 0;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SEMAKIN KECIL SEMAKIN BAIK
+    |--------------------------------------------------------------------------
+    | Contoh:
+    | Target maksimal 5%, Actual 5%  = 100%
+    | Target maksimal 5%, Actual 10% = 50%
+    */
+
+    if (lowerIsBetter) {
+        if (
+            actualNumber <=
+            targetNumber
+        ) {
+            return 1;
+        }
+
+        return Math.min(
+            targetNumber /
+            actualNumber,
+            1
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SEMAKIN BESAR SEMAKIN BAIK
+    |--------------------------------------------------------------------------
+    */
+
+    return Math.min(
+        actualNumber /
+        targetNumber,
+        1
+    );
+}
+
+function calculateTotalCrmKpi() {
+    return CRM_KPI_METRICS.reduce(
+        function (total, metric) {
+            const row =
+                crmKpiRows.find(function (item) {
+                    return item.code === metric.code;
+                });
+
+            return total +
+                (
+                    row
+                        ? calculateCrmKpiScore(
+                            metric,
+                            row
+                        )
+                        : 0
+                );
+        },
+        0
+    );
+}
+
+function formatCrmKpiDifference(metric, row) {
+    if (
+        !hasKpiValue(row.actualCrm) ||
+        !hasKpiValue(row.actualHo)
+    ) {
+        return "—";
+    }
+
+    if (metric.unit === "KPB") {
+        const crmAverage =
+            averageKpiArray(row.actualCrm);
+
+        const hoAverage =
+            averageKpiArray(row.actualHo);
+
+        return formatSignedNumber(
+            hoAverage - crmAverage
+        );
+    }
+
+    return formatSignedNumber(
+        Number(row.actualHo) -
+        Number(row.actualCrm)
+    );
+}
+
+function getDifferenceClass(metric, row) {
+    const difference =
+        Number(
+            formatCrmKpiDifference(
+                metric,
+                row
+            )
+        );
+
+    if (!Number.isFinite(difference)) {
+        return "text-slate-400";
+    }
+
+    if (difference === 0) {
+        return "text-slate-500";
+    }
+
+    return difference > 0
+        ? "text-emerald-600"
+        : "text-red-600";
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| INPUT MODE
+|--------------------------------------------------------------------------
+*/
+
+async function prepareCrmKpiInput() {
+    if (!canInputCrmKpi()) {
+        showToast(
+            "Hanya CRM yang dapat mengisi KPI."
+        );
+
+        return;
+    }
+
+    setKpiButtonLoading(
+        newCrmKpiButton,
+        true,
+        "Memeriksa periode..."
+    );
+
+    try {
+        const availability =
+            await requestBackend(
+                "getCrmKpiInputAvailability",
+                {}
+            );
+
+        let selectedMode =
+            "WEEKLY";
+
+        if (
+            availability.closingAvailable
+        ) {
+            const closingDate =
+                new Date(
+                    availability.closingYear,
+                    availability.closingMonth - 1,
+                    1
+                );
+
+            const closingName =
+                new Intl.DateTimeFormat(
+                    "id-ID",
+                    {
+                        month: "long",
+                        year: "numeric"
+                    }
+                ).format(
+                    closingDate
+                );
+
+            const chooseClosing =
+                window.confirm(
+                    `Closing ${closingName} belum dibuat.\n\n` +
+                    `Tekan OK untuk input Closing ${closingName}.\n` +
+                    `Tekan Batal untuk input Week berjalan.`
+                );
+
+            selectedMode =
+                chooseClosing
+                    ? "CLOSING"
+                    : "WEEKLY";
+        }
+
+        await startCrmKpiInput(
+            selectedMode,
+            availability
+        );
+    } catch (error) {
+        console.error(
+            "Gagal memeriksa Closing KPI:",
+            error
+        );
+
+        showToast(
+            error.message ||
+            "Periode KPI gagal diperiksa.",
+            "error"
+        );
+    } finally {
+        setKpiButtonLoading(
+            newCrmKpiButton,
+            false,
+            "+ Input Baru"
+        );
+    }
+}
+
+
+async function startCrmKpiInput(
+    mode,
+    availability
+) {
+    crmKpiInputMode =
+        mode === "CLOSING"
+            ? "CLOSING"
+            : "WEEKLY";
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filter utama tetap menunjukkan bulan berjalan.
+    | Opsi CLOSING otomatis membaca bulan sebelumnya.
+    |--------------------------------------------------------------------------
+    */
+
+    crmKpiYear.value =
+        String(
+            availability.currentYear
+        );
+
+    crmKpiMonth.value =
+        String(
+            availability.currentMonth
+        );
+
+    populateCrmKpiWeekOptions();
+
+    crmKpiWeek.value =
+        crmKpiInputMode === "CLOSING"
+            ? "CLOSING"
+            : String(
+                availability.currentWeek
+            );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Catatan hanya aktif untuk Closing
+    |--------------------------------------------------------------------------
+    */
+
+    if (crmKpiSnapshotNote) {
+        crmKpiSnapshotNote.disabled =
+            crmKpiInputMode !==
+            "CLOSING";
+
+        crmKpiSnapshotNote.value =
+            crmKpiInputMode ===
+            "CLOSING"
+                ? `Closing ${
+                    new Intl.DateTimeFormat(
+                        "id-ID",
+                        {
+                            month: "long",
+                            year: "numeric"
+                        }
+                    ).format(
+                        new Date(
+                            availability.closingYear,
+                            availability.closingMonth - 1,
+                            1
+                        )
+                    )
+                }`
+                : "";
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ambil snapshot terakhir sebagai dasar input.
+    |--------------------------------------------------------------------------
+    */
+
+    await loadCrmKpiPage();
+
+    crmKpiEditing = true;
+    crmKpiVerifying = false;
+
+    updateCrmKpiPeriodInformation(
+        "DRAFT"
+    );
+
+    updateCrmKpiButtons(
+        "DRAFT"
+    );
+
+    renderCrmKpiTable();
+}
+
+function startCrmKpiVerification() {
+    if (!crmKpiWeek.value) {
+        showToast(
+            "Pilih periode KPI yang akan diverifikasi."
+        );
+
+        return;
+    }
+
+    crmKpiEditing = false;
+    crmKpiVerifying = true;
+
+    updateCrmKpiPeriodInformation(
+        "MENUNGGU VERIFIKASI MSCM"
+    );
+
+    updateCrmKpiButtons(
+        "MENUNGGU VERIFIKASI MSCM"
+    );
+
+    renderCrmKpiTable();
+}
+
+function hasCrmKpiUnsavedChanges() {
+    return (
+        crmKpiDirty &&
+        (
+            crmKpiEditing ||
+            crmKpiVerifying
+        )
+    );
+}
+
+function discardCrmKpiUnsavedChanges() {
+    crmKpiRows =
+        JSON.parse(
+            JSON.stringify(
+                crmKpiSavedRows
+            )
+        );
+
+    crmKpiEditing = false;
+    crmKpiVerifying = false;
+    crmKpiDirty = false;
+
+    renderCrmKpiTable();
+
+    updateCrmKpiButtons(
+        ""
+    );
+
+    updateCrmKpiPeriodInformation(
+        ""
+    );
+}
+
+window["crmKpiHasUnsavedChanges"] =
+    hasCrmKpiUnsavedChanges;
+
+window["crmKpiDiscardUnsavedChanges"] =
+    discardCrmKpiUnsavedChanges;
+
+function cancelCrmKpiInput() {
+    crmKpiEditing = false;
+    crmKpiVerifying = false;
+
+    loadCrmKpiPage();
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AMBIL INPUT TABEL
+|--------------------------------------------------------------------------
+*/
+
+function getCrmKpiInputRoot() {
+    return window.innerWidth < 768
+        ? document.getElementById(
+              "crmKpiMobileList"
+          )
+        : document.getElementById(
+              "crmKpiDesktopTable"
+          );
+}
+
+
+function collectCrmKpiTableValues(owner) {
+    const actualSelector =
+        `[data-kpi-actual="${owner}"]`;
+
+    const inputRoot =
+        getCrmKpiInputRoot();
+
+    if (!inputRoot) {
+        return;
+    }
+
+    inputRoot
+        .querySelectorAll(actualSelector)
+        .forEach(function (input) {
+            const code = input.dataset.kpiCode;
+
+            const row =
+                crmKpiRows.find(function (item) {
+                    return item.code === code;
+                });
+
+            if (!row) {
+                return;
+            }
+
+            if (
+                input.dataset.kpiIndex !== undefined
+            ) {
+                const index =
+                    Number(input.dataset.kpiIndex);
+
+                const property =
+                    owner === "crm"
+                        ? "actualCrm"
+                        : "actualHo";
+
+                if (!Array.isArray(row[property])) {
+                    row[property] = [
+                        "",
+                        "",
+                        "",
+                        ""
+                    ];
+                }
+
+                row[property][index] =
+                    input.value;
+            } else if (owner === "crm") {
+                row.actualCrm =
+                    input.value;
+            } else {
+                row.actualHo =
+                    input.value;
+            }
+        });
+
+    const kpbRow =
+        crmKpiRows.find(
+            function (item) {
+                return (
+                    item.code ===
+                    "KPB"
+                );
+            }
+        );
+
+    if (kpbRow) {
+        const property =
+            owner === "crm"
+                ? "actualCrm"
+                : "actualHo";
+
+        const currentValues =
+            Array.isArray(
+                kpbRow[property]
+            )
+                ? kpbRow[property]
+                : [
+                    "",
+                    "",
+                    "",
+                    "",
+                    ""
+                ];
+
+        const firstFour =
+            [
+                currentValues[0] ?? "",
+                currentValues[1] ?? "",
+                currentValues[2] ?? "",
+                currentValues[3] ?? ""
+            ];
+
+        const average =
+            calculateKpbDisplayAverage(
+                firstFour
+            );
+
+        kpbRow[property] = [
+            ...firstFour,
+            average
+        ];
+    }
+
+    inputRoot
+        .querySelectorAll(
+            "[data-kpi-target]"
+        )
+        .forEach(function (input) {
+            const row =
+                crmKpiRows.find(function (item) {
+                    return (
+                        item.code ===
+                        input.dataset.kpiTarget
+                    );
+                });
+
+            if (row) {
+                row.target =
+                    input.value;
+            }
+        });
+}
+
+
+
+function refreshCrmKpiInputPreview() {
+    collectCrmKpiTableValues("crm");
+
+    crmKpiDirty = true;
+
+    renderCrmKpiTable();
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SIMPAN CRM
+|--------------------------------------------------------------------------
+*/
+
+async function saveCrmKpi() {
+    if (!crmKpiDirty) {
+        showToast(
+            "Belum ada perubahan yang perlu disimpan.",
+            "error"
+        );
+
+        return;
+    }
+
+    collectCrmKpiTableValues("crm");
+
+    const period =
+        getSelectedCrmKpiPeriod();
+
+    setKpiButtonLoading(
+        saveCrmKpiButton,
+        true,
+        "Menyimpan..."
+    );
+
+    try {
+        await requestBackend(
+            "saveCrmKpi",
+            {
+                branch:
+                    period.branch,
+
+                year:
+                    period.year,
+
+                month:
+                    period.month,
+
+                snapshotType:
+                    crmKpiInputMode,
+
+                snapshotNote:
+                    crmKpiSnapshotNote
+                        ? crmKpiSnapshotNote.value.trim()
+                        : "",
+
+                metrics:
+                    crmKpiRows
+            }
+        );
+
+        showToast(
+            "KPI CRM berhasil disimpan dan menunggu verifikasi MSCM."
+        );
+
+        await loadCrmKpiPage();
+    } catch (error) {
+        showToast(
+            error.message ||
+            "KPI CRM gagal disimpan."
+        );
+    } finally {
+        setKpiButtonLoading(
+            saveCrmKpiButton,
+            false,
+            "Simpan KPI"
+        );
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| VERIFIKASI MSCM
+|--------------------------------------------------------------------------
+*/
+
+async function verifyCrmKpi() {
+    collectCrmKpiTableValues(
+        "ho"
+    );
+
+    const period =
+        getSelectedCrmKpiPeriod();
+
+    setKpiButtonLoading(
+        verifyCrmKpiButton,
+        true,
+        "Memverifikasi..."
+    );
+
+    try {
+        await requestBackend(
+            "verifyCrmKpi",
+            {
+                branch:
+                    period.branch,
+
+                year:
+                    period.year,
+
+                month:
+                    period.month,
+
+                snapshotType:
+                    period.snapshotType,
+
+                metrics:
+                    crmKpiRows
+            }
+        );
+
+        showToast(
+            "KPI CRM berhasil diverifikasi MSCM."
+        );
+
+        await loadCrmKpiPage();
+    } catch (error) {
+        showToast(
+            error.message ||
+            "KPI CRM gagal diverifikasi.",
+            "error"
+        );
+    } finally {
+        setKpiButtonLoading(
+            verifyCrmKpiButton,
+            false,
+            "Verifikasi MSCM"
+        );
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| BUTTON
+|--------------------------------------------------------------------------
+*/
+
+function updateCrmKpiButtons(status) {
+    const periodSelected =
+        Boolean(
+            crmKpiYear.value &&
+            crmKpiMonth.value
+        );
+    const dirtyBadge =
+        document.getElementById(
+            "crmKpiDirtyBadge"
+        );
+
+    if (dirtyBadge) {
+        dirtyBadge.classList.toggle(
+            "hidden",
+            !crmKpiDirty
+        );
+    }    
+
+    newCrmKpiButton.classList.toggle(
+        "hidden",
+        !canInputCrmKpi() ||
+        !periodSelected ||
+        crmKpiEditing
+    );
+
+    saveCrmKpiButton.classList.toggle(
+        "hidden",
+        !crmKpiEditing
+    );
+
+    saveCrmKpiButton.disabled =
+        !crmKpiDirty;
+
+    saveCrmKpiButton.classList.toggle(
+        "opacity-50",
+        !crmKpiDirty
+    );
+
+    saveCrmKpiButton.classList.toggle(
+        "cursor-not-allowed",
+        !crmKpiDirty
+    );
+
+    verifyCrmKpiButton.classList.toggle(
+        "hidden",
+        !canVerifyCrmKpi() ||
+        !periodSelected ||
+        crmKpiVerifying ||
+        status === "TERVERIFIKASI"
+    );
+
+    cancelCrmKpiButton.classList.toggle(
+        "hidden",
+        !crmKpiEditing &&
+        !crmKpiVerifying
+    );
+
+    const actionBar =
+        document.getElementById(
+            "crmKpiActionBar"
+        );
+
+    if (actionBar) {
+        const shouldStick =
+            crmKpiEditing ||
+            crmKpiVerifying;
+
+        actionBar.classList.toggle(
+            "sticky",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "bottom-3",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "z-30",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "border",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "border-slate-200",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "shadow-lg",
+            shouldStick
+        );
+
+        actionBar.classList.toggle(
+            "md:static",
+            shouldStick
+        );
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| UI HELPER
+|--------------------------------------------------------------------------
+*/
+
+function updateCrmKpiPeriodInformation(
+    status
+) {
+    const selectedPeriod =
+        String(
+            crmKpiWeek.value || ""
+        );
+
+    const year =
+        Number(
+            crmKpiYear.value
+        );
+
+    const month =
+        Number(
+            crmKpiMonth.value
+        );
+
+    const periodLabel =
+        document.getElementById(
+            "crmKpiPeriodLabel"
+        );
+
+    const information =
+        document.getElementById(
+            "crmKpiInformation"
+        );
+
+    const statusElement =
+        document.getElementById(
+            "crmKpiStatus"
+        );
+
+    /*
+    |--------------------------------------------------------------------------
+    | STATUS
+    |--------------------------------------------------------------------------
+    */
+
+    if (statusElement) {
+
+        const currentStatus =
+            String(
+                status ||
+                "Belum ada data"
+            )
+                .trim()
+                .toUpperCase();
+
+        let statusLabel =
+            status ||
+            "Belum ada data";
+
+        if (
+            currentStatus ===
+            "TERVERIFIKASI"
+        ) {
+            statusLabel =
+                "Terverifikasi";
+        } else if (
+            currentStatus.includes(
+                "MENUNGGU"
+            )
+        ) {
+            statusLabel =
+                "Menunggu Verifikasi";
+        } else if (
+            currentStatus ===
+            "DRAFT"
+        ) {
+            statusLabel =
+                "Draft";
+        }
+
+        statusElement.textContent =
+            statusLabel;
+
+        let statusClass =
+            "mt-2 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-xs font-black text-white";
+
+        if (
+            currentStatus ===
+            "TERVERIFIKASI"
+        ) {
+            statusClass =
+                "mt-2 inline-flex rounded-full bg-emerald-400/20 px-3 py-1.5 text-xs font-black text-emerald-50";
+        } else if (
+            currentStatus.includes(
+                "MENUNGGU"
+            )
+        ) {
+            statusClass =
+                "mt-2 inline-flex rounded-full bg-amber-300/20 px-3 py-1.5 text-xs font-black text-amber-50";
+        } else if (
+            currentStatus ===
+            "DRAFT"
+        ) {
+            statusClass =
+                "mt-2 inline-flex rounded-full bg-sky-300/20 px-3 py-1.5 text-xs font-black text-sky-50";
+        }
+
+        statusElement.className =
+            statusClass;
+    }
+
+    const modeBadge =
+        document.getElementById(
+            "crmKpiModeBadge"
+        );
+
+    if (modeBadge) {
+        let badgeText = "Pilih Periode";
+        let badgeClass =
+            "inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500";
+
+        if (selectedPeriod === "CLOSING") {
+            badgeText = "● Closing";
+            badgeClass =
+                "inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700";
+        } else if (
+            Number.isFinite(Number(selectedPeriod)) &&
+            Number(selectedPeriod) > 0
+        ) {
+            badgeText = "● Weekly";
+            badgeClass =
+                "inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-sky-700";
+        }
+
+        modeBadge.textContent =
+            badgeText;
+
+        modeBadge.className =
+            badgeClass;
+    }
+
+    if (
+        !periodLabel ||
+        !information
+    ) {
+        console.warn(
+            "Elemen KPI CRM untuk informasi periode tidak ditemukan."
+        );
+
+        return;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BELUM ADA PERIODE
+    |--------------------------------------------------------------------------
+    */
+
+    if (!selectedPeriod) {
+        periodLabel.textContent =
+            "Pilih periode";
+
+        information.textContent =
+            "Pilih Week atau Closing untuk menampilkan KPI.";
+
+        return;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CLOSING BULAN SEBELUMNYA
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        selectedPeriod ===
+        "CLOSING"
+    ) {
+        const period =
+            getSelectedCrmKpiPeriod();
+
+        const closingDate =
+            new Date(
+                period.year,
+                period.month - 1,
+                1
+            );
+
+        const closingName =
+            new Intl.DateTimeFormat(
+                "id-ID",
+                {
+                    month: "long",
+                    year: "numeric"
+                }
+            ).format(
+                closingDate
+            );
+
+        periodLabel.textContent =
+            `Closing ${closingName}`;
+
+        information.textContent =
+            "Laporan final KPI CRM bulan sebelumnya.";
+
+        return;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | WEEK
+    |--------------------------------------------------------------------------
+    */
+
+    const week =
+        Number(
+            selectedPeriod
+        );
+
+    if (
+        !Number.isFinite(week) ||
+        week <= 0
+    ) {
+        periodLabel.textContent =
+            "Periode tidak valid";
+
+        information.textContent =
+            "Silakan pilih periode kembali.";
+
+        return;
+    }
+
+    const range =
+        getCrmKpiWeekRange(
+            year,
+            month,
+            week
+        );
+
+    if (!range) {
+        periodLabel.textContent =
+            `Week ${week}`;
+
+        information.textContent =
+            "Week tidak tersedia pada bulan yang dipilih.";
+
+        return;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | FORMAT TANGGAL WEEK
+    |--------------------------------------------------------------------------
+    */
+
+    const dateFormatter =
+        new Intl.DateTimeFormat(
+            "id-ID",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }
+        );
+
+    periodLabel.textContent =
+        `Week ${week}`;
+
+    information.textContent =
+        `${dateFormatter.format(
+            range.start
+        )} – ${dateFormatter.format(
+            range.end
+        )} · Minggu sampai Sabtu`;
+}
+
+function setCrmKpiLoading(
+    loading,
+    message = "Memuat data KPI..."
+) {
+    const loadingElement =
+        document.getElementById(
+            "crmKpiLoading"
+        );
+
+    const tableContainer =
+        document.getElementById(
+            "crmKpiTableContainer"
+        );
+
+    const emptyElement =
+        document.getElementById(
+            "emptyCrmKpi"
+        );
+
+    const percentageElement =
+        document.getElementById(
+            "crmKpiLoadingPercent"
+        );
+
+    const progressElement =
+        document.getElementById(
+            "crmKpiLoadingBar"
+        );
+
+    const textElement =
+        document.getElementById(
+            "crmKpiLoadingText"
+        );
+
+    window.clearInterval(
+        crmKpiLoadingTimer
+    );
+
+    crmKpiLoadingTimer = null;
+
+    if (loading) {
+        crmKpiLoadingValue = 8;
+
+        loadingElement.classList.remove(
+            "hidden"
+        );
+
+        tableContainer.classList.add(
+            "hidden"
+        );
+
+        if (emptyElement) {
+            emptyElement.classList.add(
+                "hidden"
+            );
+        }
+
+        if (textElement) {
+            textElement.textContent =
+                message;
+        }
+
+        updateCrmKpiLoadingProgress(
+            crmKpiLoadingValue
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | PROGRESS SEMU
+        |--------------------------------------------------------------------------
+        | Berjalan sampai 90%. Nilai 100% hanya diberikan
+        | setelah server benar-benar memberikan respons.
+        */
+
+        crmKpiLoadingTimer =
+            window.setInterval(
+                function () {
+                    if (
+                        crmKpiLoadingValue >=
+                        90
+                    ) {
+                        return;
+                    }
+
+                    const increment =
+                        crmKpiLoadingValue < 50
+                            ? 7
+                            : crmKpiLoadingValue < 75
+                                ? 4
+                                : 1;
+
+                    crmKpiLoadingValue =
+                        Math.min(
+                            crmKpiLoadingValue +
+                                increment,
+                            90
+                        );
+
+                    updateCrmKpiLoadingProgress(
+                        crmKpiLoadingValue
+                    );
+                },
+                280
+            );
+
+        return;
+    }
+
+    crmKpiLoadingValue = 100;
+
+    updateCrmKpiLoadingProgress(
+        100
+    );
+
+    if (textElement) {
+        textElement.textContent =
+            "Data KPI berhasil dimuat";
+    }
+
+    window.setTimeout(
+        function () {
+            loadingElement.classList.add(
+                "hidden"
+            );
+
+            tableContainer.classList.remove(
+                "hidden"
+            );
+
+            crmKpiLoadingValue = 0;
+        },
+        250
+    );
+}
+
+
+function updateCrmKpiLoadingProgress(
+    value
+) {
+    const safeValue =
+        Math.max(
+            0,
+            Math.min(
+                Number(value || 0),
+                100
+            )
+        );
+
+    const percentageElement =
+        document.getElementById(
+            "crmKpiLoadingPercent"
+        );
+
+    const progressElement =
+        document.getElementById(
+            "crmKpiLoadingBar"
+        );
+
+    if (percentageElement) {
+        percentageElement.textContent =
+            `${Math.round(
+                safeValue
+            )}%`;
+    }
+
+    if (progressElement) {
+        progressElement.style.width =
+            `${safeValue}%`;
+    }
+}
+
+function setKpiButtonLoading(
+    button,
+    loading,
+    label
+) {
+    button.disabled = loading;
+
+    button.innerHTML = loading
+        ? `
+            <span class="flex items-center justify-center gap-2">
+                <span class="ui-spinner"></span>
+                <span>${label}</span>
+            </span>
+        `
+        : label;
+}
+
+function getMetricInformation(metric) {
+    return `Target ${metric.targetLabel} · Bobot maksimal ${metric.weight}`;
+}
+
+function formatCrmKpiTarget(metric, target) {
+    if (Array.isArray(target)) {
+        return metric.targetLabel;
+    }
+
+    if (metric.targetEditable) {
+        return target
+            ? Number(target).toLocaleString("id-ID")
+            : "Target MD belum diisi";
+    }
+
+    return metric.targetLabel;
+}
+
+function averageKpiArray(
+    values
+) {
+    if (!Array.isArray(values)) {
+        return Number(
+            values || 0
+        );
+    }
+
+    const normalized =
+        normalizeKpbDisplayValues(
+            values
+        );
+
+    /*
+    | Elemen kelima merupakan rata-rata.
+    */
+
+    return Number(
+        normalized[4] || 0
+    );
+}
+
+function formatSignedNumber(value) {
+    const number = Number(value || 0);
+
+    if (number > 0) {
+        return `+${formatKpiNumber(number)}`;
+    }
+
+    return formatKpiNumber(number);
+}
+
+function formatKpiNumber(value) {
+    return Number(value || 0)
+        .toLocaleString(
+            "id-ID",
+            {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }
+        );
+}
+
+function getCrmKpiWeekRange(
+    year,
+    month,
+    week
+) {
+    const monthStart =
+        new Date(
+            year,
+            month - 1,
+            1
+        );
+
+    const monthEnd =
+        new Date(
+            year,
+            month,
+            0
+        );
+
+    /*
+    | Week CRM = Sabtu–Jumat
+    |
+    | JS:
+    | Minggu = 0
+    | Senin  = 1
+    | ...
+    | Jumat  = 5
+    | Sabtu  = 6
+    */
+
+    const daysSinceSaturday =
+        (
+            monthStart.getDay() + 1
+        ) % 7;
+
+    const firstSaturday =
+        new Date(monthStart);
+
+    firstSaturday.setDate(
+        monthStart.getDate() -
+        daysSinceSaturday
+    );
+
+    const start =
+        new Date(firstSaturday);
+
+    start.setDate(
+        firstSaturday.getDate() +
+        ((week - 1) * 7)
+    );
+
+    const end =
+        new Date(start);
+
+    end.setDate(
+        start.getDate() + 6
+    );
+
+    /*
+    | Hanya tampilkan Week yang
+    | bersinggungan dengan bulan acuan.
+    */
+
+    if (
+        end < monthStart ||
+        start > monthEnd
+    ) {
+        return null;
+    }
+
+    return {
+        start: start,
+        end: end
+    };
+}
+
+function getCurrentCrmKpiWeek() {
+    const today =
+        new Date();
+
+    const monthStart =
+        new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            1
+        );
+
+    const daysSinceSaturday =
+        (
+            monthStart.getDay() + 1
+        ) % 7;
+
+    const firstSaturday =
+        new Date(monthStart);
+
+    firstSaturday.setDate(
+        monthStart.getDate() -
+        daysSinceSaturday
+    );
+
+    const diffDays =
+        Math.floor(
+            (
+                today -
+                firstSaturday
+            ) /
+            86400000
+        );
+
+    return (
+        Math.floor(
+            diffDays / 7
+        ) + 1
+    );
+}
+
+function populateCrmKpiWeekOptions() {
+    const year =
+        Number(crmKpiYear.value);
+
+    const month =
+        Number(crmKpiMonth.value);
+
+    const previousValue =
+        crmKpiWeek.value;
+
+    crmKpiWeek.innerHTML = "";
+
+    for (
+        let week = 1;
+        week <= 6;
+        week += 1
+    ) {
+        const range =
+            getCrmKpiWeekRange(
+                year,
+                month,
+                week
+            );
+
+        if (!range) {
+            continue;
+        }
+
+        const option =
+            document.createElement(
+                "option"
+            );
+
+        option.value =
+            String(week);
+
+        option.textContent =
+            `Week ${week} · ${
+                formatCrmKpiShortDate(
+                    range.start
+                )
+            }–${
+                formatCrmKpiShortDate(
+                    range.end
+                )
+            }`;
+
+        crmKpiWeek.appendChild(
+            option
+        );
+    }
+
+    const availableValues =
+        Array.from(
+            crmKpiWeek.options
+        ).map(function (option) {
+            return option.value;
+        });
+
+    if (
+        availableValues.includes(
+            previousValue
+        )
+    ) {
+        crmKpiWeek.value =
+            previousValue;
+    } else if (
+        availableValues.length
+    ) {
+        crmKpiWeek.value =
+            availableValues[0];
+    }
+}
+
+
+function formatCrmKpiShortDate(date) {
+    return new Intl.DateTimeFormat(
+        "id-ID",
+        {
+            day: "2-digit",
+            month: "short"
+        }
+    ).format(date);
+}
+
+function getLastCrmKpiWeek(
+    year,
+    month
+) {
+    let lastWeek = 1;
+
+    for (
+        let week = 1;
+        week <= 6;
+        week += 1
+    ) {
+        const range =
+            getCrmKpiWeekRange(
+                year,
+                month,
+                week
+            );
+
+        if (range) {
+            lastWeek = week;
+        }
+    }
+
+    return lastWeek;
+}
+
+
+function getSelectedCrmKpiPeriod() {
+
+    const year =
+        Number(
+            crmKpiYear.value
+        );
+
+    const month =
+        Number(
+            crmKpiMonth.value
+        );
+
+    const snapshotType =
+        String(
+            crmKpiPeriodType.value ||
+            "WEEKLY"
+        )
+            .trim()
+            .toUpperCase();
+
+    return {
+
+        branch:
+            crmKpiBranch.value,
+
+        year,
+
+        month,
+
+        week:
+            null,
+
+        snapshotType:
+            snapshotType === "CLOSING"
+                ? "CLOSING"
+                : "WEEKLY"
+    };
+}
+function updateCrmKpiPeriodTypeUI() {
+
+    const snapshotType =
+        String(
+            crmKpiPeriodType.value ||
+            "WEEKLY"
+        )
+            .trim()
+            .toUpperCase();
+
+    const isClosing =
+        snapshotType ===
+        "CLOSING";
+
+    if (crmKpiWeekWrapper) {
+        crmKpiWeekWrapper.classList.toggle(
+            "hidden",
+            isClosing
+        );
+    }
+
+    crmKpiInputMode =
+        isClosing
+            ? "CLOSING"
+            : "WEEKLY";
+
+    if (crmKpiPeriodModeHint) {
+        crmKpiPeriodModeHint.textContent =
+            isClosing
+                ? "Closing"
+                : "Weekly";
+    }
+
+    if (crmKpiPeriodHelper) {
+        crmKpiPeriodHelper.textContent =
+            isClosing
+                ? "Closing menggunakan bulan yang dipilih sebagai periode KPI."
+                : "Periode Weekly dihitung Sabtu–Jumat.";
+    }
+
+    if (crmKpiSnapshotNote) {
+        crmKpiSnapshotNote.disabled =
+            !isClosing;
+
+        if (!isClosing) {
+            crmKpiSnapshotNote.value =
+                "";
+        }
+    }
+}
+
+crmKpiYear.addEventListener(
+    "change",
+    function () {
+        populateCrmKpiWeekOptions();
+
+        updateCrmKpiPeriodInformation(
+            ""
+        );
+    }
+);
+
+
+crmKpiMonth.addEventListener(
+    "change",
+    function () {
+        populateCrmKpiWeekOptions();
+
+        updateCrmKpiPeriodInformation(
+            ""
+        );
+    }
+);
+
+crmKpiPeriodType.addEventListener(
+    "change",
+    function () {
+
+        updateCrmKpiPeriodTypeUI();
+
+        updateCrmKpiPeriodInformation(
+            ""
+        );
+    }
+);
+
+const crmKpiFilterToggle =
+    document.getElementById(
+        "crmKpiFilterToggle"
+    );
+
+const crmKpiFilterContent =
+    document.getElementById(
+        "crmKpiFilterContent"
+    );
+
+const crmKpiFilterChevron =
+    document.getElementById(
+        "crmKpiFilterChevron"
+    );
+
+if (
+    crmKpiFilterToggle &&
+    crmKpiFilterContent
+) {
+    crmKpiFilterToggle.addEventListener(
+        "click",
+        function () {
+            const isOpen =
+                !crmKpiFilterContent.classList.contains(
+                    "hidden"
+                );
+
+            crmKpiFilterContent.classList.toggle(
+                "hidden",
+                isOpen
+            );
+
+            crmKpiFilterToggle.setAttribute(
+                "aria-expanded",
+                String(!isOpen)
+            );
+
+            if (crmKpiFilterChevron) {
+                crmKpiFilterChevron.classList.toggle(
+                    "rotate-180",
+                    !isOpen
+                );
+            }
+        }
+    );
+}
+
+document.addEventListener(
+    "input",
+    function (event) {
+        const input =
+            event.target.closest(
+                '[data-kpi-code="KPB"][data-kpi-index]'
+            );
+
+        if (!input) {
+            return;
+        }
+
+        const owner =
+            input.dataset.kpiActual;
+
+        const inputRoot =
+            getCrmKpiInputRoot();
+
+        if (!inputRoot) {
+            return;
+        }
+
+        const inputs =
+            Array.from(
+                inputRoot.querySelectorAll(
+                    `[data-kpi-actual="${owner}"][data-kpi-code="KPB"][data-kpi-index]`
+                )
+            );
+
+        const values =
+            inputs.map(function (item) {
+                return item.value;
+            });
+
+        const average =
+            calculateKpbDisplayAverage(
+                values
+            );
+
+        const averageInput =
+            inputRoot.querySelector(
+                `[data-kpi-kpb-average="${owner}"]`
+            );
+
+        if (averageInput) {
+            averageInput.value =
+                average;
+        }
+
+        const row =
+            crmKpiRows.find(
+                function (item) {
+                    return (
+                        item.code ===
+                        "KPB"
+                    );
+                }
+            );
+
+        if (!row) {
+            return;
+        }
+
+        const property =
+            owner === "crm"
+                ? "actualCrm"
+                : "actualHo";
+
+        row[property] = [
+            ...values,
+            average
+        ];
+    }
+);
+
+
+function markCrmKpiDirty() {
+    if (
+        crmKpiEditing ||
+        crmKpiVerifying
+    ) {
+        crmKpiDirty = true;
+        updateCrmKpiButtons("");
+    }
+}
+
+
+document.addEventListener("input", function (event) {
+    const input = event.target.closest(
+        '#crmKpiPage [data-kpi-actual="crm"]'
+    );
+
+    if (!input) {
+        if (event.target.closest("#crmKpiPage")) {
+            markCrmKpiDirty();
+        }
+        return;
+    }
+
+    const code = input.dataset.kpiCode;
+    const row = crmKpiRows.find(item => item.code === code);
+    const metric = CRM_KPI_METRICS.find(item => item.code === code);
+
+    if (row && metric) {
+        if (input.dataset.kpiIndex !== undefined) {
+            const index = Number(input.dataset.kpiIndex);
+
+            if (!Array.isArray(row.actualCrm)) {
+                row.actualCrm = ["", "", "", "", ""];
+            }
+
+            row.actualCrm[index] = input.value;
+
+            const values = row.actualCrm.slice(0, 4);
+            row.actualCrm[4] = calculateKpbDisplayAverage(values);
+
+            const root = getCrmKpiInputRoot();
+            const averageInput = root?.querySelector(
+                '[data-kpi-kpb-average="crm"]'
+            );
+
+            if (averageInput) {
+                averageInput.value = row.actualCrm[4];
+            }
+        } else {
+            row.actualCrm = input.value;
+        }
+
+        const score = calculateCrmKpiScore(metric, row);
+        const scoreCell = document.querySelector(
+            `#crmKpiPage [data-kpi-score="${code}"]`
+        );
+
+        if (scoreCell) {
+            scoreCell.textContent = formatKpiNumber(score);
+
+            scoreCell.classList.remove(
+                "bg-red-100",
+                "text-red-700",
+                "bg-emerald-100",
+                "text-emerald-700",
+                "text-slate-900"
+            );
+
+            if (score === 0) {
+                scoreCell.classList.add("bg-red-100", "text-red-700");
+            } else if (score >= metric.weight) {
+                scoreCell.classList.add(
+                    "bg-emerald-100",
+                    "text-emerald-700"
+                );
+            } else {
+                scoreCell.classList.add("text-slate-900");
+            }
+        }
+
+        const total = calculateTotalCrmKpi();
+        const percentage = calculateCrmKpiPercentage(total);
+        const totalText = `${formatKpiNumber(percentage)}%`;
+
+        const totalTable = document.getElementById("crmKpiTableTotal");
+        const totalCard = document.getElementById("crmKpiTotal");
+
+        if (totalTable) totalTable.textContent = totalText;
+        if (totalCard) totalCard.textContent = totalText;
+    }
+
+    markCrmKpiDirty();
+});
+
+
+document.addEventListener(
+    "change",
+    function (event) {
+        if (
+            !event.target.closest(
+                "#crmKpiPage"
+            )
+        ) {
+            return;
+        }
+
+        markCrmKpiDirty();
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| EVENT
+|--------------------------------------------------------------------------
+*/
+
+document
+    .getElementById("loadCrmKpiButton")
+    .addEventListener(
+        "click",
+        function () {
+            if (
+                hasCrmKpiUnsavedChanges()
+            ) {
+                const confirmed =
+                    window.confirm(
+                        "Perubahan KPI CRM belum disimpan.\n\nLanjutkan tanpa menyimpan?"
+                    );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                discardCrmKpiUnsavedChanges();
+            }
+
+            loadCrmKpiPage();
+        }
+    );
+
+newCrmKpiButton.addEventListener(
+    "click",
+    prepareCrmKpiInput
+);
+
+saveCrmKpiButton.addEventListener(
+    "click",
+    saveCrmKpi
+);
+
+verifyCrmKpiButton.addEventListener(
+    "click",
+    startCrmKpiVerification
+);
+
+cancelCrmKpiButton.addEventListener(
+    "click",
+    cancelCrmKpiInput
+);
+
+window.loadCrmKpiPage =
+    loadCrmKpiPage;
