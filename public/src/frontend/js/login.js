@@ -229,7 +229,7 @@ if (
     existingUser
 ) {
     window.location.replace(
-        "index.html"
+        "dashboard.html"
     );
 }
 
@@ -355,7 +355,7 @@ loginForm.addEventListener(
             );
 
             window.location.replace(
-                "index.html"
+                "dashboard.html"
             );
             
         } catch (error) {
