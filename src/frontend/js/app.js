@@ -892,7 +892,7 @@ if (
         );
 
         window.location.replace(
-            "login.html"
+            "dashboard.html"
         );
 
         throw new Error(
