@@ -1194,19 +1194,19 @@ function renderLpjBudgetTable() {
                 return `
                     <tr data-lpj-budget-row="${index}">
                         <td class="font-black">
-                            ${escapeHtml(item.itemName || item.name || "")}
+                            ${escapeHtml(item.itemName || item.namaItem || item.nama_item || item.name || "-")}
                         </td>
 
                         <td>
-                            ${escapeHtml(item.itemType || item.type || "-")}
+                            ${escapeHtml(item.itemType || item.jenisItem || item.jenis_item || item.type || "-")}
                         </td>
 
                         <td>
-                            ${Number(item.quantity) || 0}
+                            ${Number(item.quantity ?? item.jumlah ?? 0) || 0}
                         </td>
 
                         <td class="font-black">
-                            ${rupiah(Number(item.totalPrice) || 0)}
+                            ${rupiah(Number(item.totalPrice ?? item.hargaTotal ?? item.harga_total ?? 0) || 0)}
                         </td>
 
                         <td>
