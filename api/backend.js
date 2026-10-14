@@ -3488,6 +3488,82 @@ const gasHandler = (() => {
             | LPJ → SUPABASE
             |--------------------------------------------------------------------------
             */
+            if (
+                requestBody.action ===
+                "uploadLpjAsset"
+            ) {
+                const payload =
+                    requestBody.payload || {};
+
+                const pkmId =
+                    String(payload.pkmId || "").trim();
+
+                const lpjId =
+                    String(payload.lpjId || "").trim();
+
+                const itemId =
+                    String(payload.itemId || "").trim();
+
+                const type =
+                    String(payload.type || "").trim().toUpperCase();
+
+                const imageData =
+                    String(payload.imageData || "").trim();
+
+                if (!pkmId || !lpjId || !imageData) {
+                    return response.status(400).json({
+                        success: false,
+                        message: "Data upload foto LPJ tidak lengkap."
+                    });
+                }
+
+                const lpjTypes = [
+                    "TENT",
+                    "KEGIATAN_1",
+                    "KEGIATAN_2"
+                ];
+
+                const itemTypes = [
+                    "DESIGN",
+                    "PHOTO"
+                ];
+
+                let uploaded;
+
+                if (lpjTypes.includes(type)) {
+                    uploaded = await uploadLpjImage({
+                        pkmId,
+                        lpjId,
+                        imageData,
+                        type
+                    });
+                } else if (itemTypes.includes(type)) {
+                    if (!itemId) {
+                        return response.status(400).json({
+                            success: false,
+                            message: "ID item budget tidak tersedia."
+                        });
+                    }
+
+                    uploaded = await uploadPkmItemImage({
+                        pkmId,
+                        itemId,
+                        imageData,
+                        type: type.toLowerCase()
+                    });
+                } else {
+                    return response.status(400).json({
+                        success: false,
+                        message: "Jenis foto tidak dikenal."
+                    });
+                }
+
+                return response.status(200).json({
+                    success: true,
+                    path: uploaded.path,
+                    fileName: uploaded.fileName
+                });
+            }
 
             if (
                 requestBody.action ===
@@ -4388,7 +4464,10 @@ const gasHandler = (() => {
                     */
 
                     const lpjId =
-                        crypto.randomUUID();
+                        String(
+                            payload.lpjId ||
+                            crypto.randomUUID()
+                        ).trim();
 
                     const now =
                         new Date().toISOString();
@@ -4408,13 +4487,13 @@ const gasHandler = (() => {
                             pkmId,
 
                         foto_tenda_full:
-                            "",
+                        String(payload.tentPhotoPath || ""),
 
-                        foto_kegiatan_1:
-                            "",
+                    foto_kegiatan_1:
+                        String(payload.activityPhoto1Path || ""),
 
-                        foto_kegiatan_2:
-                            "",
+                    foto_kegiatan_2:
+                        String(payload.activityPhoto2Path || ""),
 
                         evaluasi:
                             String(
@@ -4674,6 +4753,20 @@ const gasHandler = (() => {
                             synced_at:
                                 now
                         };
+
+                        const designImagePath =
+                            String(item.designImagePath || "").trim();
+
+                        const photoPath =
+                            String(item.photoPath || "").trim();
+
+                        if (designImagePath) {
+                            updateItem.gambar_desain = designImagePath;
+                        }
+
+                        if (photoPath) {
+                            updateItem.foto = photoPath;
+                        }
 
                         /*
                         |--------------------------------------------------------------------------
@@ -16526,6 +16619,13 @@ module.exports = async function handler(req, res) {
         );
 
     case "getLpjCandidates":
+        return await runHandler(
+            gasHandler,
+            req,
+            res
+        );
+
+    case "uploadLpjAsset":
         return await runHandler(
             gasHandler,
             req,

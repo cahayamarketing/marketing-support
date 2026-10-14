@@ -200,12 +200,6 @@ function initializeLpjFrontend() {
         .addEventListener(
             "click",
             function () {
-
-                if (!lpjReviewConfirmed) {
-                    openLpjReview();
-                    return;
-                }
-
                 finalizeLpj();
             }
         );
@@ -1047,7 +1041,7 @@ function openLpjModal(pkmId) {
 
     if (finalizeButton) {
         finalizeButton.textContent =
-            "Review & Finalisasi LPJ";
+            "Ajukan Finalisasi LPJ";
     }
 
     document.getElementById(
@@ -1273,6 +1267,9 @@ function renderLpjBudgetTable() {
                                 class="form-input min-h-20 lpj-budget-note"
                                 placeholder="Keterangan..."
                             ></textarea>
+                            <p class="lpj-budget-note-error hidden mt-1 text-xs font-bold text-red-600">
+                                Keterangan wajib diisi karena harga realisasi melebihi pengajuan.
+                            </p>
                         </td>
                     </tr>
                 `;
@@ -1384,7 +1381,9 @@ function renderLpjBudgetTable() {
                                     class="form-input lpj-budget-note mt-1 min-h-20"
                                     placeholder="Keterangan..."
                                 ></textarea>
-
+                                <p class="lpj-budget-note-error hidden mt-1 text-xs font-bold text-red-600">
+                                    Keterangan wajib diisi karena harga realisasi melebihi pengajuan.
+                                </p>
                             </div>
 
                         </div>
@@ -1630,6 +1629,15 @@ async function finalizeLpj() {
         return;
     }
 
+    const confirmed = window.confirm(
+        "Ajukan Finalisasi LPJ?\n\n" +
+        "Pastikan data realisasi, budget, dokumentasi, dan evaluasi sudah benar."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
     const button =
         document.getElementById(
             "finalizeLpjButton"
@@ -1666,38 +1674,67 @@ async function finalizeLpj() {
 
             const actualPrice =
                 Number(
-                    row.querySelector(".lpj-actual-price")
+                    row
+                        .querySelector(".lpj-actual-price")
                         .value.replace(/\D/g, "")
                 ) || 0;
 
             const totalPrice =
                 Number(item.totalPrice) || 0;
 
-            const note =
-                row.querySelector(".lpj-budget-note")
-                    .value.trim();
+            const noteInput =
+                row.querySelector(".lpj-budget-note");
 
-            if (actualPrice > totalPrice && !note) {
+            const errorMessage =
+                row.querySelector(".lpj-budget-note-error");
+
+            const note = noteInput.value.trim();
+
+            const isInvalid =
+                actualPrice > totalPrice && !note;
+
+            noteInput.classList.toggle(
+                "border-red-500",
+                isInvalid
+            );
+
+            noteInput.classList.toggle(
+                "ring-2",
+                isInvalid
+            );
+
+            noteInput.classList.toggle(
+                "ring-red-100",
+                isInvalid
+            );
+
+            if (errorMessage) {
+                errorMessage.classList.toggle(
+                    "hidden",
+                    !isInvalid
+                );
+            }
+
+            if (isInvalid) {
                 budgetValidationErrors.push({
-                    row: row,
-                    itemName: item.itemName || item.name || "Item",
-                    input: row.querySelector(".lpj-budget-note")
+                    input: noteInput,
+                    itemName:
+                        item.itemName ||
+                        item.name ||
+                        "Item"
                 });
             }
         });
 
         if (budgetValidationErrors.length > 0) {
-            budgetValidationErrors.forEach(function (error) {
-                error.input.classList.add("border-red-500", "ring-2", "ring-red-100");
-            });
-
             const firstError = budgetValidationErrors[0];
 
             showToast(
-                `Keterangan wajib diisi karena realisasi melebihi pengajuan: ${firstError.itemName}`
+                "Keterangan wajib diisi karena harga realisasi melebihi pengajuan."
             );
 
             firstError.input.focus();
+
             firstError.input.scrollIntoView({
                 behavior: "smooth",
                 block: "center"
@@ -1706,106 +1743,101 @@ async function finalizeLpj() {
             return;
         }
 
+        const pkmId = String(activeLpjItem.id);
+        const lpjId = crypto.randomUUID();
 
+        const budgetDetails = [];
 
-        const budgetDetails =
-            await Promise.all(
-                budgetRows.map(
-                    async function (row, index) {
-                        return {
-                            ...lpjBudgetItems[index],
+        for (let index = 0; index < budgetRows.length; index++) {
+            const row = budgetRows[index];
+            const item = lpjBudgetItems[index];
+            const itemId = String(item.id || "").trim();
 
-                            actualPrice:
-                                Number(
-                                    row
-                                        .querySelector(
-                                            ".lpj-actual-price"
-                                        )
-                                        .value
-                                        .replace(/\D/g, "")
-                                ) || 0,
+            const designFile =
+                row.querySelector(".lpj-design-image").files[0];
 
-                            designImage:
-                                await lpjFileToDataUrl(
-                                    row
-                                        .querySelector(
-                                            ".lpj-design-image"
-                                        )
-                                        .files[0]
-                                ),
+            const photoFile =
+                row.querySelector(".lpj-item-photo").files[0];
 
-                            photo:
-                                await lpjFileToDataUrl(
-                                    row
-                                        .querySelector(
-                                            ".lpj-item-photo"
-                                        )
-                                        .files[0]
-                                ),
+            const designImagePath = itemId
+                ? await uploadLpjAsset({
+                    pkmId,
+                    lpjId,
+                    itemId,
+                    file: designFile,
+                    type: "DESIGN"
+                })
+                : "";
 
-                            note:
-                                row
-                                    .querySelector(
-                                        ".lpj-budget-note"
-                                    )
-                                    .value
-                                    .trim()
-                        };
-                    }
-                )
-            );
+            const photoPath = itemId
+                ? await uploadLpjAsset({
+                    pkmId,
+                    lpjId,
+                    itemId,
+                    file: photoFile,
+                    type: "PHOTO"
+                })
+                : "";
+
+            budgetDetails.push({
+                ...item,
+
+                actualPrice:
+                    Number(
+                        row.querySelector(".lpj-actual-price")
+                            .value.replace(/\D/g, "")
+                    ) || 0,
+
+                designImagePath,
+                photoPath,
+
+                note:
+                    row.querySelector(".lpj-budget-note")
+                        .value.trim()
+            });
+        }
+
+        const tentPhotoPath = await uploadLpjAsset({
+            pkmId,
+            lpjId,
+            file: document.getElementById("lpjTentPhoto").files[0],
+            type: "TENT"
+        });
+
+        const activityPhoto1Path = await uploadLpjAsset({
+            pkmId,
+            lpjId,
+            file: document.getElementById("lpjActivityPhoto1").files[0],
+            type: "KEGIATAN_1"
+        });
+
+        const activityPhoto2Path = await uploadLpjAsset({
+            pkmId,
+            lpjId,
+            file: document.getElementById("lpjActivityPhoto2").files[0],
+            type: "KEGIATAN_2"
+        });
 
         const payload = {
-            pkmId:
-                activeLpjItem.id,
+            pkmId,
+            lpjId,
 
             actualDb:
-                Number(
-                    document.getElementById(
-                        "lpjActualDb"
-                    ).value
-                ) || 0,
+                Number(document.getElementById("lpjActualDb").value) || 0,
 
             actualDeal:
-                Number(
-                    document.getElementById(
-                        "lpjActualDeal"
-                    ).value
-                ) || 0,
+                Number(document.getElementById("lpjActualDeal").value) || 0,
 
             actualUe:
-                Number(
-                    document.getElementById(
-                        "lpjActualUe"
-                    ).value
-                ) || 0,
+                Number(document.getElementById("lpjActualUe").value) || 0,
 
-            evaluation:
-                evaluation,
+            evaluation,
 
-            tentPhoto:
-                await lpjFileToDataUrl(
-                    document.getElementById(
-                        "lpjTentPhoto"
-                    ).files[0]
-                ),
+            tentPhotoPath,
+            activityPhoto1Path,
+            activityPhoto2Path,
 
-            activityPhoto1:
-                await lpjFileToDataUrl(
-                    document.getElementById(
-                        "lpjActivityPhoto1"
-                    ).files[0]
-                ),
-
-            activityPhoto2:
-                await lpjFileToDataUrl(
-                    document.getElementById(
-                        "lpjActivityPhoto2"
-                    ).files[0]
-                ),
-
-            budgetDetails:
-                budgetDetails
+            budgetDetails
         };
 
         const result =
@@ -1834,6 +1866,102 @@ async function finalizeLpj() {
         button.textContent =
             "Finalisasi LPJ";
     }
+}
+
+async function uploadLpjAsset({
+    pkmId,
+    lpjId,
+    itemId = "",
+    file,
+    type
+}) {
+    if (!file) {
+        return "";
+    }
+
+    const imageData = await compressLpjImage(file);
+
+    const result = await requestBackend(
+        "uploadLpjAsset",
+        {
+            pkmId,
+            lpjId,
+            itemId,
+            imageData,
+            type
+        }
+    );
+
+    if (!result || !result.success || !result.path) {
+        throw new Error(
+            result?.message || `Upload gambar ${type} gagal.`
+        );
+    }
+
+    return result.path;
+}
+
+async function compressLpjImage(file) {
+    if (!file) {
+        return "";
+    }
+
+    if (!file.type.startsWith("image/")) {
+        throw new Error("File yang dipilih bukan gambar.");
+    }
+
+    const image = await new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+
+        reader.onload = function () {
+            const img = new Image();
+
+            img.onload = function () {
+                resolve(img);
+            };
+
+            img.onerror = function () {
+                reject(new Error("Gambar gagal dibaca."));
+            };
+
+            img.src = reader.result;
+        };
+
+        reader.onerror = function () {
+            reject(new Error("Gambar gagal dibaca."));
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    const maxDimension = 1600;
+    const scale = Math.min(
+        1,
+        maxDimension / Math.max(image.width, image.height)
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    let quality = 0.8;
+    let dataUrl = canvas.toDataURL("image/jpeg", quality);
+
+    while (dataUrl.length > 2_000_000 && quality > 0.35) {
+        quality -= 0.1;
+        dataUrl = canvas.toDataURL("image/jpeg", quality);
+    }
+
+    if (dataUrl.length > 2_000_000) {
+        throw new Error(
+            "Ukuran gambar masih terlalu besar. Pilih gambar yang lebih kecil."
+        );
+    }
+
+    return dataUrl;
 }
 
 function lpjFileToDataUrl(file) {
