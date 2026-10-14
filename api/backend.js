@@ -3722,8 +3722,17 @@ const gasHandler = (() => {
                 const lpjRows =
                     await fetchAllSupabaseRows(
                         "/rest/v1/lpj" +
-                        "?select=id_lpj,id_pkm"
+                        "?select=id_lpj,id_pkm,foto_tenda_full,foto_kegiatan_1,foto_kegiatan_2,evaluasi,act_db,act_deal,act_ue,tanggal_lpj,raw_data"
                     );
+
+                const lpjByPkm = new Map(
+                    lpjRows.map(function (row) {
+                        return [
+                            String(row.id_pkm || "").trim(),
+                            row
+                        ];
+                    })
+                );
 
                 const lpjPkmIds =
                     new Set(
@@ -3765,8 +3774,25 @@ const gasHandler = (() => {
                             /*
                             | Sudah punya LPJ → jangan tampil
                             */
-                            if (
-                                lpjPkmIds.has(idPkm)
+                            const existingLpj = lpjByPkm.get(idPkm);
+
+                            const statusFilter = String(
+                                payload.status || "PROCESS"
+                            )
+                                .trim()
+                                .toUpperCase();
+
+                            if (statusFilter === "DONE") {
+                                return Boolean(existingLpj);
+                            }
+
+                            if (statusFilter === "PROCESS") {
+                                if (existingLpj) {
+                                    return false;
+                                }
+                            } else if (
+                                statusFilter !== "ALL" &&
+                                existingLpj
                             ) {
                                 return false;
                             }
@@ -4174,6 +4200,9 @@ const gasHandler = (() => {
                                         }
                                     );
 
+                            const lpjRecord =
+                                lpjByPkm.get(idPkm) || null;
+
                             return {
                                 id:
                                     idPkm,
@@ -4262,8 +4291,34 @@ const gasHandler = (() => {
                                     ) || 0,
 
                                 status:
-                                    row.status ||
-                                    "Belum LPJ",
+                                    lpjRecord ? "DONE" : "PROCESS",
+
+                                lpjId:
+                                    lpjRecord?.id_lpj || "",
+
+                                tanggalLpj:
+                                    lpjRecord?.tanggal_lpj || "",
+
+                                actualDb:
+                                    Number(lpjRecord?.act_db) || 0,
+
+                                actualDeal:
+                                    Number(lpjRecord?.act_deal) || 0,
+
+                                actualUe:
+                                    Number(lpjRecord?.act_ue) || 0,
+
+                                evaluation:
+                                    lpjRecord?.evaluasi || "",
+
+                                tentPhotoPath:
+                                    lpjRecord?.foto_tenda_full || "",
+
+                                activityPhoto1Path:
+                                    lpjRecord?.foto_kegiatan_1 || "",
+
+                                activityPhoto2Path:
+                                    lpjRecord?.foto_kegiatan_2 || "",
 
                                 budgetDetails:
                                     budgetDetails
@@ -4489,10 +4544,10 @@ const gasHandler = (() => {
                         foto_tenda_full:
                         String(payload.tentPhotoPath || ""),
 
-                    foto_kegiatan_1:
+                        foto_kegiatan_1:
                         String(payload.activityPhoto1Path || ""),
 
-                    foto_kegiatan_2:
+                        foto_kegiatan_2:
                         String(payload.activityPhoto2Path || ""),
 
                         evaluasi:

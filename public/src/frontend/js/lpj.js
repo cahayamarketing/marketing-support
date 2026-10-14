@@ -8,6 +8,7 @@ let lpjTotalPages = 1;
 let activeLpjItem = null;
 let lpjBudgetItems = [];
 let lpjReviewConfirmed = false;
+let lpjReadOnlyMode = false;
 
 function initializeLpjFrontend() {
     window.renderBranchFilter(
@@ -429,6 +430,13 @@ async function loadLpjCandidates(
                                 "lpjTypePkm"
                             )
                             .value,
+                    
+                    status:
+                        document
+                            .getElementById(
+                                "lpjStatusFilter"
+                            )
+                            .value || "PROCESS",
 
                     branches:
                         getSelectedBranches(
@@ -542,7 +550,7 @@ function renderLpjTable() {
 
                         <td>
                             <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600">
-                                Belum LPJ
+                                ${item.status === "DONE" ? "DONE" : "PROCESS"}
                             </span>
                         </td>
 
@@ -552,7 +560,7 @@ function renderLpjTable() {
                                 data-create-lpj="${escapeHtml(item.id)}"
                                 class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white hover:bg-red-700"
                             >
-                                Buat LPJ
+                                ${item.status === "DONE" ? "Lihat LPJ" : "Buat LPJ"}
                             </button>
                         </td>
                     </tr>
@@ -949,6 +957,10 @@ function resetLpjFilter() {
     ).value = "ALL";
 
     document.getElementById(
+        "lpjStatusFilter"
+    ).value = "PROCESS";
+
+    document.getElementById(
         "lpjTypePkm"
     ).value = "ALL";
 
@@ -1017,7 +1029,27 @@ function openLpjModal(pkmId) {
                                 0
                             ) || 0,
 
-                        actualPrice: 0
+                        actualPrice:
+                            Number(
+                                item.hargaRealisasi ??
+                                item.actualPrice ??
+                                0
+                            ) || 0,
+
+                        designImagePath:
+                            item.gambarDesain ||
+                            item.designImagePath ||
+                            "",
+
+                        photoPath:
+                            item.foto ||
+                            item.photoPath ||
+                            "",
+
+                        note:
+                            item.keterangan ||
+                            item.note ||
+                            ""
                     };
                 })
             : [];
