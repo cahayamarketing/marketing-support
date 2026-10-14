@@ -981,6 +981,7 @@ function openLpjModal(pkmId) {
         return;
     }
 
+
     lpjBudgetItems =
         Array.isArray(
             activeLpjItem.budgetDetails
@@ -990,10 +991,43 @@ function openLpjModal(pkmId) {
                 .map(function (item) {
                     return {
                         ...item,
+
+                        // Samakan nama properti backend
+                        // dengan yang dibaca frontend LPJ
+                        itemName:
+                            item.itemName ??
+                            item.namaItem ??
+                            item.nama_item ??
+                            item.name ??
+                            "",
+
+                        itemType:
+                            item.itemType ??
+                            item.jenisItem ??
+                            item.jenis_item ??
+                            item.type ??
+                            "-",
+
+                        quantity:
+                            Number(
+                                item.quantity ??
+                                item.jumlah ??
+                                0
+                            ) || 0,
+
+                        totalPrice:
+                            Number(
+                                item.totalPrice ??
+                                item.hargaTotal ??
+                                item.harga_total ??
+                                0
+                            ) || 0,
+
                         actualPrice: 0
                     };
                 })
             : [];
+
 
     lpjReviewConfirmed = false;
 
