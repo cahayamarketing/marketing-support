@@ -1658,6 +1658,56 @@ async function finalizeLpj() {
                     )
                 ];
 
+
+        const budgetValidationErrors = [];
+
+        budgetRows.forEach(function (row, index) {
+            const item = lpjBudgetItems[index];
+
+            const actualPrice =
+                Number(
+                    row.querySelector(".lpj-actual-price")
+                        .value.replace(/\D/g, "")
+                ) || 0;
+
+            const totalPrice =
+                Number(item.totalPrice) || 0;
+
+            const note =
+                row.querySelector(".lpj-budget-note")
+                    .value.trim();
+
+            if (actualPrice > totalPrice && !note) {
+                budgetValidationErrors.push({
+                    row: row,
+                    itemName: item.itemName || item.name || "Item",
+                    input: row.querySelector(".lpj-budget-note")
+                });
+            }
+        });
+
+        if (budgetValidationErrors.length > 0) {
+            budgetValidationErrors.forEach(function (error) {
+                error.input.classList.add("border-red-500", "ring-2", "ring-red-100");
+            });
+
+            const firstError = budgetValidationErrors[0];
+
+            showToast(
+                `Keterangan wajib diisi karena realisasi melebihi pengajuan: ${firstError.itemName}`
+            );
+
+            firstError.input.focus();
+            firstError.input.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+
+            return;
+        }
+
+
+
         const budgetDetails =
             await Promise.all(
                 budgetRows.map(

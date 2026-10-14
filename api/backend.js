@@ -4275,6 +4275,56 @@ const gasHandler = (() => {
                             });
                     }
 
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | VALIDASI HARGA REALISASI VS PENGAJUAN
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const budgetDetails =
+                        Array.isArray(payload.budgetDetails)
+                            ? payload.budgetDetails
+                            : [];
+
+                    for (const item of budgetDetails) {
+                        const actualPrice =
+                            Number(item.actualPrice) || 0;
+
+                        const submittedPrice =
+                            Number(
+                                item.totalPrice ??
+                                item.hargaTotal ??
+                                item.harga_total ??
+                                0
+                            ) || 0;
+
+                        const note =
+                            String(item.note || "").trim();
+
+                        const itemName =
+                            String(
+                                item.itemName ||
+                                item.namaItem ||
+                                item.nama_item ||
+                                "Item tanpa nama"
+                            ).trim();
+
+                        if (
+                            actualPrice > submittedPrice &&
+                            !note
+                        ) {
+                            return response
+                                .status(400)
+                                .json({
+                                    success: false,
+                                    message:
+                                        `Keterangan wajib diisi untuk item "${itemName}" karena harga realisasi melebihi pengajuan.`
+                                });
+                        }
+                    }
+                    
+
                     /*
                     |--------------------------------------------------------------------------
                     | CEK PKM
@@ -4586,13 +4636,6 @@ const gasHandler = (() => {
                     | UPDATE PKM ITEM
                     |--------------------------------------------------------------------------
                     */
-
-                    const budgetDetails =
-                        Array.isArray(
-                            payload.budgetDetails
-                        )
-                            ? payload.budgetDetails
-                            : [];
 
                     for (
                         const item
