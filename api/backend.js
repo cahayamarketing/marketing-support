@@ -16843,6 +16843,13 @@ module.exports = async function handler(req, res) {
             res
         );
 
+    case "getLpjAsset":
+        return await runHandler(
+            gasHandler,
+            req,
+            res
+        );
+
     case "uploadLpjAsset":
         return await runHandler(
             gasHandler,
