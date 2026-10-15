@@ -394,35 +394,24 @@ function generatePkmPdf(
 
     y += 2;
 
+
     const budgetRows =
-        Array.isArray(
-            pkm.budgetDetails
-        ) &&
+        Array.isArray(pkm.budgetDetails) &&
         pkm.budgetDetails.length
-            ? pkm.budgetDetails.map(
-                function (item) {
-                    return [
-                        item.itemType || "-",
-                        item.itemName || "-",
-                        item.quantity || "",
-                        rupiahPdf(
-                            item.totalPrice
-                        ),
-                        item.note || ""
-                    ];
-                }
-            )
+            ? pkm.budgetDetails.map(function (item) {
+                return [
+                    item.itemType || "-",
+                    item.itemName || "-",
+                    item.quantity ?? "",
+                    rupiahPdf(item.totalPrice),
+                    item.note || item.notes || item.keterangan || ""
+                ];
+            })
             : [
-                [
-                    "-",
-                    "Detail budget tidak tersedia",
-                    "",
-                    rupiahPdf(
-                        pkm.totalFund
-                    ),
-                    ""
-                ]
+                ["-", "Detail budget tidak tersedia", "", "-", 
+                "Periksa data pkm_item di Supabase"]
             ];
+
 
     documentPdf.autoTable({
         startY: y + 1,

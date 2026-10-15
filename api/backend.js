@@ -7721,6 +7721,14 @@ function mapPkmRecord(row) {
         leasing:
             splitTextValue(row.leasing),
 
+        leasingDetails:
+            Array.isArray(row.leasing_details)
+                ? row.leasing_details.map(item => ({
+                    name: String(item.nama || "").trim(),
+                    fund: Number(item.nominal) || 0
+                }))
+                : [],
+
         danaLeasing:
             danaLeasing,
 
@@ -7922,7 +7930,7 @@ async function getPkmRows(filters) {
         "tanggal_pengajuan", "lokasi", "kabupaten",
         "kecamatan", "kelurahan", "alasan", "konsep",
         "people", "fokus_type", "program_h1",
-        "program_h23", "publikasi", "leasing",
+        "program_h23", "publikasi", "leasing","leasing_details",
         "dana_ls", "dana_md", "dana_csm", "dana_ll",
         "target_db", "target_deal", "target_ue",
         "status", "source", "pengajuan",
@@ -8058,6 +8066,62 @@ return async function handler(req, res) {
                 );
             })
             .map(mapPkmRecord);
+
+
+        /*
+        * Ambil detail item anggaran untuk seluruh PKM.
+        */
+        const pkmIds = records
+            .map(item => String(item.id_pkm || "").trim())
+            .filter(Boolean);
+
+        if (pkmIds.length > 0) {
+            const itemQuery = new URLSearchParams({
+                select: "id,link_pkm,jenis_item,nama_item,jumlah,harga_total,keterangan",
+                order: "id.asc"
+            });
+
+            itemQuery.set(
+                "link_pkm",
+                "in.(" + pkmIds.join(",") + ")"
+            );
+
+            const itemRows = await supabaseRequest(
+                "/rest/v1/pkm_item?" + itemQuery.toString()
+            );
+
+            const itemsByPkm = new Map();
+
+            for (const row of itemRows || []) {
+                const key = String(row.link_pkm || "").trim();
+
+                if (!itemsByPkm.has(key)) {
+                    itemsByPkm.set(key, []);
+                }
+
+                itemsByPkm.get(key).push({
+                    id: String(row.id || ""),
+                    itemType: String(row.jenis_item || ""),
+                    itemName: String(row.nama_item || ""),
+                    quantity: Number(row.jumlah) || 0,
+                    totalPrice: Number(row.harga_total) || 0,
+                    note: String(row.keterangan || "")
+                });
+            }
+
+            records = records.map(item => ({
+                ...item,
+                budgetDetails:
+                    itemsByPkm.get(String(item.id_pkm || "").trim()) || []
+            }));
+        } else {
+            records = records.map(item => ({
+                ...item,
+                budgetDetails: []
+            }));
+        }
+
+
 
         /*
          * Pastikan terbaru berada di atas.
@@ -8301,14 +8365,17 @@ const getPkmPdfDataHandler = async (req, res) => {
 
         try {
 
+
             const itemRows =
                 await supabaseRequest(
                     "/rest/v1/pkm_item" +
-                    "?select=id,jenis_item,nama_item,jumlah,harga_total," +
-                    "harga_actual,actual_price,gambar_desain,foto,keterangan" +
+                    "?select=id,link_pkm,jenis_item,nama_item,jumlah," +
+                    "harga_total,harga_realisasi,gambar_desain,foto,keterangan" +
                     "&link_pkm=eq." +
-                    encodeURIComponent(pkmId)
+                    encodeURIComponent(pkmId) +
+                    "&order=id.asc"
                 );
+
 
             if (Array.isArray(itemRows)) {
 
@@ -8345,10 +8412,7 @@ const getPkmPdfDataHandler = async (req, res) => {
                             ) || 0,
 
                         actualPrice:
-                            Number(
-                                item.harga_actual ||
-                                item.actual_price
-                            ) || 0,
+                                Number(item.harga_realisasi) || 0,
 
                         designImage:
                             String(
@@ -8361,12 +8425,13 @@ const getPkmPdfDataHandler = async (req, res) => {
                                 item.foto ||
                                 ""
                             ).trim(),
-
+                        
                         notes:
-                            String(
-                                item.keterangan ||
-                                ""
-                            ).trim()
+                            String(item.keterangan || "").trim(),
+
+                        note:
+                            String(item.keterangan || "").trim()
+
                     }));
 
             }
@@ -10468,6 +10533,30 @@ async function sendPkmApprovalDiscordAuto_(
             0
         ) || 0;
 
+    
+    const leasingDetailsRaw =
+        pkm?.leasingDetails ??
+        pkm?.leasing_details ??
+        [];
+
+    const leasingDetails =
+        Array.isArray(leasingDetailsRaw)
+            ? leasingDetailsRaw
+                .filter(x => x && (x.name || x.nama))
+                .map(x => ({
+                    name: String(x.name || x.nama).trim(),
+                    amount: Number(x.fund ?? x.nominal) || 0
+                }))
+            : [];
+
+    const leasingBreakdown =
+        leasingDetails.length > 0
+            ? leasingDetails.map(x =>
+                `• ${x.name}: ${formatRupiah(x.amount)}`
+            ).join("\n")
+            : "• Rincian kontribusi leasing tidak tersedia";
+
+
 
     /*
     |----------------------------------------------------------------------
@@ -10707,20 +10796,25 @@ async function sendPkmApprovalDiscordAuto_(
                     |------------------------------------------------------
                     */
 
+
                     {
-                        name:
-                            "Dana",
+                        name: "Rincian Dana",
 
-                        value:
-                            [
-                                `**Internal**   ${formatRupiah(danaInternal)}`,
-                                `**MD**         ${formatRupiah(danaMd)}`,
-                                `**Leasing**    ${formatRupiah(danaLeasing)}`,
-                                `**Lain Lain**  ${formatRupiah(danaLain)}`
-                            ].join("\n"),
+                        value: [
+                            `**Internal / CSM:** ${formatRupiah(danaInternal)}`,
+                            `**Main Dealer:** ${formatRupiah(danaMd)}`,
+                            "",
+                            "**Kontribusi Leasing:**",
+                            leasingBreakdown,
+                            `**Total Leasing:** ${formatRupiah(danaLeasing)}`,
+                            `**Lain-lain:** ${formatRupiah(danaLain)}`,
+                            "",
+                            `**TOTAL DANA:** ${formatRupiah(
+                                danaInternal + danaMd + danaLeasing + danaLain
+                            )}`
+                        ].join("\n"),
 
-                        inline:
-                            false
+                        inline: false
                     },
 
 
@@ -11642,6 +11736,37 @@ async function sendManagerH23WhatsappApproval(pkmData) {
         return "Rp" + amount.toLocaleString("id-ID");
     };
 
+    
+    const leasingDetailsRaw =
+        pkmData.leasingDetails ??
+        pkmData.leasing_details ??
+        [];
+
+    const leasingDetails =
+        Array.isArray(leasingDetailsRaw)
+            ? leasingDetailsRaw
+                .filter(x => x && (x.name || x.nama))
+                .map(x => ({
+                    name: String(x.name || x.nama).trim(),
+                    amount: Number(x.fund ?? x.nominal) || 0
+                }))
+            : [];
+
+    const leasingText =
+        leasingDetails.length > 0
+            ? leasingDetails.map(x =>
+                "• " + x.name + ": " +
+                formatRupiah(x.amount)
+            ).join("\n")
+            : "• Rincian kontribusi leasing tidak tersedia";
+
+    const totalDana =
+        (Number(pkmData.danaInternal) || 0) +
+        (Number(pkmData.danaMd) || 0) +
+        (Number(pkmData.danaLeasing) || 0) +
+        (Number(pkmData.danaLain) || 0);
+
+
     const message =
         "🔔 *APPROVAL PKM — MANAGER H23*\n\n" +
 
@@ -11660,10 +11785,13 @@ async function sendManagerH23WhatsappApproval(pkmData) {
         "• Lokasi: " + (pkmData.location || "-") + "\n\n" +
 
         "💰 *RINCIAN DANA*\n" +
-        "• Internal: " + formatRupiah(pkmData.danaInternal) + "\n" +
-        "• MD: " + formatRupiah(pkmData.danaMd) + "\n" +
-        "• Leasing: " + formatRupiah(pkmData.danaLeasing) + "\n" +
-        "• Lain-lain: " + formatRupiah(pkmData.danaLain) + "\n\n" +
+        "• Internal / CSM: " + formatRupiah(pkmData.danaInternal) + "\n" +
+        "• Main Dealer: " + formatRupiah(pkmData.danaMd) + "\n" +
+        "• Kontribusi Leasing:\n" + leasingText + "\n" +
+        "• Total Leasing: " + formatRupiah(pkmData.danaLeasing) + "\n" +
+        "• Lain-lain: " + formatRupiah(pkmData.danaLain) + "\n" +
+        "• *TOTAL DANA: " + formatRupiah(totalDana) + "*\n\n" +
+
 
         "🎯 *TARGET*\n" +
         "• DB: " + (pkmData.targetDb ?? 0) + "\n" +
@@ -13847,8 +13975,19 @@ async function approvePkmHandler(
                             0,
 
                         danaLeasing:
-                            row.dana_ls ||
-                            0,
+                            row.dana_ls || 0,
+
+                        
+                        leasingDetails:
+                            Array.isArray(row.leasing_details)
+                                ? row.leasing_details
+                                : [],
+
+
+                        leasingDetails:
+                            Array.isArray(row.leasing_details)
+                                ? row.leasing_details
+                                : [],
 
                         danaLain:
                             row.dana_ll ||
@@ -13941,8 +14080,17 @@ async function approvePkmHandler(
                         0,
 
                     danaLeasing:
-                        row.dana_ls ??
-                        0,
+                        row.dana_ls ?? 0,
+
+                    leasingDetails:
+                        Array.isArray(row.leasing_details)
+                            ? row.leasing_details
+                            : [],
+
+                    leasingDetails:
+                        Array.isArray(row.leasing_details)
+                        ? row.leasing_details
+                        : [],
 
                     danaLain:
                         row.dana_ll ??

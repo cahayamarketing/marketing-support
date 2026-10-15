@@ -11787,6 +11787,82 @@ async function openApprovalModal(
         targetText
     );
 
+    
+    const formatApprovalRupiah = value =>
+        "Rp" + (Number(value) || 0).toLocaleString("id-ID");
+
+    const leasingDetails =
+        Array.isArray(item.leasingDetails)
+            ? item.leasingDetails
+            : Array.isArray(item.leasing_details)
+                ? item.leasing_details.map(x => ({
+                    name: x.nama,
+                    fund: x.nominal
+                }))
+                : [];
+
+    const fundRows = [
+        ...leasingDetails.map(x => ({
+            name: "Leasing — " + (x.name || "-"),
+            amount: Number(x.fund) || 0
+        })),
+        {
+            name: "Main Dealer",
+            amount: Number(item.danaMd ?? item.dana_md) || 0
+        },
+        {
+            name: "CSM",
+            amount: Number(item.danaCsm ?? item.dana_csm) || 0
+        },
+        {
+            name: "Lain-lain",
+            amount: Number(item.danaLain ?? item.dana_ll) || 0
+        }
+    ];
+
+    document.getElementById("approvalFundBreakdown").innerHTML =
+        fundRows.map(x => `
+            <div class="flex justify-between gap-4 border-b border-slate-200 py-2 last:border-0">
+                <span>${escapeHtml(x.name)}</span>
+                <strong class="whitespace-nowrap">${formatApprovalRupiah(x.amount)}</strong>
+            </div>
+        `).join("");
+
+    const budgetDetails = Array.isArray(item.budgetDetails)
+        ? item.budgetDetails
+        : [];
+
+    document.getElementById("approvalBudgetDetails").innerHTML =
+        budgetDetails.length
+            ? `
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-100">
+                        <tr>
+                            <th class="p-2 text-left">Jenis Item</th>
+                            <th class="p-2 text-left">Nama Item</th>
+                            <th class="p-2 text-right">Jumlah</th>
+                            <th class="p-2 text-right">Harga</th>
+                            <th class="p-2 text-left">Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${budgetDetails.map(x => `
+                            <tr class="border-t border-slate-200">
+                                <td class="p-2">${escapeHtml(x.jenisItem || x.itemType || x.jenis_item || "-")}</td>
+                                <td class="p-2">${escapeHtml(x.namaItem || x.itemName || x.nama_item || "-")}</td>
+                                <td class="p-2 text-right">${Number(x.jumlah ?? x.quantity) || 0}</td>
+                                <td class="p-2 text-right whitespace-nowrap">${formatApprovalRupiah(x.hargaTotal ?? x.totalPrice ?? x.harga_total)}</td>
+                                <td class="p-2">${escapeHtml(x.keterangan || x.note || x.notes || "-")}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `
+            : `<p class="p-3 text-slate-500">
+                Detail item belum tersedia. Periksa data PKM ITEM.
+            </p>`;
+
+
     setApprovalField(
         "approvalReason",
         item.alasan
