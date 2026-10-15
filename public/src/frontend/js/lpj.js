@@ -609,8 +609,12 @@ function renderLpjTable() {
                                     </p>
                                 </div>
 
-                                <span class="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-600">
-                                    Belum LPJ
+                                <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${
+                                    item.status === "DONE"
+                                        ? "bg-green-50 text-green-700"
+                                        : "bg-red-50 text-red-600"
+                                }">
+                                    ${item.status === "DONE" ? "DONE" : "Belum LPJ"}
                                 </span>
                             </div>
 
@@ -673,7 +677,7 @@ function renderLpjTable() {
                                 data-create-lpj="${escapeHtml(item.id)}"
                                 class="mt-4 w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-700 active:scale-[0.99]"
                             >
-                                Buat LPJ
+                                ${item.status === "DONE" ? "Lihat LPJ" : "Buat LPJ"}
                             </button>
 
                         </div>
@@ -987,6 +991,10 @@ function openLpjModal(pkmId) {
         return;
     }
 
+    
+    lpjReadOnlyMode =
+        activeLpjItem.status === "DONE";
+
 
     lpjBudgetItems =
         Array.isArray(
@@ -1116,17 +1124,14 @@ function openLpjModal(pkmId) {
     ).textContent =
         activeLpjItem.targetUe || 0;
 
-    document.getElementById(
-        "lpjActualDb"
-    ).value = 0;
+    document.getElementById("lpjActualDb").value =
+        lpjReadOnlyMode ? (activeLpjItem.actualDb ?? 0) : 0;
 
-    document.getElementById(
-        "lpjActualDeal"
-    ).value = 0;
+    document.getElementById("lpjActualDeal").value =
+        lpjReadOnlyMode ? (activeLpjItem.actualDeal ?? 0) : 0;
 
-    document.getElementById(
-        "lpjActualUe"
-    ).value = 0;
+    document.getElementById("lpjActualUe").value =
+        lpjReadOnlyMode ? (activeLpjItem.actualUe ?? 0) : 0;
 
     updateLpjAchievement(
         "lpjActualDb",
@@ -1149,32 +1154,38 @@ function openLpjModal(pkmId) {
         "lpjProgressUeBar"
     );
 
-    document.getElementById(
-        "lpjEvaluation"
-    ).value = "";
+
+    document.getElementById("lpjEvaluation").value =
+        lpjReadOnlyMode
+            ? (activeLpjItem.evaluation || "")
+            : "";
+
+    const evaluationValue =
+        document.getElementById("lpjEvaluation").value || "";
 
     const evaluationCount =
-        document.getElementById(
-            "lpjEvaluationCount"
-        );
+        document.getElementById("lpjEvaluationCount");
 
     if (evaluationCount) {
         evaluationCount.textContent =
-            "0 karakter";
+            `${evaluationValue.length} karakter`;
     }
 
     const evaluationStatus =
-        document.getElementById(
-            "lpjEvaluationStatus"
-        );
+        document.getElementById("lpjEvaluationStatus");
 
     if (evaluationStatus) {
         evaluationStatus.textContent =
-            "Belum diisi";
+            evaluationValue.trim().length > 0
+                ? "Evaluasi tersimpan"
+                : "Belum diisi";
 
         evaluationStatus.className =
-            "text-[11px] font-bold text-slate-400";
+            evaluationValue.trim().length > 0
+                ? "text-[11px] font-bold text-emerald-600"
+                : "text-[11px] font-bold text-slate-400";
     }
+
 
     document.getElementById(
         "lpjTentPhoto"
@@ -1192,6 +1203,7 @@ function openLpjModal(pkmId) {
         "lpjTentPhotoPreview",
         "lpjActivityPhoto1Preview",
         "lpjActivityPhoto2Preview"
+
     ].forEach(function (previewId) {
 
         const preview =
@@ -1214,12 +1226,94 @@ function openLpjModal(pkmId) {
 
     });
 
+    if (lpjReadOnlyMode) {
+        restoreLpjPhotoPreview(
+            activeLpjItem.tentPhotoPath,
+            "lpjTentPhotoPreview"
+        );
+
+        restoreLpjPhotoPreview(
+            activeLpjItem.activityPhoto1Path,
+            "lpjActivityPhoto1Preview"
+        );
+
+        restoreLpjPhotoPreview(
+            activeLpjItem.activityPhoto2Path,
+            "lpjActivityPhoto2Preview"
+        );
+    }
+
     renderLpjBudgetTable();
 
-    const modal =
-        document.getElementById(
-            "lpjModal"
+
+    // Isi kembali realisasi dan keterangan dari PKM ITEM
+    if (lpjReadOnlyMode) {
+        [
+            ...document.querySelectorAll("[data-lpj-budget-row]"),
+            ...document.querySelectorAll("[data-lpj-budget-mobile-row]")
+        ].forEach(function (row) {
+            const index = Number(
+                row.dataset.lpjBudgetRow ??
+                row.dataset.lpjBudgetMobileRow
+            );
+
+            const item = lpjBudgetItems[index];
+
+            if (!item) return;
+
+            const priceInput = row.querySelector(".lpj-actual-price");
+            const noteInput = row.querySelector(".lpj-budget-note");
+
+            if (priceInput) {
+                priceInput.value = item.actualPrice
+                    ? rupiah(item.actualPrice)
+                    : "";
+            }
+
+            if (noteInput) {
+                noteInput.value = item.note || "";
+            }
+        });
+    }
+
+    // Kunci field saat membuka LPJ DONE
+    document.querySelectorAll(
+        "#lpjModal .lpj-actual-price, " +
+        "#lpjModal .lpj-budget-note, " +
+        "#lpjModal #lpjEvaluation, " +
+        "#lpjModal #lpjActualDb, " +
+        "#lpjModal #lpjActualDeal, " +
+        "#lpjModal #lpjActualUe"
+    ).forEach(function (input) {
+        input.readOnly = lpjReadOnlyMode;
+    });
+
+    document.querySelectorAll(
+        "#lpjModal .lpj-design-image, " +
+        "#lpjModal .lpj-item-photo, " +
+        "#lpjModal #lpjTentPhoto, " +
+        "#lpjModal #lpjActivityPhoto1, " +
+        "#lpjModal #lpjActivityPhoto2"
+    ).forEach(function (input) {
+        input.disabled = lpjReadOnlyMode;
+    });
+
+
+    if (finalizeButton) {
+        finalizeButton.classList.toggle(
+            "hidden",
+            lpjReadOnlyMode
         );
+        finalizeButton.disabled = lpjReadOnlyMode;
+    }
+
+    if (reviewPanel) {
+        reviewPanel.classList.add("hidden");
+    }
+
+    const modal =
+        document.getElementById("lpjModal");
+
 
     modal.classList.remove("hidden");
     modal.setAttribute(
@@ -1640,10 +1734,22 @@ function openLpjReview() {
     });
 }
 
+
 async function finalizeLpj() {
     if (!activeLpjItem) {
         return;
     }
+
+    if (
+        lpjReadOnlyMode ||
+        activeLpjItem.status === "DONE"
+    ) {
+        showToast(
+            "LPJ sudah selesai dan hanya dapat dilihat."
+        );
+        return;
+    }
+
 
     const evaluation =
         document
@@ -1775,8 +1881,13 @@ async function finalizeLpj() {
             return;
         }
 
-        const pkmId = String(activeLpjItem.id);
-        const lpjId = crypto.randomUUID();
+        
+        const pkmId = String(activeLpjItem.id).trim();
+
+        const lpjId =
+            `${pkmId}LPJ${crypto.getRandomValues(new Uint8Array(3))
+                .reduce((result, byte) => result + byte.toString(16).padStart(2, "0"), "")}`;
+
 
         const budgetDetails = [];
 
@@ -1899,6 +2010,51 @@ async function finalizeLpj() {
             "Finalisasi LPJ";
     }
 }
+
+
+async function restoreLpjPhotoPreview(path, previewId) {
+    if (!path) return;
+
+    const preview =
+        document.getElementById(previewId);
+
+    const image =
+        preview?.querySelector("img");
+
+    if (!preview || !image) return;
+
+    try {
+        const result =
+            await requestBackend(
+                "getLpjAsset",
+                { path }
+            );
+
+        if (
+            !result ||
+            !result.success ||
+            !result.dataUrl
+        ) {
+            console.warn(
+                "Foto LPJ tersimpan tidak dapat dimuat:",
+                path,
+                result?.message
+            );
+            return;
+        }
+
+        image.src = result.dataUrl;
+        preview.classList.remove("hidden");
+    } catch (error) {
+        console.warn(
+            "Gagal memuat foto LPJ tersimpan:",
+            path,
+            error
+        );
+    }
+}
+
+
 
 async function uploadLpjAsset({
     pkmId,

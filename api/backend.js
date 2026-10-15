@@ -3565,6 +3565,140 @@ const gasHandler = (() => {
                 });
             }
 
+
+            if (
+                requestBody.action ===
+                "getLpjAsset"
+            ) {
+                try {
+                    const payload =
+                        requestBody.payload || {};
+
+                    const assetPath =
+                        String(payload.path || "").trim();
+
+                    const prefix = "LPJ_Images/";
+
+                    if (!assetPath.startsWith(prefix)) {
+                        return response.status(400).json({
+                            success: false,
+                            message: "Path foto LPJ tidak valid."
+                        });
+                    }
+
+                    const fileName =
+                        assetPath.slice(prefix.length);
+
+                    if (
+                        !fileName ||
+                        fileName.includes("/") ||
+                        fileName.includes("\\") ||
+                        fileName === "." ||
+                        fileName === ".."
+                    ) {
+                        return response.status(400).json({
+                            success: false,
+                            message: "Nama file foto LPJ tidak valid."
+                        });
+                    }
+
+                    const drive =
+                        getPkmItemImagesDriveClient();
+
+                    const escapedFileName =
+                        fileName
+                            .replace(/\\/g, "\\\\")
+                            .replace(/'/g, "\\'");
+
+                    const filesResult =
+                        await drive.files.list({
+                            q:
+                                `'${LPJ_IMAGES_DRIVE_ID}' in parents` +
+                                ` and name = '${escapedFileName}'` +
+                                " and trashed = false",
+
+                            pageSize: 1,
+
+                            fields:
+                                "files(id,name,mimeType)"
+                        });
+
+                    const file =
+                        filesResult.data.files?.[0];
+
+                    if (!file) {
+                        return response.status(404).json({
+                            success: false,
+                            message: "Foto LPJ tidak ditemukan di Google Drive."
+                        });
+                    }
+
+                    const fileResult =
+                        await drive.files.get(
+                            {
+                                fileId: file.id,
+                                alt: "media"
+                            },
+                            {
+                                responseType: "arraybuffer"
+                            }
+                        );
+
+                    const buffer =
+                        Buffer.isBuffer(fileResult.data)
+                            ? fileResult.data
+                            : Buffer.from(fileResult.data);
+
+                    if (buffer.length > 5 * 1024 * 1024) {
+                        return response.status(413).json({
+                            success: false,
+                            message: "Ukuran foto LPJ melebihi batas."
+                        });
+                    }
+
+                    const mimeType =
+                        String(file.mimeType || "");
+
+                    if (
+                        ![
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp"
+                        ].includes(mimeType)
+                    ) {
+                        return response.status(400).json({
+                            success: false,
+                            message: "Format file bukan gambar yang didukung."
+                        });
+                    }
+
+                    return response.status(200).json({
+                        success: true,
+                        dataUrl:
+                            `data:${mimeType};base64,` +
+                            buffer.toString("base64")
+                    });
+
+                } catch (error) {
+                    console.error(
+                        "[VERCEL] GET LPJ ASSET ERROR",
+                        traceId,
+                        error
+                    );
+
+                    return response
+                        .status(error.status || 500)
+                        .json({
+                            success: false,
+                            message:
+                                error.message ||
+                                "Gagal mengambil foto LPJ dari Google Drive."
+                        });
+                }
+            }
+
+
+
             if (
                 requestBody.action ===
                 "getLpjCandidates"
@@ -4130,7 +4264,7 @@ const gasHandler = (() => {
 
                     itemRows = await supabaseRequest(
                         "/rest/v1/pkm_item" +
-                        "?select=id,link_pkm,jenis_item,nama_item,jumlah," +
+                        "?select=id,link_pkm,link_lpj,jenis_item,nama_item,jumlah," +
                         "harga_total,harga_realisasi,gambar_desain,foto,keterangan" +
                         "&link_pkm=in.(" +
                         itemFilter +
@@ -4462,14 +4596,49 @@ const gasHandler = (() => {
                     |--------------------------------------------------------------------------
                     */
 
+                    
+                    const pkmSelect = [
+                        "id_pkm",
+                        "nama",
+                        "cabang",
+                        "type_pkm",
+                        "jenis_pkm",
+                        "jenis_kegiatan",
+                        "tanggal_mulai",
+                        "tanggal_selesai",
+                        "tanggal_pengajuan",
+                        "lokasi",
+                        "kabupaten",
+                        "kecamatan",
+                        "kelurahan",
+                        "people",
+                        "fokus_type",
+                        "program_h1",
+                        "program_h23",
+                        "publikasi",
+                        "leasing",
+                        "dana_ls",
+                        "dana_md",
+                        "dana_csm",
+                        "dana_ll",
+                        "target_db",
+                        "target_deal",
+                        "target_ue",
+                        "status",
+                        "pdf",
+                        "print",
+                        "raw_data"
+                    ].join(",");
+
                     const pkmRows =
                         await supabaseRequest(
                             "/rest/v1/pkm" +
-                            "?select=id_pkm" +
+                            "?select=" + pkmSelect +
                             "&id_pkm=eq." +
                             encodeURIComponent(pkmId) +
                             "&limit=1"
                         );
+
 
                     if (
                         !Array.isArray(pkmRows) ||
@@ -4518,11 +4687,15 @@ const gasHandler = (() => {
                     |--------------------------------------------------------------------------
                     */
 
+                    
+                    const suppliedLpjId =
+                        String(payload.lpjId || "").trim();
+
                     const lpjId =
-                        String(
-                            payload.lpjId ||
-                            crypto.randomUUID()
-                        ).trim();
+                        suppliedLpjId.startsWith(`${pkmId}LPJ`)
+                            ? suppliedLpjId
+                            : `${pkmId}LPJ${crypto.randomBytes(3).toString("hex")}`;
+
 
                     const now =
                         new Date().toISOString();
@@ -4533,67 +4706,57 @@ const gasHandler = (() => {
                     |--------------------------------------------------------------------------
                     */
 
+                    const pkm = pkmRows[0];
+
                     const lpjRecord = {
+                        id_lpj: lpjId,
+                        id_pkm: pkmId,
 
-                        id_lpj:
-                            lpjId,
+                        cabang: pkm.cabang ?? null,
+                        type_pkm: pkm.type_pkm ?? null,
+                        tanggal_mulai: pkm.tanggal_mulai ?? null,
+                        tanggal_selesai: pkm.tanggal_selesai ?? null,
+                        lokasi: pkm.lokasi ?? null,
+                        kabupaten: pkm.kabupaten ?? null,
+                        kecamatan: pkm.kecamatan ?? null,
+                        kelurahan: pkm.kelurahan ?? null,
+                        people: pkm.people ?? null,
+                        fokus_type: pkm.fokus_type ?? null,
+                        program_h1: pkm.program_h1 ?? null,
+                        program_h23: pkm.program_h23 ?? null,
+                        publikasi: pkm.publikasi ?? null,
+                        leasing: pkm.leasing ?? null,
 
-                        id_pkm:
-                            pkmId,
+                        dana_ls: Number(pkm.dana_ls) || 0,
+                        dana_md: Number(pkm.dana_md) || 0,
+                        dana_csm: Number(pkm.dana_csm) || 0,
+                        dana_ll: Number(pkm.dana_ll) || 0,
 
-                        foto_tenda_full:
-                        String(payload.tentPhotoPath || ""),
+                        foto_tenda_full: String(payload.tentPhotoPath || ""),
+                        foto_kegiatan_1: String(payload.activityPhoto1Path || ""),
+                        foto_kegiatan_2: String(payload.activityPhoto2Path || ""),
 
-                        foto_kegiatan_1:
-                        String(payload.activityPhoto1Path || ""),
+                        evaluasi: String(payload.evaluation || "").trim(),
 
-                        foto_kegiatan_2:
-                        String(payload.activityPhoto2Path || ""),
+                        pdf: pkm.pdf ?? null,
+                        print: pkm.print ?? null,
 
-                        evaluasi:
-                            String(
-                                payload.evaluation ||
-                                ""
-                            ).trim(),
+                        act_db: Number(payload.actualDb) || 0,
+                        act_deal: Number(payload.actualDeal) || 0,
+                        act_ue: Number(payload.actualUe) || 0,
 
-                        pdf:
-                            "",
+                        tanggal_lpj: now,
+                        source: "WEB",
+                        created_at: now,
+                        updated_at: now,
+                        synced_at: now,
 
-                        print:
-                            "",
-
-                        act_db:
-                            Number(
-                                payload.actualDb
-                            ) || 0,
-
-                        act_deal:
-                            Number(
-                                payload.actualDeal
-                            ) || 0,
-
-                        act_ue:
-                            Number(
-                                payload.actualUe
-                            ) || 0,
-
-                        tanggal_lpj:
-                            now,
-
-                        source:
-                            "WEB",
-
-                        created_at:
-                            now,
-
-                        updated_at:
-                            now,
-
-                        synced_at:
-                            now,
-
-                        raw_data:
-                            payload
+                        raw_data: {
+                            ...payload,
+                            pkmData: pkm,
+                            lpjId: lpjId,
+                            pkmId: pkmId
+                        }
                     };
 
                     /*
