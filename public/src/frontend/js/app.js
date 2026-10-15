@@ -1237,40 +1237,25 @@ function abortAllBackendRequests() {
 let sessionExpiredHandling =
     false;
 
+
 function isSessionExpiredResponse(
     status,
     message
 ) {
     const text =
-        String(
-            message || ""
-        ).toLowerCase();
+        String(message || "").toLowerCase();
 
     return (
-        status === 401 ||
-        text.includes(
-            "session expired"
-        ) ||
-        text.includes(
-            "session tidak valid"
-        ) ||
-        text.includes(
-            "token tidak valid"
-        ) ||
-        text.includes(
-            "token expired"
-        ) ||
-        text.includes(
-            "sesi telah berakhir"
-        ) ||
-        text.includes(
-            "sesi berakhir"
-        ) ||
-        text.includes(
-            "autentikasi"
-        )
+        text.includes("session expired") ||
+        text.includes("session tidak valid") ||
+        text.includes("token tidak valid") ||
+        text.includes("token expired") ||
+        text.includes("sesi telah berakhir") ||
+        text.includes("sesi berakhir") ||
+        text.includes("sesi login telah berakhir")
     );
 }
+
 
 function handleSessionExpired() {
     if (
