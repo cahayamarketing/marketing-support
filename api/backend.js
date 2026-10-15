@@ -89,6 +89,58 @@ function getPkmItemImagesDriveClient() {
     });
 }
 
+
+function getLpjImagesDriveClient() {
+    const clientId =
+        process.env.GOOGLE_OAUTH_CLIENT_ID;
+
+    const clientSecret =
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+    const redirectUri =
+        process.env.GOOGLE_OAUTH_REDIRECT_URI;
+
+    const refreshToken =
+        process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
+
+    if (
+        !clientId ||
+        !clientSecret ||
+        !redirectUri ||
+        !refreshToken
+    ) {
+        const error = new Error(
+            "Konfigurasi Google Drive OAuth LPJ belum lengkap."
+        );
+        error.status = 500;
+        throw error;
+    }
+
+    if (!LPJ_IMAGES_DRIVE_ID) {
+        const error = new Error(
+            "LPJ_IMAGES_DRIVE_ID belum dikonfigurasi."
+        );
+        error.status = 500;
+        throw error;
+    }
+
+    const auth = new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        redirectUri
+    );
+
+    auth.setCredentials({
+        refresh_token: refreshToken
+    });
+
+    return google.drive({
+        version: "v3",
+        auth
+    });
+}
+
+
 function getPkmPdfDriveClient() {
 
     const clientId =
@@ -899,7 +951,7 @@ async function uploadLpjImage({
     }
 
     const drive =
-        getPkmItemImagesDriveClient();
+        getLpjImagesDriveClient();
 
     const safeType =
         String(
@@ -3603,7 +3655,7 @@ const gasHandler = (() => {
                     }
 
                     const drive =
-                        getPkmItemImagesDriveClient();
+                        getLpjImagesDriveClient();
 
                     const escapedFileName =
                         fileName
@@ -3679,6 +3731,7 @@ const gasHandler = (() => {
                             buffer.toString("base64")
                     });
 
+                
                 } catch (error) {
                     console.error(
                         "[VERCEL] GET LPJ ASSET ERROR",
@@ -3686,15 +3739,38 @@ const gasHandler = (() => {
                         error
                     );
 
+                    const googleError =
+                        String(
+                            error?.code ||
+                            error?.response?.data?.error ||
+                            error?.message ||
+                            ""
+                        ).toLowerCase();
+
+                    const isGoogleAuthError =
+                        googleError.includes("unauthorized_client") ||
+                        googleError.includes("invalid_grant") ||
+                        googleError.includes("invalid_client");
+
+                    const status =
+                        isGoogleAuthError
+                            ? 502
+                            : (
+                                error?.status === 401
+                                    ? 502
+                                    : (error?.status || 500)
+                            );
+
                     return response
-                        .status(error.status || 500)
+                        .status(status)
                         .json({
                             success: false,
-                            message:
-                                error.message ||
-                                "Gagal mengambil foto LPJ dari Google Drive."
+                            message: isGoogleAuthError
+                                ? "Autentikasi Google Drive bermasalah. Periksa OAuth Client dan Refresh Token di Vercel."
+                                : "Gagal mengambil foto LPJ dari Google Drive."
                         });
                 }
+
             }
 
 
